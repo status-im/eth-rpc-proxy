@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  rpc-proxy:
+    build:
+      context: ./nginx-proxy
+    ports:
+      - "8080:8080"
+    networks:
+      - rpc-network
+    depends_on:
+      - health-checker
+    volumes:
+      - ./nginx-proxy/providers.json:/usr/local/openresty/nginx/providers.json
+      - ./nginx-proxy/.htpasswd:/etc/nginx/.htpasswd
+    environment:
+      CONFIG_HEALTH_CHECKER_URL: http://health-checker:8080/providers
+
+  health-checker:
+    build:
+      context: ./config-health-checker
+    ports:
+      - "8081:8080"
+    networks:
+      - rpc-network
+    volumes:
+      - ./config-health-checker/secrets:/config
+    environment:
+      DEFAULT_PROVIDERS_PATH: /config/default_providers.json
+      REFERENCE_PROVIDERS_PATH: /config/reference_providers.json
+      PORT: "8080"
+
+networks:
+  rpc-network:
+    driver: bridge

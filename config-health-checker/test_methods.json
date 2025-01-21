@@ -1,0 +1,15 @@
+[
+  {
+    "method": "eth_blockNumber",
+    "params": [],
+    "maxDifference": "0"
+  },
+  {
+    "method": "eth_getBalance",
+    "params": [
+      "0x9B27B66D4de4e839326b98108d978526a18E95a3",
+      "latest"
+    ],
+    "maxDifference": "0"
+  }
+]

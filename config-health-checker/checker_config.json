@@ -1,0 +1,8 @@
+{
+  "interval_seconds": 30,
+  "default_providers_path": "default_providers.json",
+  "reference_providers_path": "reference_providers.json",
+  "output_providers_path": "providers.json",
+  "tests_config_path": "test_methods.json",
+  "logs_path": "logs"
+}

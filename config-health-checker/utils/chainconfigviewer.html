@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Chain Config Viewer</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .chain { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+    .chain-header { font-weight: bold; margin-bottom: 10px; }
+    .provider { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <h1>Chain Config Viewer</h1>
+  <div>
+    <label for="config-select">Select Configuration:</label>
+    <select id="config-select">
+      <option value="default">Default Providers</option>
+      <option value="reference">Reference Providers</option>
+    </select>
+  </div>
+  <div id="chains-container"></div>
+
+  <script>
+    function getConfigPath(selected) {
+      return selected === 'default' 
+        ? '../secrets/default_providers.json'
+        : '../secrets/reference_providers.json';
+    }
+
+    async function loadConfig(selected) {
+      try {
+        const path = getConfigPath(selected);
+        const response = await fetch(path);
+        const data = await response.json();
+        displayChains(data.chains);
+      } catch (error) {
+        console.error('Error loading config:', error);
+      }
+    }
+
+    // Add event listener for selector change
+    document.getElementById('config-select').addEventListener('change', (e) => {
+      loadConfig(e.target.value);
+    });
+
+    // Load default config initially
+    loadConfig('default');
+
+    function displayChains(chains) {
+      const container = document.getElementById('chains-container');
+      container.innerHTML = chains.map(chain => `
+        <div class="chain">
+          <div class="chain-header">
+            ${chain.name} (${chain.network}) - Chain ID: ${chain.chainId}
+          </div>
+          ${chain.providers.map(provider => `
+            <div class="provider">
+              <div><strong>${provider.name}</strong></div>
+              <div>URL: ${provider.url}</div>
+              <div>Auth Type: ${provider.authType}</div>
+              ${provider.authType === 'token-auth' ? `
+                <div>Auth Token: ${provider.authToken}</div>
+              ` : ''}
+              <div>Enabled: ${provider.enabled ? 'Yes' : 'No'}</div>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    }
+
+    // Load config when page loads
+    loadConfig();
+  </script>
+</body>
+</html>
