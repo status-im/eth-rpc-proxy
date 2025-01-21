@@ -18,13 +18,13 @@ services:
 
   health-checker:
     build:
-      context: ./config-health-checker
+      context: rpc-health-checker
     ports:
       - "8081:8080"
     networks:
       - rpc-network
     volumes:
-      - ./config-health-checker/secrets:/config
+      - ./rpc-health-checker/secrets:/config
     environment:
       DEFAULT_PROVIDERS_PATH: /config/default_providers.json
       REFERENCE_PROVIDERS_PATH: /config/reference_providers.json
