@@ -8,21 +8,18 @@
         {
           "name": "InfuraMainnet",
           "url": "https://mainnet.infura.io/v3",
-          "enabled": true,
           "authType": "token-auth",
           "authToken": "111"
         },
         {
           "name": "AlchemyMainnet",
           "url": "https://eth-mainnet.alchemyapi.io/v2",
-          "enabled": true,
           "authType": "token-auth",
           "authToken": "222"
         },
         {
           "name": "Example",
           "url": "https://another-provider.example,io/v2",
-          "enabled": true,
           "authType": "no-auth"
         }
       ]
@@ -35,14 +32,12 @@
         {
           "name": "InfuraSepolia",
           "url": "https://sepolia.infura.io/v3",
-          "enabled": true,
           "authType": "token-auth",
           "authToken": "111"
         },
         {
           "name": "AlchemySepolia",
           "url": "https://eth-sepolia.alchemyapi.io/v2",
-          "enabled": true,
           "authType": "token-auth",
           "authToken": "222"
         }

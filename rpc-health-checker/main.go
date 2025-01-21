@@ -44,36 +44,8 @@ func main() {
 	// Create validation function
 	validationFunc := func() {
 		// Create fresh runner for each execution
-		// Create a copy of config with updated provider paths
-		runnerConfig := *config
-		if *defaultProvidersPath != "" {
-			runnerConfig.DefaultProvidersPath = *defaultProvidersPath
-		}
-		if *referenceProvidersPath != "" {
-			runnerConfig.ReferenceProvidersPath = *referenceProvidersPath
-		}
-
-		// Verify provider files exist
-		if _, err := os.Stat(runnerConfig.ReferenceProvidersPath); err != nil {
-			log.Printf("reference providers file not found: %s", runnerConfig.ReferenceProvidersPath)
-			return
-		}
-		if _, err := os.Stat(runnerConfig.DefaultProvidersPath); err != nil {
-			log.Printf("default providers file not found: %s", runnerConfig.DefaultProvidersPath)
-			return
-		}
-		// print content of reference providers
-		referenceProviders, err := os.ReadFile(runnerConfig.ReferenceProvidersPath)
-		if err != nil {
-			log.Printf("failed to read reference providers file: %v", err)
-			return
-		}
-		// write content of reference providers as json string to log
-		log.Printf("reference providers: %s", referenceProviders)
-
-		// log config
-		log.Printf("config: %v", runnerConfig)
-		runner, err := core.NewRunnerFromConfig(runnerConfig, caller)
+		log.Printf("config: %v", config)
+		runner, err := core.NewRunnerFromConfig(*config, caller)
 		if err != nil {
 			log.Printf("failed to create runner: %v", err)
 			return
@@ -100,10 +72,7 @@ func main() {
 		port = "8080"
 	}
 
-	server := api.New(
-		port,
-		config.OutputProvidersPath,
-	)
+	server := api.New(port, config.OutputProvidersPath)
 	if err := server.Start(); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}

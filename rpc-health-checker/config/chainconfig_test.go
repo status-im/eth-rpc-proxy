@@ -21,8 +21,7 @@ func TestLoadChains(t *testing.T) {
 						"name": "infura",
 						"url": "https://mainnet.infura.io/v3",
 						"authType": "token-auth",
-						"authToken": "test",
-						"enabled": true
+						"authToken": "test"
 					}
 				]
 			}
@@ -78,8 +77,7 @@ func TestLoadReferenceChains(t *testing.T) {
 					"name": "infura",
 					"url": "https://mainnet.infura.io/v3",
 					"authType": "token-auth",
-					"authToken": "test",
-					"enabled": true
+					"authToken": "test"
 				}
 			}
 		]
@@ -145,8 +143,7 @@ func TestLoadReferenceChains(t *testing.T) {
 						"name": "infura",
 						"url": "https://mainnet.infura.io/v3",
 						"authType": "token-auth",
-						"authToken": "test",
-						"enabled": true
+						"authToken": "test"
 					}
 				}
 			]

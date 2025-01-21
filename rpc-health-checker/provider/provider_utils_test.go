@@ -38,21 +38,18 @@ func (suite *RpcProviderTestSuite) SetupSuite() {
     {
       "name": "InfuraMainnet",
       "url": "https://mainnet.infura.io/v3",
-      "enabled": true,
       "authType": "token-auth",
       "authToken": "infura-token"
     },
     {
       "name": "AlchemyMainnet",
       "url": "https://eth-mainnet.alchemyapi.io/v2",
-      "enabled": true,
       "authType": "token-auth",
       "authToken": "alchemy-token"
     },
     {
       "name": "Example",
       "url": "https://another-provider.example.io/v2",
-      "enabled": true,
       "authType": "no-auth"
     }
   ]
@@ -64,7 +61,6 @@ func (suite *RpcProviderTestSuite) SetupSuite() {
     {
       "name": "BadProvider",
       "url": "https://bad-provider.example.io",
-      "enabled": true,
       "authType": "no-auth"
     }
   ]` // Note the missing comma and closing brace
@@ -73,7 +69,6 @@ func (suite *RpcProviderTestSuite) SetupSuite() {
 		"providers": [{
 			"name": "InfuraMainnet",
 			"url": "https://mainnet.infura.io/v3",
-			"enabled": true,
 			"authType": "invalid-auth"
 		}]
 	}`

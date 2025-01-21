@@ -13,32 +13,6 @@ import (
 	requestsrunner "github.com/status-im/eth-rpc-proxy/requests_runner"
 )
 
-func loadChainsToMap(filePath string) (map[int64]config.ChainConfig, error) {
-	chains, err := config.LoadChains(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	chainMap := make(map[int64]config.ChainConfig)
-	for _, chain := range chains.Chains {
-		chainMap[int64(chain.ChainID)] = chain
-	}
-	return chainMap, nil
-}
-
-func loadReferenceChainsToMap(filePath string) (map[int64]config.ReferenceChainConfig, error) {
-	chains, err := config.LoadReferenceChains(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	chainMap := make(map[int64]config.ReferenceChainConfig)
-	for _, chain := range chains.Chains {
-		chainMap[int64(chain.ChainId)] = chain
-	}
-	return chainMap, nil
-}
-
 // ChainValidationRunner coordinates validation across multiple chains
 type ChainValidationRunner struct {
 	chainConfigs        map[int64]config.ChainConfig
@@ -99,7 +73,14 @@ func (r *ChainValidationRunner) validateChains(ctx context.Context) ([]config.Ch
 
 	for chainId, chainCfg := range r.chainConfigs {
 		if refCfg, exists := r.referenceChainCfgs[chainId]; exists {
-			chainResults := r.validateChain(ctx, chainCfg, refCfg)
+			chainResults := ValidateMultipleEVMMethods(
+				ctx,
+				r.methodConfigs,
+				r.caller,
+				chainCfg.Providers,
+				refCfg.Provider,
+				r.timeout,
+			)
 			results[chainId] = chainResults
 
 			if validProviders := r.getValidProviders(chainCfg, chainResults); len(validProviders) > 0 {
@@ -112,22 +93,6 @@ func (r *ChainValidationRunner) validateChains(ctx context.Context) ([]config.Ch
 	}
 
 	return validChains, results
-}
-
-// validateChain runs validation for a single chain
-func (r *ChainValidationRunner) validateChain(
-	ctx context.Context,
-	chainCfg config.ChainConfig,
-	refCfg config.ReferenceChainConfig,
-) map[string]ProviderValidationResult {
-	return ValidateMultipleEVMMethods(
-		ctx,
-		r.methodConfigs,
-		r.caller,
-		chainCfg.Providers,
-		refCfg.Provider,
-		r.timeout,
-	)
 }
 
 // getValidProviders filters and returns valid providers from validation results
@@ -170,10 +135,36 @@ func (r *ChainValidationRunner) writeValidChains(validChains []config.ChainConfi
 	}
 }
 
+func loadChainsToMap(filePath string) (map[int64]config.ChainConfig, error) {
+	chains, err := config.LoadChains(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	chainMap := make(map[int64]config.ChainConfig)
+	for _, chain := range chains.Chains {
+		chainMap[int64(chain.ChainID)] = chain
+	}
+	return chainMap, nil
+}
+
+func loadReferenceChainsToMap(filePath string) (map[int64]config.ReferenceChainConfig, error) {
+	chains, err := config.LoadReferenceChains(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	chainMap := make(map[int64]config.ReferenceChainConfig)
+	for _, chain := range chains.Chains {
+		chainMap[int64(chain.ChainId)] = chain
+	}
+	return chainMap, nil
+}
+
 // NewRunnerFromConfig creates a new ChainValidationRunner from config.CheckerConfig
 func NewRunnerFromConfig(
-	cfg config.CheckerConfig,
-	caller requestsrunner.MethodCaller,
+	cfg configreader.CheckerConfig,
+	caller requestsrunner.EVMMethodCaller,
 ) (*ChainValidationRunner, error) {
 	// Load reference chains
 	referenceChains, err := loadReferenceChainsToMap(cfg.ReferenceProvidersPath)

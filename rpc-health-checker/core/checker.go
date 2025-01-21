@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/status-im/eth-rpc-proxy/config"
 	"math/big"
 	"time"
+
+	"github.com/status-im/eth-rpc-proxy/config"
 
 	"github.com/status-im/eth-rpc-proxy/provider"
 	requestsrunner "github.com/status-im/eth-rpc-proxy/requests_runner"

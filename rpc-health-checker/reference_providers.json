@@ -4,29 +4,23 @@
       "name": "ethereum",
       "network": "mainnet",
       "chainId": 1,
-      "providers": [
-        {
+      "provider": {
           "name": "infura",
           "url": "https://mainnet.infura.io/v3",
           "authType": "token-auth",
-          "authToken": "test",
-          "enabled": true
-        }
-      ]
+          "authToken": "test"
+      }
     },
     {
       "name": "polygon",
       "network": "mainnet",
       "chainId": 137,
-      "providers": [
-        {
+      "provider": {
           "name": "alchemy",
           "url": "https://polygon-mainnet.g.alchemy.com/v2",
           "authType": "token-auth",
-          "authToken": "test",
-          "enabled": true
-        }
-      ]
+          "authToken": "test"
+      }
     }
   ]
 }
