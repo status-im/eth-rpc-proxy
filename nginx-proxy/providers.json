@@ -1,0 +1,24 @@
+{
+  "chains": [
+    {
+      "name": "ethereum",
+      "network": "mainnet",
+      "providers": [
+        {
+          "url": "https://mainnet.infura.io/v3",
+          "authType": "token-auth",
+          "authToken": "123",
+          "authLogin": "",
+          "authPassword": ""
+        },
+        {
+          "url": "https://eth-mainnet.alchemyapi.io/v2/",
+          "authType": "token-auth",
+          "authToken": "654",
+          "authLogin": "",
+          "authPassword": ""
+        }
+      ]
+    }
+  ]
+}
