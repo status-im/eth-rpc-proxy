@@ -15,6 +15,7 @@ services:
       - ./nginx-proxy/.htpasswd:/etc/nginx/.htpasswd
     environment:
       CONFIG_HEALTH_CHECKER_URL: http://health-checker:8080/providers
+      CUSTOM_DNS: 127.0.0.11
 
   health-checker:
     build:

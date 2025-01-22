@@ -1,16 +1,27 @@
 local http = require("resty.http")
 local json = require("cjson")
+local resolver_utils = require("resolver_utils")
 
 local M = {}
 local function read_config_from_url(url)
-    ngx.log(ngx.ERR, "Fetching configuration from URL: ", url)
     if not url or url == "" then
         return nil, "URL is invalid or not provided"
     end
 
     local httpc = http.new()
+    local custom_dns = os.getenv("CUSTOM_DNS")
+    local request_url = url
+    
+    -- Resolve URL using custom DNS if available
+    if custom_dns and custom_dns ~= "" then
+        request_url, err = resolver_utils.resolve_url_with_custom_dns(url, custom_dns)
+        if not request_url then
+            ngx.log(ngx.ERR, "Failed to resolve URL with custom DNS: ", err)
+            request_url = url  -- Fall back to original URL
+        end
+    end
 
-    local res, err = httpc:request_uri(url, {
+    local res, err = httpc:request_uri(request_url, {
         method = "GET",
         headers = {
             ["Content-Type"] = "application/json",
@@ -28,10 +39,9 @@ local function read_config_from_url(url)
         return nil, "HTTP error: " .. res.status
     end
 
-    ngx.log(ngx.ERR, "Successfully fetched configuration from URL")
+    ngx.log(ngx.ERR, "Successfully fetched configuration from URL: ", request_url)
     return res.body, nil
 end
-
 
 -- Function to read configuration from file
 local function read_config_from_file(filepath)
