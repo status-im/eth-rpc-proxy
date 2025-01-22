@@ -163,8 +163,8 @@ func loadReferenceChainsToMap(filePath string) (map[int64]config.ReferenceChainC
 
 // NewRunnerFromConfig creates a new ChainValidationRunner from config.CheckerConfig
 func NewRunnerFromConfig(
-	cfg configreader.CheckerConfig,
-	caller requestsrunner.EVMMethodCaller,
+	cfg config.CheckerConfig,
+	caller requestsrunner.MethodCaller,
 ) (*ChainValidationRunner, error) {
 	// Load reference chains
 	referenceChains, err := loadReferenceChainsToMap(cfg.ReferenceProvidersPath)
