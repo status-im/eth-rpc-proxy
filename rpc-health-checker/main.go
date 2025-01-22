@@ -72,7 +72,7 @@ func main() {
 		port = "8080"
 	}
 
-	server := api.New(port, config.OutputProvidersPath)
+	server := api.New(port, config.OutputProvidersPath, config.DefaultProvidersPath)
 	if err := server.Start(); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}

@@ -11,17 +11,12 @@ import (
 
 // ServerConfig contains configuration for the HTTP server
 type ServerConfig struct {
-	Port          string
-	ProvidersPath string
-	ReadTimeout   time.Duration
-	WriteTimeout  time.Duration
-	IdleTimeout   time.Duration
-}
-
-// Provider represents a configuration provider
-type Provider struct {
-	URL        string `json:"url"`
-	AuthHeader string `json:"auth_header"`
+	Port                 string
+	ProvidersPath        string
+	DefaultProvidersPath string
+	ReadTimeout          time.Duration
+	WriteTimeout         time.Duration
+	IdleTimeout          time.Duration
 }
 
 // Server defines the interface for the configuration HTTP server
@@ -34,12 +29,11 @@ type httpServer struct {
 	config        ServerConfig
 	server        *http.Server
 	logger        *slog.Logger
-	providers     []Provider
 	lastReload    time.Time
 	reloadTimeout time.Duration
 }
 
-func New(port, providersPath string) Server {
+func New(port, providersPath, defaultProvidersPath string) Server {
 	mux := http.NewServeMux()
 	srv := &http.Server{
 		Addr:    ":" + port,
@@ -48,11 +42,12 @@ func New(port, providersPath string) Server {
 
 	s := &httpServer{
 		config: ServerConfig{
-			Port:          port,
-			ProvidersPath: providersPath,
-			ReadTimeout:   5 * time.Second,
-			WriteTimeout:  10 * time.Second,
-			IdleTimeout:   15 * time.Second,
+			Port:                 port,
+			ProvidersPath:        providersPath,
+			DefaultProvidersPath: defaultProvidersPath,
+			ReadTimeout:          5 * time.Second,
+			WriteTimeout:         10 * time.Second,
+			IdleTimeout:          15 * time.Second,
 		},
 		server: srv,
 		logger: slog.Default(),
@@ -79,20 +74,43 @@ func (s *httpServer) Stop() error {
 	return s.server.Shutdown(context.Background())
 }
 
-func (s *httpServer) providersHandler(w http.ResponseWriter, r *http.Request) {
-	f, err := os.Open(s.config.ProvidersPath)
+func (s *httpServer) fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func (s *httpServer) loadProviders(w io.Writer, path string) error {
+	if !s.fileExists(path) {
+		return os.ErrNotExist
+	}
+
+	f, err := os.Open(path)
 	if err != nil {
-		s.logger.Error("failed to open providers file", "error", err)
-		http.Error(w, "failed to open providers file", http.StatusInternalServerError)
-		return
+		return err
 	}
 	defer f.Close()
 
+	_, err = io.Copy(w, f)
+	return err
+}
+
+func (s *httpServer) providersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	if _, err := io.Copy(w, f); err != nil {
-		s.logger.Error("failed to read providers file", "error", err)
-		http.Error(w, "failed to read providers file", http.StatusInternalServerError)
-		return
+
+	// Only try to load output providers if the file exists
+	if s.fileExists(s.config.ProvidersPath) {
+		err := s.loadProviders(w, s.config.ProvidersPath)
+		if err == nil {
+			return
+		}
+		s.logger.Info("failed to load output providers, falling back to default", "error", err)
+	}
+
+	// If output providers don't exist or failed to load, use default providers
+	err := s.loadProviders(w, s.config.DefaultProvidersPath)
+	if err != nil {
+		s.logger.Error("failed to load default providers", "error", err)
+		http.Error(w, "no providers available", http.StatusServiceUnavailable)
 	}
 }
 

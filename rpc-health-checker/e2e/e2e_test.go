@@ -268,7 +268,7 @@ func (s *E2ETestSuite) TestE2E() {
 	)
 
 	// Start HTTP server
-	server := api.New(testPort, s.cfg.OutputProvidersPath)
+	server := api.New(testPort, s.cfg.OutputProvidersPath, s.cfg.DefaultProvidersPath)
 	serverDone := make(chan error)
 	go func() {
 		serverDone <- server.Start()
