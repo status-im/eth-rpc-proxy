@@ -106,7 +106,10 @@ func TestEVMMethodWithCaller(
 		}
 
 		// Use provided comparison function
-		valid := config.CompareFunc(refValue, providerValue)
+		valid := true
+		if refResult.Success {
+			valid = config.CompareFunc(refValue, providerValue)
+		}
 
 		checkResults[provider.Name] = CheckResult{
 			Valid:  valid,
