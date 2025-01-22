@@ -12,7 +12,7 @@ docker run -it --rm \
   --name rpc-proxy \
   --network rpc-network \
   -p 8080:8080 \
-  -e CONFIG_HEALTH_CHECKER_URL=http://config-health-checker:8080/providers \
+  -e CONFIG_HEALTH_CHECKER_URL=http://rpc-health-checker:8080/providers \
   rpc-proxy
 
 

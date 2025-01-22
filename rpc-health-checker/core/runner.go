@@ -102,28 +102,13 @@ func (r *ChainValidationRunner) getValidProviders(
 ) []provider.RPCProvider {
 	var validProviders []provider.RPCProvider
 
-	for providerName, result := range results {
-		if result.Valid {
-			if provider := r.findProviderByName(chainCfg.Providers, providerName); provider != nil {
-				validProviders = append(validProviders, *provider)
-			}
+	for _, provider := range chainCfg.Providers {
+		if result, exists := results[provider.Name]; exists && result.Valid {
+			validProviders = append(validProviders, provider)
 		}
 	}
 
 	return validProviders
-}
-
-// findProviderByName finds a provider by name in the list
-func (r *ChainValidationRunner) findProviderByName(
-	providers []provider.RPCProvider,
-	name string,
-) *provider.RPCProvider {
-	for _, provider := range providers {
-		if provider.Name == name {
-			return &provider
-		}
-	}
-	return nil
 }
 
 // writeValidChains writes valid chains to output file if path is specified
