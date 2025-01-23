@@ -80,40 +80,60 @@ NETWORK_DATA = [
     }
 ]
 
-def generate_providers(providers, networks, chains):
+def generate_providers(providers, networks, chains, single_provider=False):
     output = {"chains": []}
     
     for network_data in NETWORK_DATA:
         if network_data["chain"] not in chains or network_data["network"] not in networks:
             continue
             
-        chain_entry = {
-            "name": network_data["chain"].capitalize(),
-            "network": network_data["network"],
-            "chainId": network_data["chainId"],
-            "providers": []
-        }
-        
-        provider_counts = defaultdict(int)
-        
-        for provider_spec in providers:
+        if single_provider:
+            # Use the first provider only
+            provider_spec = providers[0]
             p_type, _, p_token = provider_spec.partition(":")
             
-            # Get the appropriate URL from providers map
             if p_type not in network_data["providers"]:
                 continue
                 
-            provider_counts[p_type] += 1
-            count = provider_counts[p_type]
+            chain_entry = {
+                "name": network_data['chain'],
+                "network": network_data["network"],
+                "chainId": network_data["chainId"],
+                "provider": {
+                    "name": p_type.capitalize(),
+                    "url": network_data["providers"][p_type],
+                    "authType": "token-auth",
+                    "authToken": p_token
+                }
+            }
+        else:
+            # Original multiple providers format
+            chain_entry = {
+                "name": network_data["chain"],
+                "network": network_data["network"],
+                "chainId": network_data["chainId"],
+                "providers": []
+            }
             
-            chain_entry["providers"].append({
-                "name": f"{p_type.capitalize()}{count}",
-                "url": network_data["providers"][p_type],
-                "authType": "token-auth",
-                "authToken": p_token
-            })
+            provider_counts = defaultdict(int)
+            
+            for provider_spec in providers:
+                p_type, _, p_token = provider_spec.partition(":")
+                
+                if p_type not in network_data["providers"]:
+                    continue
+                    
+                provider_counts[p_type] += 1
+                count = provider_counts[p_type]
+                
+                chain_entry["providers"].append({
+                    "name": f"{p_type.capitalize()}{count}",
+                    "url": network_data["providers"][p_type],
+                    "authType": "token-auth",
+                    "authToken": p_token
+                })
         
-        if chain_entry["providers"]:
+        if (single_provider and "provider" in chain_entry) or (not single_provider and chain_entry["providers"]):
             output["chains"].append(chain_entry)
     
     return output
@@ -130,6 +150,8 @@ def main():
                         help="Chains to generate configs for")
     parser.add_argument("--output", "-o", default="generated_providers.json",
                         help="Output file path")
+    parser.add_argument("--single-provider", action="store_true",
+                        help="Generate config with single provider per chain")
     
     args = parser.parse_args()
     
@@ -138,7 +160,7 @@ def main():
         if ":" not in provider:
             raise ValueError(f"Invalid provider format: {provider}. Use provider:token format")
     
-    config = generate_providers(args.providers, args.networks, args.chains)
+    config = generate_providers(args.providers, args.networks, args.chains, args.single_provider)
     
     with open(args.output, "w") as f:
         json.dump(config, f, indent=2)

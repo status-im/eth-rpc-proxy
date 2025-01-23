@@ -11,11 +11,12 @@ services:
     depends_on:
       - health-checker
     volumes:
-      - ./nginx-proxy/providers.json:/usr/local/openresty/nginx/providers.json
-      - ./nginx-proxy/.htpasswd:/etc/nginx/.htpasswd
+      - ./secrets/default_providers.json:/usr/local/openresty/nginx/providers.json
+      - ./secrets/.htpasswd:/etc/nginx/.htpasswd
     environment:
       CONFIG_HEALTH_CHECKER_URL: http://health-checker:8080/providers
       CUSTOM_DNS: 127.0.0.11
+      RELOAD_INTERVAL: "10"
 
   health-checker:
     build:
@@ -25,7 +26,7 @@ services:
     networks:
       - rpc-network
     volumes:
-      - ./rpc-health-checker/secrets:/config
+      - ./secrets:/config
     environment:
       DEFAULT_PROVIDERS_PATH: /config/default_providers.json
       REFERENCE_PROVIDERS_PATH: /config/reference_providers.json
