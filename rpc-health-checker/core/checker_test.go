@@ -40,7 +40,7 @@ func TestValidateMultipleEVMMethods(t *testing.T) {
 	// Create mock MethodCaller
 	mockCaller := &mocks.EVMMethodCaller{
 		Responses: map[string]requestsrunner.ProviderResult{
-			"reference": {
+			"reference_reference": {
 				Success:     true,
 				Response:    []byte(`{"result":"0x64"}`),
 				ElapsedTime: 100 * time.Millisecond,

@@ -37,23 +37,11 @@ func TestEVMMethodWithCaller(
 	timeout time.Duration,
 ) map[string]CheckResult {
 	// Validate inputs
-	if caller == nil {
-		return map[string]CheckResult{
-			"input_error": {
-				Valid: false,
-				Error: errors.New("caller cannot be nil"),
-			},
-		}
+	if caller == nil || referenceProvider.Name == "" {
+		return map[string]CheckResult{}
 	}
 
-	if referenceProvider.Name == "" {
-		return map[string]CheckResult{
-			"input_error": {
-				Valid: false,
-				Error: errors.New("reference provider must have a name"),
-			},
-		}
-	}
+	referenceProvider.Name = "reference_" + referenceProvider.Name
 	// Combine reference provider with test providers
 	allProviders := append([]provider.RPCProvider{referenceProvider}, providers...)
 
@@ -63,13 +51,13 @@ func TestEVMMethodWithCaller(
 	// Extract reference result
 	refResult, refExists := results[referenceProvider.Name]
 	if !refExists || !refResult.Success {
-		return handleReferenceFailure(results, referenceProvider.Name)
+		return handleError(results, fmt.Sprintf("validation failed: reference provider %s failed", referenceProvider.Name))
 	}
 
 	// Parse reference value
 	refValue, err := parseJSONRPCResult(refResult.Response)
 	if err != nil {
-		return handleReferenceParseError(results, referenceProvider.Name, err)
+		return handleError(results, fmt.Sprintf("failed to parse reference provider %s response: %v", referenceProvider.Name, err))
 	}
 
 	// Compare each provider's result to reference
@@ -78,8 +66,9 @@ func TestEVMMethodWithCaller(
 		result, exists := results[provider.Name]
 		if !exists {
 			checkResults[provider.Name] = CheckResult{
-				Valid: false,
-				Error: errors.New("provider result not found"),
+				Valid:           false,
+				Error:           "provider result not found",
+				ReferenceResult: refResult,
 			}
 			continue
 		}
@@ -87,9 +76,10 @@ func TestEVMMethodWithCaller(
 		// Handle failed requests
 		if !result.Success {
 			checkResults[provider.Name] = CheckResult{
-				Valid:  false,
-				Result: result,
-				Error:  result.Error,
+				Valid:           false,
+				Result:          result,
+				Error:           result.Error.Error(),
+				ReferenceResult: refResult,
 			}
 			continue
 		}
@@ -98,9 +88,10 @@ func TestEVMMethodWithCaller(
 		providerValue, err := parseJSONRPCResult(result.Response)
 		if err != nil {
 			checkResults[provider.Name] = CheckResult{
-				Valid:  false,
-				Result: result,
-				Error:  fmt.Errorf("failed to parse provider response: %w", err),
+				Valid:           false,
+				Result:          result,
+				Error:           fmt.Sprintf("failed to parse provider response: %v", err),
+				ReferenceResult: refResult,
 			}
 			continue
 		}
@@ -112,8 +103,9 @@ func TestEVMMethodWithCaller(
 		}
 
 		checkResults[provider.Name] = CheckResult{
-			Valid:  valid,
-			Result: result,
+			Valid:           valid,
+			Result:          result,
+			ReferenceResult: refResult,
 		}
 	}
 
@@ -122,9 +114,10 @@ func TestEVMMethodWithCaller(
 
 // CheckResult contains the validation result for a provider
 type CheckResult struct {
-	Valid  bool
-	Result requestsrunner.ProviderResult
-	Error  error
+	Valid           bool
+	Result          requestsrunner.ProviderResult
+	ReferenceResult requestsrunner.ProviderResult
+	Error           string
 }
 
 // TestMultipleEVMMethods runs multiple EVM method tests and returns results per provider per method
@@ -156,32 +149,14 @@ func TestMultipleEVMMethods(
 	return results
 }
 
-// handleReferenceFailure handles cases where reference provider fails
-func handleReferenceFailure(results map[string]requestsrunner.ProviderResult, refName string) map[string]CheckResult {
-	checkResults := make(map[string]CheckResult)
-
-	// Mark all non-reference providers as invalid due to reference failure
-	for name, result := range results {
-		if name != refName {
-			checkResults[name] = CheckResult{
-				Valid:  false,
-				Result: result,
-				Error:  fmt.Errorf("validation failed: reference provider %s failed", refName),
-			}
-		}
-	}
-
-	return checkResults
-}
-
-// handleReferenceParseError handles cases where reference result cannot be parsed
-func handleReferenceParseError(results map[string]requestsrunner.ProviderResult, refName string, err error) map[string]CheckResult {
+// handleError creates check results for all providers with a given error message
+func handleError(results map[string]requestsrunner.ProviderResult, errMsg string) map[string]CheckResult {
 	checkResults := make(map[string]CheckResult)
 	for name, result := range results {
 		checkResults[name] = CheckResult{
 			Valid:  false,
 			Result: result,
-			Error:  fmt.Errorf("failed to parse reference provider %s response: %w", refName, err),
+			Error:  errMsg,
 		}
 	}
 	return checkResults
@@ -210,12 +185,9 @@ func ValidateMultipleEVMMethods(
 		for method, result := range results {
 			if !result.Valid {
 				allValid = false
-				// Get reference result for this method
-				refResult := methodResults[referenceProvider.Name][method]
-
 				failedMethods[method] = FailedMethodResult{
 					Result:          result.Result,
-					ReferenceResult: refResult.Result,
+					ReferenceResult: result.ReferenceResult,
 				}
 			}
 		}
