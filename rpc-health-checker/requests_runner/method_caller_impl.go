@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	rpcprovider "github.com/status-im/eth-rpc-proxy/provider"
@@ -67,7 +68,7 @@ func (r *RequestsRunner) CallMethod(
 	case rpcprovider.BasicAuth:
 		req.SetBasicAuth(provider.AuthLogin, provider.AuthPassword)
 	case rpcprovider.TokenAuth:
-		req.URL.Path += fmt.Sprintf("/%s", provider.AuthToken)
+		req.URL.Path = strings.TrimRight(req.URL.Path, "/") + fmt.Sprintf("/%s", provider.AuthToken)
 	}
 
 	// Make the request
