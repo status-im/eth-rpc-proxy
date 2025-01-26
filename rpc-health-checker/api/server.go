@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // ServerConfig contains configuration for the HTTP server
@@ -55,6 +57,7 @@ func New(port, providersPath, defaultProvidersPath string) Server {
 
 	mux.HandleFunc("/providers", s.providersHandler)
 	mux.HandleFunc("/health", s.healthHandler)
+	mux.Handle("/metrics", promhttp.Handler())
 
 	return s
 }

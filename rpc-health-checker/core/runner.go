@@ -9,25 +9,26 @@ import (
 	"time"
 
 	"github.com/status-im/eth-rpc-proxy/config"
+	"github.com/status-im/eth-rpc-proxy/metrics"
 	"github.com/status-im/eth-rpc-proxy/provider"
 	requestsrunner "github.com/status-im/eth-rpc-proxy/requests_runner"
 )
 
 // ChainValidationRunner coordinates validation across multiple chains
 type ChainValidationRunner struct {
-	chainConfigs        map[int64]config.ChainConfig
-	referenceChainCfgs  map[int64]config.ReferenceChainConfig
-	methodConfigs       []config.EVMMethodTestConfig
-	caller              requestsrunner.MethodCaller
-	timeout             time.Duration
-	outputProvidersPath string
-	logger              *slog.Logger
+	chainConfigs          map[int64]config.ChainConfig
+	referenceChainConfigs map[int64]config.ReferenceChainConfig
+	methodConfigs         []config.EVMMethodTestConfig
+	caller                requestsrunner.MethodCaller
+	timeout               time.Duration
+	outputProvidersPath   string
+	logger                *slog.Logger
 }
 
 // NewChainValidationRunner creates a new validation runner
 func NewChainValidationRunner(
-	chainCfgs map[int64]config.ChainConfig,
-	referenceCfgs map[int64]config.ReferenceChainConfig,
+	chainConfigs map[int64]config.ChainConfig,
+	referenceConfigs map[int64]config.ReferenceChainConfig,
 	methodConfigs []config.EVMMethodTestConfig,
 	caller requestsrunner.MethodCaller,
 	timeout time.Duration,
@@ -49,18 +50,24 @@ func NewChainValidationRunner(
 	}))
 
 	return &ChainValidationRunner{
-		chainConfigs:        chainCfgs,
-		referenceChainCfgs:  referenceCfgs,
-		methodConfigs:       methodConfigs,
-		caller:              caller,
-		timeout:             timeout,
-		outputProvidersPath: outputProvidersPath,
-		logger:              logger,
+		chainConfigs:          chainConfigs,
+		referenceChainConfigs: referenceConfigs,
+		methodConfigs:         methodConfigs,
+		caller:                caller,
+		timeout:               timeout,
+		outputProvidersPath:   outputProvidersPath,
+		logger:                logger,
 	}
 }
 
 // Run executes validation across all configured chains and writes valid providers to output file
 func (r *ChainValidationRunner) Run(ctx context.Context) {
+	startTime := time.Now()
+	defer func() {
+		duration := time.Since(startTime)
+		metrics.RecordValidationCycleDuration(duration)
+	}()
+
 	validChains, results := r.validateChains(ctx)
 	r.logger.Info("validation results", "results", results)
 	r.writeValidChains(validChains)
@@ -72,7 +79,7 @@ func (r *ChainValidationRunner) validateChains(ctx context.Context) ([]config.Ch
 	results := make(map[int64]map[string]ProviderValidationResult)
 
 	for chainId, chainCfg := range r.chainConfigs {
-		if refCfg, exists := r.referenceChainCfgs[chainId]; exists {
+		if refCfg, exists := r.referenceChainConfigs[chainId]; exists {
 			chainResults := ValidateMultipleEVMMethods(
 				ctx,
 				r.methodConfigs,
@@ -102,9 +109,9 @@ func (r *ChainValidationRunner) getValidProviders(
 ) []provider.RPCProvider {
 	var validProviders []provider.RPCProvider
 
-	for _, provider := range chainCfg.Providers {
-		if result, exists := results[provider.Name]; exists && result.Valid {
-			validProviders = append(validProviders, provider)
+	for _, providerConfigs := range chainCfg.Providers {
+		if result, exists := results[providerConfigs.Name]; exists && result.Valid {
+			validProviders = append(validProviders, providerConfigs)
 		}
 	}
 
