@@ -28,9 +28,10 @@ Run the complete system:
      --chains ethereum optimism arbitrum base \
      --output secrets/reference_providers.json
     ``` 
-   Please replace `YOUR_INFURA_TOKEN` and `YOUR_INFURA_TOKEN_REFERENCE` with your Infura API tokens. You can also add more providers (infura or grove), see `--providers` flag help.
-   Note: `--providers` accepts multiple chain:token pairs. For example, `--providers infura:TOKEN1 infura:TOKEN2 grove:TOKEN3 nodefleet:TOKEN4`
-2. 
+   Please replace `YOUR_INFURA_TOKEN` and `YOUR_INFURA_TOKEN_REFERENCE` with your Infura API tokens. 
+
+   **Note**: `--providers` accepts multiple chain:token pairs. For example, `--providers infura:TOKEN1 infura:TOKEN2 grove:TOKEN3 nodefleet:TOKEN4`
+
 3. Create .htpasswd file for nginx proxy authentication:
    ```bash
    htpasswd -c secrets/.htpasswd dev
