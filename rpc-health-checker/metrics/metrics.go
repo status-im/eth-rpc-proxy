@@ -6,7 +6,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/status-im/eth-rpc-proxy/config"
 )
 
 var (
@@ -15,15 +14,10 @@ var (
 		Help: "Duration of validation cycle in seconds",
 	})
 
-	workingProviders = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "working_providers_total",
-		Help: "Number of working providers per chain",
-	}, []string{"chain_name", "network"})
-
-	nonWorkingProviders = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "non_working_providers_total",
-		Help: "Number of non-working providers per chain",
-	}, []string{"chain_name", "network"})
+	providerStatus = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "provider_status",
+		Help: "Status of providers (1 = working, 0 = not working)",
+	}, []string{"chain_id", "chain_name", "network_name", "provider_name", "provider_url", "auth_token_masked"})
 
 	rpcRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "rpc_requests_total",
@@ -36,29 +30,25 @@ func RecordValidationCycleDuration(duration time.Duration) {
 	validationCycleDuration.Observe(duration.Seconds())
 }
 
-// RecordWorkingProviders records the number of working providers for each chain
-func RecordWorkingProviders(validChains []config.ChainConfig) {
-	for _, chain := range validChains {
-		workingProviders.With(prometheus.Labels{
-			"chain_name": chain.Name,
-			"network":    chain.Network,
-		}).Set(float64(len(chain.Providers)))
-	}
-}
-
-// RecordNonWorkingProviders records the status of non-working providers
-func RecordNonWorkingProviders(chainName, networkName string, providerResults map[string]struct {
-	Valid bool
-	URL   string
+// RecordProviderStatuses records the status of all providers for each chain
+func RecordProviderStatuses(chainId int64, chainName, networkName string, providerResults map[string]struct {
+	Valid     bool
+	URL       string
+	AuthToken string
 }) {
 	for providerName, result := range providerResults {
 		value := 0.0
-		if !result.Valid {
+		if result.Valid {
 			value = 1.0
 		}
-		nonWorkingProviders.With(prometheus.Labels{
-			"chain_name": providerName,
-			"network":    networkName,
+		maskedToken := maskAuthToken(result.AuthToken)
+		providerStatus.With(prometheus.Labels{
+			"chain_id":          fmt.Sprintf("%d", chainId),
+			"chain_name":        chainName,
+			"network_name":      networkName,
+			"provider_name":     providerName,
+			"provider_url":      result.URL,
+			"auth_token_masked": maskedToken,
 		}).Set(value)
 	}
 }

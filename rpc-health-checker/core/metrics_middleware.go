@@ -16,32 +16,44 @@ func RecordValidationMetrics(
 ) {
 	duration := time.Since(startTime)
 	metrics.RecordValidationCycleDuration(duration)
-	metrics.RecordWorkingProviders(validChains)
 
-	// Record non-working providers metrics
+	// Record provider statuses for all chains
 	for chainId, chainResults := range results {
 		if chainConfig, exists := chainConfigs[chainId]; exists {
 			providerStatus := make(map[string]struct {
-				Valid bool
-				URL   string
+				Valid     bool
+				URL       string
+				AuthToken string
 			})
 
-			// Create a map of provider names to their URLs
-			providerUrls := make(map[string]string)
+			// Create a map of provider names to their URLs and auth tokens
+			providerInfo := make(map[string]struct {
+				URL       string
+				AuthToken string
+			})
 			for _, provider := range chainConfig.Providers {
-				providerUrls[provider.Name] = provider.URL
+				providerInfo[provider.Name] = struct {
+					URL       string
+					AuthToken string
+				}{
+					URL:       provider.URL,
+					AuthToken: provider.AuthToken,
+				}
 			}
 
 			for providerName, result := range chainResults {
+				info := providerInfo[providerName]
 				providerStatus[providerName] = struct {
-					Valid bool
-					URL   string
+					Valid     bool
+					URL       string
+					AuthToken string
 				}{
-					Valid: result.Valid,
-					URL:   providerUrls[providerName],
+					Valid:     result.Valid,
+					URL:       info.URL,
+					AuthToken: info.AuthToken,
 				}
 			}
-			metrics.RecordNonWorkingProviders(chainConfig.Name, chainConfig.Network, providerStatus)
+			metrics.RecordProviderStatuses(chainId, chainConfig.Name, chainConfig.Network, providerStatus)
 		}
 	}
 }
