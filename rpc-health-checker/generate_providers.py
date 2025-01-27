@@ -4,6 +4,7 @@ from collections import defaultdict
 
 INFURA = "infura"
 GROVE = "grove"
+NODEFLEET = "nodefleet"
 
 NETWORK_DATA = [
     {
@@ -12,7 +13,8 @@ NETWORK_DATA = [
         "chainId": 1,
         "providers": {
             INFURA: "https://mainnet.infura.io/v3/",
-            GROVE: "https://eth.rpc.grove.city/v1/"
+            GROVE: "https://eth.rpc.grove.city/v1/",
+            NODEFLEET: "https://eth-mainnet.alphafleet.io/"
         }
     },
     {
@@ -21,7 +23,8 @@ NETWORK_DATA = [
         "chainId": 11155111,
         "providers": {
             INFURA: "https://sepolia.infura.io/v3/",
-            GROVE: "https://eth-sepolia-testnet.rpc.grove.city/v1/"
+            GROVE: "https://eth-sepolia-testnet.rpc.grove.city/v1/",
+            NODEFLEET: "https://eth-sepolia.alphafleet.io/"
         }
     },
     {
@@ -30,7 +33,8 @@ NETWORK_DATA = [
         "chainId": 10,
         "providers": {
             INFURA: "https://optimism-mainnet.infura.io/v3/",
-            GROVE: "https://optimism.rpc.grove.city/v1/"
+            GROVE: "https://optimism.rpc.grove.city/v1/",
+            NODEFLEET: "https://optimism-mainnet.alphafleet.io/"
         }
     },
     {
@@ -39,7 +43,8 @@ NETWORK_DATA = [
         "chainId": 11155420,
         "providers": {
             INFURA: "https://optimism-sepolia.infura.io/v3/",
-            GROVE: "https://optimism-sepolia-testnet.rpc.grove.city/v1/"
+            GROVE: "https://optimism-sepolia-testnet.rpc.grove.city/v1/",
+            NODEFLEET: "https://optimism-sepolia.alphafleet.io/"
         }
     },
     {
@@ -48,7 +53,8 @@ NETWORK_DATA = [
         "chainId": 42161,
         "providers": {
             INFURA: "https://arbitrum-mainnet.infura.io/v3/",
-            GROVE: "https://arbitrum-one.rpc.grove.city/v1/"
+            GROVE: "https://arbitrum-one.rpc.grove.city/v1/",
+            NODEFLEET: "https://arb-mainnet.alphafleet.io/"
         }
     },
     {
@@ -57,7 +63,8 @@ NETWORK_DATA = [
         "chainId": 421614,
         "providers": {
             INFURA: "https://arbitrum-sepolia.infura.io/v3/",
-            GROVE: "https://arbitrum-sepolia-testnet.rpc.grove.city/v1/"
+            GROVE: "https://arbitrum-sepolia-testnet.rpc.grove.city/v1/",
+            NODEFLEET: "https://arb-sepolia.alphafleet.io/"
         }
     },
     {
@@ -66,7 +73,8 @@ NETWORK_DATA = [
         "chainId": 8453,
         "providers": {
             INFURA: "https://base-mainnet.infura.io/v3/",
-            GROVE: "https://base.rpc.grove.city/v1/"
+            GROVE: "https://base.rpc.grove.city/v1/",
+            NODEFLEET: "https://base-mainnet.alphafleet.io/"
         }
     },
     {
@@ -75,7 +83,8 @@ NETWORK_DATA = [
         "chainId": 84532,
         "providers": {
             INFURA: "https://base-sepolia.infura.io/v3/",
-            GROVE: "https://base-testnet.rpc.grove.city/v1/"
+            GROVE: "https://base-testnet.rpc.grove.city/v1/",
+            NODEFLEET: "https://base-sepolia.alphafleet.io/"
         }
     }
 ]
