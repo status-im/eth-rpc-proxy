@@ -29,7 +29,8 @@ Run the complete system:
      --output secrets/reference_providers.json
     ``` 
    Please replace `YOUR_INFURA_TOKEN` and `YOUR_INFURA_TOKEN_REFERENCE` with your Infura API tokens. You can also add more providers (infura or grove), see `--providers` flag help.
-
+   Note: `--providers` accepts multiple chain:token pairs. For example, `--providers infura:TOKEN1 infura:TOKEN2 grove:TOKEN3 nodefleet:TOKEN4`
+2. 
 3. Create .htpasswd file for nginx proxy authentication:
    ```bash
    htpasswd -c secrets/.htpasswd dev
@@ -45,10 +46,16 @@ Run the complete system:
     -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
     ```
 The services will be accessible under:
-- RPC Health Checker: http://localhost:8080
+- RPC Health Checker: http://localhost:8081
   - Check the list of validated providers at http://localhost:8081/providers
-- nginx-proxy: http://localhost:8081
-  - The new RPC endpoint is now available http://localhost:8080/ethereum/mainnet (path is `/chain/network`). 
+- nginx-proxy: http://localhost:8080
+  - The new RPC endpoint is now available http://localhost:8080/ethereum/mainnet (path is `/chain/network`)
+- Prometheus: http://localhost:9090
+  - Metrics and monitoring interface
+- Grafana: http://localhost:3000 (default credentials: admin/admin)
+  - Visualization dashboards for RPC metrics and health status
+
+![grafana.png](grafana.png)
 
 
 ## Sub projects
