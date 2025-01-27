@@ -22,7 +22,16 @@ var (
 	rpcRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "rpc_requests_total",
 		Help: "Total number of RPC requests made for validation checks",
-	}, []string{"chain_id", "provider_name", "provider_url", "method", "auth_token_masked"})
+	}, []string{
+		"chain_id",
+		"provider_name",
+		"provider_url",
+		"method",
+		"auth_token_masked",
+		"request_err",    // Error message if request failed, "none" if successful
+		"http_status",    // HTTP status code, "0" if request failed before getting response
+		"evm_error_code", // EVM error code from JSON-RPC response, "0" if successful
+	})
 )
 
 // RecordValidationCycleDuration records the duration of a complete validation cycle
@@ -53,16 +62,26 @@ func RecordProviderStatuses(chainId int64, chainName, networkName string, provid
 	}
 }
 
-// RecordRPCRequest records a single RPC request with its metadata
-func RecordRPCRequest(chainId int64, providerName, providerURL, method, authToken string) {
+// RecordRPCRequest records a single RPC request with its metadata and error information
+func RecordRPCRequest(chainId int64, providerName, providerURL, method, authToken string, requestErr error, httpStatus int, evmErrorCode int) {
 	// Mask the auth token by keeping only first and last 4 characters if it's long enough
 	maskedToken := maskAuthToken(authToken)
+
+	// Format error message, use "none" if no error
+	errMsg := "none"
+	if requestErr != nil {
+		errMsg = requestErr.Error()
+	}
+
 	rpcRequestsTotal.WithLabelValues(
 		fmt.Sprintf("%d", chainId),
 		providerName,
 		providerURL,
 		method,
 		maskedToken,
+		errMsg,
+		fmt.Sprintf("%d", httpStatus),
+		fmt.Sprintf("%d", evmErrorCode),
 	).Inc()
 }
 

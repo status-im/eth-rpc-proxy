@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/status-im/eth-rpc-proxy/metrics"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/status-im/eth-rpc-proxy/metrics"
 
 	rpcprovider "github.com/status-im/eth-rpc-proxy/provider"
 )
@@ -32,6 +33,23 @@ func (r *RequestsRunner) CallMethod(
 	timeout time.Duration,
 ) ProviderResult {
 	startTime := time.Now()
+	var httpStatus int
+	var requestErr error
+	var evmErrorCode int
+
+	// Defer the metrics recording
+	defer func() {
+		metrics.RecordRPCRequest(
+			provider.ChainID,
+			provider.Name,
+			provider.URL,
+			method,
+			provider.AuthToken,
+			requestErr,
+			httpStatus,
+			evmErrorCode,
+		)
+	}()
 
 	// Create JSON-RPC 2.0 request body
 	requestBody := map[string]interface{}{
@@ -43,9 +61,10 @@ func (r *RequestsRunner) CallMethod(
 
 	jsonBody, err := json.Marshal(requestBody)
 	if err != nil {
+		requestErr = fmt.Errorf("failed to marshal request body: %w", err)
 		return ProviderResult{
 			Success:     false,
-			Error:       fmt.Errorf("failed to marshal request body: %w", err),
+			Error:       requestErr,
 			ElapsedTime: time.Since(startTime),
 		}
 	}
@@ -54,9 +73,10 @@ func (r *RequestsRunner) CallMethod(
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", provider.URL, bytes.NewBuffer(jsonBody))
 	if err != nil {
+		requestErr = fmt.Errorf("failed to create request: %w", err)
 		return ProviderResult{
 			Success:     false,
-			Error:       fmt.Errorf("failed to create request: %w", err),
+			Error:       requestErr,
 			ElapsedTime: time.Since(startTime),
 		}
 	}
@@ -72,25 +92,26 @@ func (r *RequestsRunner) CallMethod(
 		req.URL.Path = strings.TrimRight(req.URL.Path, "/") + fmt.Sprintf("/%s", provider.AuthToken)
 	}
 
-	// Record RPC request metric
-	metrics.RecordRPCRequest(provider.ChainID, provider.Name, provider.URL, method, provider.AuthToken)
-
 	// Make the request
 	resp, err := client.Do(req)
 	if err != nil {
+		requestErr = fmt.Errorf("request failed: %w", err)
 		return ProviderResult{
 			Success:     false,
-			Error:       fmt.Errorf("request failed: %w", err),
+			Error:       requestErr,
 			ElapsedTime: time.Since(startTime),
 		}
 	}
 	defer resp.Body.Close()
 
+	httpStatus = resp.StatusCode
+
 	// Check response status code
 	if resp.StatusCode != http.StatusOK {
+		requestErr = fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 		return ProviderResult{
 			Success:     false,
-			Error:       fmt.Errorf("unexpected status code: %d", resp.StatusCode),
+			Error:       requestErr,
 			ElapsedTime: time.Since(startTime),
 		}
 	}
@@ -98,9 +119,10 @@ func (r *RequestsRunner) CallMethod(
 	// Read and parse response
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		requestErr = fmt.Errorf("failed to read response: %w", err)
 		return ProviderResult{
 			Success:     false,
-			Error:       fmt.Errorf("failed to read response: %w", err),
+			Error:       requestErr,
 			ElapsedTime: time.Since(startTime),
 		}
 	}
@@ -115,18 +137,21 @@ func (r *RequestsRunner) CallMethod(
 	}
 
 	if err := json.Unmarshal(body, &jsonResponse); err != nil {
+		requestErr = fmt.Errorf("failed to parse JSON response: %w", err)
 		return ProviderResult{
 			Success:     false,
-			Error:       fmt.Errorf("failed to parse JSON response: %w", err),
+			Error:       requestErr,
 			ElapsedTime: time.Since(startTime),
 		}
 	}
 
 	// Check for JSON-RPC error
 	if jsonResponse.Error.Code != 0 {
+		evmErrorCode = jsonResponse.Error.Code
+		requestErr = fmt.Errorf("JSON-RPC error: %s (code %d)", jsonResponse.Error.Message, jsonResponse.Error.Code)
 		return ProviderResult{
 			Success:     false,
-			Error:       fmt.Errorf("JSON-RPC error: %s (code %d)", jsonResponse.Error.Message, jsonResponse.Error.Code),
+			Error:       requestErr,
 			Response:    body,
 			ElapsedTime: time.Since(startTime),
 		}
