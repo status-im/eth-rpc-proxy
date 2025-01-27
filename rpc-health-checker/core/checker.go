@@ -188,8 +188,9 @@ func ValidateMultipleEVMMethods(
 	validationResults := make(map[string]ProviderValidationResult)
 
 	for providerName, results := range methodResults {
-		// Track failed methods
+		// Track failed and successful methods
 		failedMethods := make(map[string]FailedMethodResult)
+		succeedMethods := make(map[string]SucceedMethodResult)
 		allValid := true
 
 		for method, result := range results {
@@ -199,28 +200,41 @@ func ValidateMultipleEVMMethods(
 					Result:          result.Result,
 					ReferenceResult: result.ReferenceResult,
 				}
+			} else {
+				succeedMethods[method] = SucceedMethodResult{
+					Result:          result.Result,
+					ReferenceResult: result.ReferenceResult,
+				}
 			}
 		}
 
 		validationResults[providerName] = ProviderValidationResult{
-			Valid:         allValid,
-			FailedMethods: failedMethods,
+			Valid:          allValid,
+			FailedMethods:  failedMethods,
+			SucceedMethods: succeedMethods,
 		}
 	}
 
 	return validationResults
 }
 
-// ProviderValidationResult contains aggregated validation results for a provider
-type ProviderValidationResult struct {
-	Valid         bool                          // Overall validation status
-	FailedMethods map[string]FailedMethodResult // Map of failed test methods to their results
-}
-
 // FailedMethodResult contains details about a failed method test
 type FailedMethodResult struct {
 	Result          requestsrunner.ProviderResult // Raw result from the provider
 	ReferenceResult requestsrunner.ProviderResult // Raw result from the reference provider
+}
+
+// SucceedMethodResult contains details about a successful method test
+type SucceedMethodResult struct {
+	Result          requestsrunner.ProviderResult // Raw result from the provider
+	ReferenceResult requestsrunner.ProviderResult // Raw result from the reference provider
+}
+
+// ProviderValidationResult contains aggregated validation results for a provider
+type ProviderValidationResult struct {
+	Valid          bool                           // Overall validation status
+	FailedMethods  map[string]FailedMethodResult  // Map of failed test methods to their results
+	SucceedMethods map[string]SucceedMethodResult // Map of successful test methods to their results
 }
 
 // parseJSONRPCResult extracts the numeric result from a JSON-RPC response
