@@ -41,7 +41,6 @@ func TestEVMMethodWithCaller(
 		return map[string]CheckResult{}
 	}
 
-	referenceProvider.Name = "reference_" + referenceProvider.Name
 	// Combine reference provider with test providers
 	allProviders := append([]provider.RPCProvider{referenceProvider}, providers...)
 

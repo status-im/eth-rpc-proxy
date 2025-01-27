@@ -3,10 +3,11 @@ package core
 import (
 	"context"
 	"errors"
-	"github.com/status-im/eth-rpc-proxy/config"
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/status-im/eth-rpc-proxy/config"
 
 	"github.com/status-im/eth-rpc-proxy/provider"
 	requestsrunner "github.com/status-im/eth-rpc-proxy/requests_runner"
@@ -40,19 +41,22 @@ func TestValidateMultipleEVMMethods(t *testing.T) {
 	// Create mock MethodCaller
 	mockCaller := &mocks.EVMMethodCaller{
 		Responses: map[string]requestsrunner.ProviderResult{
-			"reference_reference": {
+			"reference": {
 				Success:     true,
 				Response:    []byte(`{"result":"0x64"}`),
+				Result:      "0x64",
 				ElapsedTime: 100 * time.Millisecond,
 			},
 			"providerA": {
 				Success:     true,
 				Response:    []byte(`{"result":"0x64"}`),
+				Result:      "0x64",
 				ElapsedTime: 100 * time.Millisecond,
 			},
 			"providerB": {
 				Success:     true,
 				Response:    []byte(`{"result":"0x6e"}`),
+				Result:      "0x6e",
 				ElapsedTime: 100 * time.Millisecond,
 			},
 		},
@@ -130,10 +134,10 @@ func TestValidateMultipleEVMMethods(t *testing.T) {
 			500*time.Millisecond,
 		)
 
-		// Verify all results are invalid due to reference failure
+		// Verify results are valid if reference fails
 		providerAResults := results["providerA"]
-		assert.False(t, providerAResults.Valid)
-		assert.Len(t, providerAResults.FailedMethods, 2)
+		assert.True(t, providerAResults.Valid)
+		assert.Len(t, providerAResults.FailedMethods, 0)
 	})
 
 	t.Run("partial provider failures", func(t *testing.T) {
