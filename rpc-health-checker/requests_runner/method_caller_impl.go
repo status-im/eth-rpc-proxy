@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/status-im/eth-rpc-proxy/metrics"
 	"io"
 	"net/http"
 	"strings"
@@ -70,6 +71,9 @@ func (r *RequestsRunner) CallMethod(
 	case rpcprovider.TokenAuth:
 		req.URL.Path = strings.TrimRight(req.URL.Path, "/") + fmt.Sprintf("/%s", provider.AuthToken)
 	}
+
+	// Record RPC request metric
+	metrics.RecordRPCRequest(provider.ChainID, provider.Name, provider.URL, method, provider.AuthToken)
 
 	// Make the request
 	resp, err := client.Do(req)

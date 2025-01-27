@@ -17,6 +17,7 @@ type RPCProvider struct {
 	AuthLogin    string              `json:"authLogin" validate:"required_if=AuthType basic-auth,omitempty,min=1"`    // Login for BasicAuth
 	AuthPassword string              `json:"authPassword" validate:"required_if=AuthType basic-auth,omitempty,min=1"` // Password for BasicAuth
 	AuthToken    string              `json:"authToken" validate:"required_if=AuthType token-auth,omitempty,min=1"`    // Token for TokenAuth
+	ChainID      int64               `json:"chain_id"`
 }
 
 // method unmarshal json and validate field "Enabled" exists

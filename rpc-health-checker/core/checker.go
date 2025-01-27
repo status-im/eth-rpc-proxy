@@ -172,7 +172,7 @@ func handleReferenceError(results map[string]requestsrunner.ProviderResult, refe
 	return checkResults
 }
 
-// ValidateMultipleEVMMethods runs multiple EVM method tests and returns validation summary
+// ValidateMultipleEVMMethods runs multiple EVM method tests and returns validation summary provider -> result
 func ValidateMultipleEVMMethods(
 	ctx context.Context,
 	methodConfigs []config.EVMMethodTestConfig,

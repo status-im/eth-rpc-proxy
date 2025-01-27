@@ -152,6 +152,8 @@ func LoadReferenceChains(filePath string) (ReferenceChainsConfig, error) {
 	// Validate and normalize each reference chain
 	for i := range config.Chains {
 		config.Chains[i].normalize()
+		// Set ChainID for the provider
+		config.Chains[i].Provider.ChainID = int64(config.Chains[i].ChainId)
 		if err := config.Chains[i].Validate(); err != nil {
 			return ReferenceChainsConfig{}, fmt.Errorf("invalid reference chain configuration: %w", err)
 		}

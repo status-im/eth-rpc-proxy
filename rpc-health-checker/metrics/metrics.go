@@ -1,43 +1,35 @@
 package metrics
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/status-im/eth-rpc-proxy/config"
 )
 
 var (
-	validationCycleDuration = prometheus.NewHistogram(
-		prometheus.HistogramOpts{
-			Name:    "validation_cycle_duration_seconds",
-			Help:    "Duration of complete validation cycles in seconds",
-			Buckets: prometheus.DefBuckets,
-		},
-	)
+	validationCycleDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name: "validation_cycle_duration_seconds",
+		Help: "Duration of validation cycle in seconds",
+	})
 
-	workingProvidersCount = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "working_providers_count",
-			Help: "Number of working providers per chain",
-		},
-		[]string{"chainName", "networkName"},
-	)
+	workingProviders = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "working_providers_total",
+		Help: "Number of working providers per chain",
+	}, []string{"chain_name", "network"})
 
-	nonWorkingProviders = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "non_working_providers",
-			Help: "Status of non-working providers (1 if provider is not working, 0 if working)",
-		},
-		[]string{"chainName", "networkName", "providerName", "providerUrl"},
-	)
+	nonWorkingProviders = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "non_working_providers_total",
+		Help: "Number of non-working providers per chain",
+	}, []string{"chain_name", "network"})
+
+	rpcRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "rpc_requests_total",
+		Help: "Total number of RPC requests made for validation checks",
+	}, []string{"chain_id", "provider_name", "provider_url", "method", "auth_token_masked"})
 )
-
-func init() {
-	prometheus.MustRegister(validationCycleDuration)
-	prometheus.MustRegister(workingProvidersCount)
-	prometheus.MustRegister(nonWorkingProviders)
-}
 
 // RecordValidationCycleDuration records the duration of a complete validation cycle
 func RecordValidationCycleDuration(duration time.Duration) {
@@ -47,9 +39,9 @@ func RecordValidationCycleDuration(duration time.Duration) {
 // RecordWorkingProviders records the number of working providers for each chain
 func RecordWorkingProviders(validChains []config.ChainConfig) {
 	for _, chain := range validChains {
-		workingProvidersCount.With(prometheus.Labels{
-			"chainName":   chain.Name,
-			"networkName": chain.Network,
+		workingProviders.With(prometheus.Labels{
+			"chain_name": chain.Name,
+			"network":    chain.Network,
 		}).Set(float64(len(chain.Providers)))
 	}
 }
@@ -65,10 +57,29 @@ func RecordNonWorkingProviders(chainName, networkName string, providerResults ma
 			value = 1.0
 		}
 		nonWorkingProviders.With(prometheus.Labels{
-			"chainName":    chainName,
-			"networkName":  networkName,
-			"providerName": providerName,
-			"providerUrl":  result.URL,
+			"chain_name": providerName,
+			"network":    networkName,
 		}).Set(value)
 	}
+}
+
+// RecordRPCRequest records a single RPC request with its metadata
+func RecordRPCRequest(chainId int64, providerName, providerURL, method, authToken string) {
+	// Mask the auth token by keeping only first and last 4 characters if it's long enough
+	maskedToken := maskAuthToken(authToken)
+	rpcRequestsTotal.WithLabelValues(
+		fmt.Sprintf("%d", chainId),
+		providerName,
+		providerURL,
+		method,
+		maskedToken,
+	).Inc()
+}
+
+// maskAuthToken masks the auth token for security
+func maskAuthToken(token string) string {
+	if len(token) <= 8 {
+		return "***"
+	}
+	return token[:4] + "..." + token[len(token)-4:]
 }

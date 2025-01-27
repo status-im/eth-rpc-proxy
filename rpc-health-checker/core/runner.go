@@ -67,7 +67,7 @@ func (r *ChainValidationRunner) Run(ctx context.Context) {
 	r.writeValidChains(validChains)
 }
 
-// validateChains runs validation for all chains and returns valid chains and validation results
+// validateChains runs validation for all chains and returns valid chains and validation results (chainID -> provider -> result)
 func (r *ChainValidationRunner) validateChains(ctx context.Context) ([]config.ChainConfig, map[int64]map[string]ProviderValidationResult) {
 	var validChains []config.ChainConfig
 	results := make(map[int64]map[string]ProviderValidationResult)
