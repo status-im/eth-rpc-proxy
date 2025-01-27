@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/status-im/eth-rpc-proxy/config"
-	"github.com/status-im/eth-rpc-proxy/metrics"
 	"github.com/status-im/eth-rpc-proxy/provider"
 	requestsrunner "github.com/status-im/eth-rpc-proxy/requests_runner"
 )
@@ -60,45 +59,11 @@ func NewChainValidationRunner(
 	}
 }
 
-// recordMetrics records validation cycle metrics
-func (r *ChainValidationRunner) recordMetrics(startTime time.Time, validChains []config.ChainConfig, results map[int64]map[string]ProviderValidationResult) {
-	duration := time.Since(startTime)
-	metrics.RecordValidationCycleDuration(duration)
-	metrics.RecordWorkingProviders(validChains)
-
-	// Record non-working providers metrics
-	for chainId, chainResults := range results {
-		if chainConfig, exists := r.chainConfigs[chainId]; exists {
-			providerStatus := make(map[string]struct {
-				Valid bool
-				URL   string
-			})
-
-			// Create a map of provider names to their URLs
-			providerUrls := make(map[string]string)
-			for _, provider := range chainConfig.Providers {
-				providerUrls[provider.Name] = provider.URL
-			}
-
-			for providerName, result := range chainResults {
-				providerStatus[providerName] = struct {
-					Valid bool
-					URL   string
-				}{
-					Valid: result.Valid,
-					URL:   providerUrls[providerName],
-				}
-			}
-			metrics.RecordNonWorkingProviders(chainConfig.Name, chainConfig.Network, providerStatus)
-		}
-	}
-}
-
 // Run executes validation across all configured chains and writes valid providers to output file
 func (r *ChainValidationRunner) Run(ctx context.Context) {
 	startTime := time.Now()
 	validChains, results := r.validateChains(ctx)
-	defer r.recordMetrics(startTime, validChains, results)
+	defer RecordValidationMetrics(startTime, validChains, results, r.chainConfigs)
 	r.writeValidChains(validChains)
 }
 
