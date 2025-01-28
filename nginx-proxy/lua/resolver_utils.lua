@@ -20,7 +20,7 @@ local function resolve_url_with_custom_dns(url, custom_dns)
         return nil, "Invalid URL format"
     end
 
-    ngx.log(ngx.ERR, "Resolving host: ", host, " using DNS: ", custom_dns)
+    ngx.log(ngx.INFO, "Resolving host: ", host, " using DNS: ", custom_dns)
 
     -- Initialize DNS resolver
     local dns = require("resty.dns.resolver")
@@ -52,7 +52,7 @@ local function resolve_url_with_custom_dns(url, custom_dns)
     -- Return complete URL with resolved IP using parsed components
     for i, ans in ipairs(answers) do
         if ans.address then
-            ngx.log(ngx.ERR, "Resolved IP: ", ans.address)
+            ngx.log(ngx.INFO, "Resolved IP: ", ans.address)
             -- Reconstruct URL using parsed components
             local resolved_url = scheme .. "://" .. ans.address
             if port then

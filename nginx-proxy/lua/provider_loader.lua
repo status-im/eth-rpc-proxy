@@ -39,13 +39,13 @@ local function read_config_from_url(url)
         return nil, "HTTP error: " .. res.status
     end
 
-    ngx.log(ngx.ERR, "Successfully fetched configuration from URL: ", request_url)
+    ngx.log(ngx.INFO, "Successfully fetched configuration from URL: ", request_url)
     return res.body, nil
 end
 
 -- Function to read configuration from file
 local function read_config_from_file(filepath)
-    ngx.log(ngx.ERR, "Reading configuration from file: ", filepath)
+    ngx.log(ngx.INFO, "Reading configuration from file: ", filepath)
     if not filepath or filepath == "" then
         return nil, "Filepath is invalid or not provided"
     end
@@ -58,7 +58,7 @@ local function read_config_from_file(filepath)
 
     local content = file:read("*all")
     file:close()
-    ngx.log(ngx.ERR, "Successfully read configuration from file")
+    ngx.log(ngx.INFO, "Successfully read configuration from file")
     return content, nil
 end
 
@@ -68,7 +68,7 @@ function M.reload_providers(premature, url, fallbackLocalConfig)
         return
     end
 
-    ngx.log(ngx.ERR, "Reloading providers")
+    ngx.log(ngx.INFO, "Reloading providers")
 
     -- Attempt to load configuration from URL
     local config, err = read_config_from_url(url)
@@ -97,10 +97,10 @@ function M.reload_providers(premature, url, fallbackLocalConfig)
     for _, chain in ipairs(parsed_config.chains or {}) do
         local key = chain.name .. ":" .. chain.network
         ngx.shared.providers:set(key, json.encode(chain.providers))
-        ngx.log(ngx.ERR, "Loaded providers for ", key, json.encode(chain.providers))
+        ngx.log(ngx.INFO, "Loaded providers for ", key, json.encode(chain.providers))
     end
 
-    ngx.log(ngx.ERR, "Providers reloaded and stored by chain/network")
+    ngx.log(ngx.INFO, "Providers reloaded and stored by chain/network")
 end
 
 -- Scheduler to call reload_providers
