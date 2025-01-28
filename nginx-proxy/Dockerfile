@@ -6,7 +6,6 @@ RUN apk add --no-cache ca-certificates curl perl && \
     /usr/local/openresty/bin/opm install ledgetech/lua-resty-http
 
 # Copy configuration files
-COPY .htpasswd /etc/nginx/.htpasswd
 COPY nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
 COPY providers.json /usr/local/openresty/nginx/providers.json
 COPY lua /usr/local/openresty/nginx/lua

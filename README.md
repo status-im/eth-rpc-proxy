@@ -38,7 +38,7 @@ Run the complete system:
    ```
 3. Execute the following commands to start the system:
     ```bash
-    docker-compose up --build
+    docker-compose -f docker-compose-local.yml up -d --build
     ```
 4. Run test requests:
     ```bash

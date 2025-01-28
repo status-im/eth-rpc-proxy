@@ -1,8 +1,9 @@
+version: '3.8'
+
 services:
   rpc-proxy:
     build:
       context: ./nginx-proxy
-    container_name: 'rpc-proxy'
     ports:
       - "8080:8080"
     networks:
@@ -16,17 +17,12 @@ services:
       CONFIG_HEALTH_CHECKER_URL: http://health-checker:8080/providers
       CUSTOM_DNS: 127.0.0.11
       RELOAD_INTERVAL: "10"
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 0.0.0.0 8080"]
-      interval: '30s'
-      timeout: '30s'
-      retries: 3
-      start_period: '10s'
 
   health-checker:
     build:
       context: rpc-health-checker
-    container_name: 'health-checker'
+    ports:
+      - "8081:8080"
     networks:
       - rpc-network
     volumes:
@@ -35,12 +31,37 @@ services:
       DEFAULT_PROVIDERS_PATH: /config/default_providers.json
       REFERENCE_PROVIDERS_PATH: /config/reference_providers.json
       PORT: "8080"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://0.0.0.0:8080/health"]
-      interval: '30s'
-      timeout: '30s'
-      retries: 3
-      start_period: '10s'
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - rpc-network
+    depends_on:
+      - health-checker
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - rpc-network
+    depends_on:
+      - prometheus
+
+volumes:
+  grafana-storage:
 
 networks:
   rpc-network:
