@@ -1,23 +1,24 @@
 services:
   rpc-proxy:
     build:
-      context: ./nginx-proxy
+      context: './nginx-proxy'
     container_name: 'rpc-proxy'
-    ports:
-      - "8080:8080"
-    networks:
-      - rpc-network
-    depends_on:
-      - health-checker
-    volumes:
-      - ./secrets/default_providers.json:/usr/local/openresty/nginx/providers.json
-      - ./secrets/.htpasswd:/etc/nginx/.htpasswd
+    restart: 'always'
     environment:
-      CONFIG_HEALTH_CHECKER_URL: http://health-checker:8080/providers
-      CUSTOM_DNS: 127.0.0.11
-      RELOAD_INTERVAL: "10"
+      CONFIG_HEALTH_CHECKER_URL: 'http://health-checker:8080/providers'
+      CUSTOM_DNS: '127.0.0.11'
+      RELOAD_INTERVAL: '10'
+    ports:
+      - '8080:8080'
+    networks:
+      - 'rpc-network'
+    volumes:
+      - './secrets/default_providers.json:/usr/local/openresty/nginx/providers.json'
+      - './secrets/.htpasswd:/etc/nginx/.htpasswd'
+    depends_on:
+      - 'health-checker'
     healthcheck:
-      test: ["CMD-SHELL", "nc -z 0.0.0.0 8080"]
+      test: ['CMD-SHELL', 'nc -z 0.0.0.0 8080']
       interval: '30s'
       timeout: '30s'
       retries: 3
@@ -25,22 +26,37 @@ services:
 
   health-checker:
     build:
-      context: rpc-health-checker
+      context: './rpc-health-checker'
     container_name: 'health-checker'
-    networks:
-      - rpc-network
-    volumes:
-      - ./secrets:/config
+    restart: 'always'
     environment:
-      DEFAULT_PROVIDERS_PATH: /config/default_providers.json
-      REFERENCE_PROVIDERS_PATH: /config/reference_providers.json
-      PORT: "8080"
+      DEFAULT_PROVIDERS_PATH: '/config/default_providers.json'
+      REFERENCE_PROVIDERS_PATH: '/config/reference_providers.json'
+      PORT: '8082'
+    ports:
+      - '8082:8082'
+    networks:
+      - 'rpc-network'
+    volumes:
+      - './secrets:/config'
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://0.0.0.0:8080/health"]
+      test: ['CMD-SHELL', 'wget -q -O - http://0.0.0.0:8082/health']
       interval: '30s'
       timeout: '30s'
       retries: 3
       start_period: '10s'
+
+  rpc-proxy-metrics:
+    image: 'nginx/nginx-prometheus-exporter:1.4'
+    container_name: 'rpc-proxy-metrics'
+    restart: 'always'
+    command: 
+      - '--nginx.scrape-uri=http://rpc-proxy:8080/stub_status'
+      - '--web.listen-address=:8090'
+    ports:
+      - '8090:8090'
+    networks:
+      - 'rpc-network'
 
 networks:
   rpc-network:

@@ -4,4 +4,8 @@ global:
 scrape_configs:
   - job_name: 'health-checker'
     static_configs:
-      - targets: ['health-checker:8080']
+      - targets: ['health-checker:8082']
+
+  - job_name: 'rpc-proxy-metrics'
+    static_configs:
+      - targets: ['rpc-proxy-metrics:8090']
