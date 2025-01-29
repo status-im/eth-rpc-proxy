@@ -1,64 +1,82 @@
-version: '3.8'
-
 services:
   rpc-proxy:
     build:
-      context: ./nginx-proxy
-    ports:
-      - "8080:8080"
-    networks:
-      - rpc-network
-    depends_on:
-      - health-checker
-    volumes:
-      - ./secrets/default_providers.json:/usr/local/openresty/nginx/providers.json
-      - ./secrets/.htpasswd:/etc/nginx/.htpasswd
+      context: './nginx-proxy'
+    container_name: 'rpc-proxy'
+    restart: 'always'
     environment:
-      CONFIG_HEALTH_CHECKER_URL: http://health-checker:8080/providers
-      CUSTOM_DNS: 127.0.0.11
-      RELOAD_INTERVAL: "10"
+      CONFIG_HEALTH_CHECKER_URL: 'http://health-checker:8080/providers'
+      CUSTOM_DNS: '127.0.0.11'
+      RELOAD_INTERVAL: '10'
+    ports:
+      - '8080:8080'
+    networks:
+      - 'rpc-network'
+    depends_on:
+      - 'health-checker'
+    volumes:
+      - './secrets/default_providers.json:/usr/local/openresty/nginx/providers.json'
+      - './secrets/.htpasswd:/etc/nginx/.htpasswd'
 
   health-checker:
     build:
-      context: rpc-health-checker
-    ports:
-      - "8081:8080"
-    networks:
-      - rpc-network
-    volumes:
-      - ./secrets:/config
+      context: './rpc-health-checker'
+    container_name: 'health-checker'
+    restart: 'always'
     environment:
-      DEFAULT_PROVIDERS_PATH: /config/default_providers.json
-      REFERENCE_PROVIDERS_PATH: /config/reference_providers.json
-      PORT: "8080"
+      DEFAULT_PROVIDERS_PATH: '/config/default_providers.json'
+      REFERENCE_PROVIDERS_PATH: '/config/reference_providers.json'
+      PORT: '8080'
+    ports:
+      - '8082:8080'
+    networks:
+      - 'rpc-network'
+    volumes:
+      - './secrets:/config'
+
+  rpc-proxy-metrics:
+    image: 'nginx/nginx-prometheus-exporter:1.4'
+    container_name: 'rpc-proxy-metrics'
+    restart: 'always'
+    command: 
+      - '--nginx.scrape-uri=http://rpc-proxy:8080/stub_status'
+      - '--web.listen-address=:8090'
+    ports:
+      - '8090:8090'
+    networks:
+      - 'rpc-network'
 
   prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    image: 'prom/prometheus:latest'
+    container_name: 'prometheus'
+    restart: 'always'
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - '9090:9090'
     networks:
-      - rpc-network
+      - 'rpc-network'
+    volumes:
+      - './prometheus.yml:/etc/prometheus/prometheus.yml'
     depends_on:
-      - health-checker
+      - 'health-checker'
 
   grafana:
-    image: grafana/grafana:latest
+    image: 'grafana/grafana:latest'
+    container_name: 'grafana'
+    restart: 'always'
     ports:
-      - "3000:3000"
-    volumes:
-      - grafana-storage:/var/lib/grafana
-      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
-      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - '3000:3000'
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      GF_SECURITY_ADMIN_PASSWORD: 'admin'
     networks:
-      - rpc-network
+      - 'rpc-network'
+    volumes:
+      - 'grafana-storage:/var/lib/grafana'
+      - './grafana/provisioning/datasources:/etc/grafana/provisioning/datasources'
+      - './grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards'
     depends_on:
-      - prometheus
+      - 'prometheus'
 
 volumes:
   grafana-storage:
