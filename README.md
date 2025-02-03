@@ -1,5 +1,7 @@
 # Ethereum RPC Proxy 
 
+[![Tests](https://github.com/status-im/eth-rpc-proxy/actions/workflows/test.yml/badge.svg)](https://github.com/status-im/eth-rpc-proxy/actions/workflows/test.yml)
+
 The Ethereum RPC Proxy System provides a robust solution for managing and monitoring Ethereum RPC providers. It consists of two main components:
 1. **RPC Health Checker**: Monitors and validates RPC provider health
 2. **nginx-proxy**: Acts as a reverse proxy with provider failover capabilities
