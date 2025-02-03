@@ -11,5 +11,19 @@
       "latest"
     ],
     "maxDifference": "0"
+  },
+  {
+    "method": "eth_feeHistory",
+    "params": [
+      "0x4",
+      "latest",
+      [25, 50, 75]
+    ],
+    "maxDifference": "0"
+  },
+  {
+    "method": "eth_gasPrice",
+    "params": [],
+    "maxDifference": "1000000000"
   }
 ]
