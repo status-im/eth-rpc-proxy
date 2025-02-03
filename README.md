@@ -15,9 +15,16 @@ Run the complete system:
    # Create secrets directory if it doesn't exist
    mkdir -p secrets
    
-   # Generate default_providers.json 
+   # Generate default_providers.json with token authentication
    python3 rpc-health-checker/generate_providers.py \
-     --providers infura:YOUR_INFURA_TOKEN \
+     --providers infura:YOUR_INFURA_TOKEN grove:YOUR_GROVE_TOKEN \
+     --networks mainnet sepolia \
+     --chains ethereum optimism arbitrum base \
+     --output secrets/default_providers.json
+   
+   # Or use mix of token and basic authentication for some providers
+   python3 rpc-health-checker/generate_providers.py \
+     --providers infura:YOUR_INFURA_TOKEN grove:username:password \
      --networks mainnet sepolia \
      --chains ethereum optimism arbitrum base \
      --output secrets/default_providers.json
@@ -25,14 +32,20 @@ Run the complete system:
    # Generate reference_providers.json
    python3 rpc-health-checker/generate_providers.py \
      --single-provider \
-     --providers infura:YOUR_INFURA_TOKEN_REFERENCE  \
+     --providers infura:YOUR_INFURA_TOKEN_REFERENCE \
      --networks mainnet sepolia \
      --chains ethereum optimism arbitrum base \
      --output secrets/reference_providers.json
     ``` 
-   Please replace `YOUR_INFURA_TOKEN` and `YOUR_INFURA_TOKEN_REFERENCE` with your Infura API tokens. 
+   Please replace:
+   - `YOUR_INFURA_TOKEN` and `YOUR_INFURA_TOKEN_REFERENCE` with your Infura API tokens
+   - `YOUR_GROVE_TOKEN` with your Grove API token, or use `username:password` for basic auth
+   - Other provider credentials as needed
 
-   **Note**: `--providers` accepts multiple chain:token pairs. For example, `--providers infura:TOKEN1 infura:TOKEN2 grove:TOKEN3 nodefleet:TOKEN4`
+   **Note**: `--providers` accepts multiple providers with different authentication methods:
+   - Token auth format: `provider:token` (e.g., `infura:abc123`)
+   - Basic auth format: `provider:username:password` (e.g., `grove:user:pass`)
+   - Example: `--providers infura:TOKEN1 grove:user:pass nodefleet:TOKEN2`
 
 3. Create .htpasswd file for nginx proxy authentication:
    ```bash
@@ -59,7 +72,6 @@ The services will be accessible under:
   - Visualization dashboards for RPC metrics and health status
 
 ![grafana.png](grafana.png)
-
 
 ## Sub projects
 

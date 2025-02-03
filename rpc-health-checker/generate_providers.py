@@ -89,6 +89,34 @@ NETWORK_DATA = [
     }
 ]
 
+def parse_provider_spec(provider_spec):
+    """Parse provider specification into provider type and auth details."""
+    parts = provider_spec.split(":", 2)
+    
+    if len(parts) < 2:
+        raise ValueError(f"Invalid provider format: {provider_spec}. Use provider:token or provider:username:password format")
+    
+    provider_type = parts[0]
+    
+    if len(parts) == 2:
+        # Token auth format: provider:token
+        return {
+            "type": provider_type,
+            "auth_type": "token-auth",
+            "auth_token": parts[1],
+            "auth_login": "",
+            "auth_password": ""
+        }
+    else:
+        # Basic auth format: provider:username:password
+        return {
+            "type": provider_type,
+            "auth_type": "basic-auth",
+            "auth_token": "",
+            "auth_login": parts[1],
+            "auth_password": parts[2]
+        }
+
 def generate_providers(providers, networks, chains, single_provider=False):
     output = {"chains": []}
     
@@ -98,8 +126,8 @@ def generate_providers(providers, networks, chains, single_provider=False):
             
         if single_provider:
             # Use the first provider only
-            provider_spec = providers[0]
-            p_type, _, p_token = provider_spec.partition(":")
+            provider_spec = parse_provider_spec(providers[0])
+            p_type = provider_spec["type"]
             
             if p_type not in network_data["providers"]:
                 continue
@@ -111,8 +139,10 @@ def generate_providers(providers, networks, chains, single_provider=False):
                 "provider": {
                     "name": p_type.capitalize(),
                     "url": network_data["providers"][p_type],
-                    "authType": "token-auth",
-                    "authToken": p_token
+                    "authType": provider_spec["auth_type"],
+                    "authToken": provider_spec["auth_token"],
+                    "authLogin": provider_spec["auth_login"],
+                    "authPassword": provider_spec["auth_password"]
                 }
             }
         else:
@@ -126,8 +156,9 @@ def generate_providers(providers, networks, chains, single_provider=False):
             
             provider_counts = defaultdict(int)
             
-            for provider_spec in providers:
-                p_type, _, p_token = provider_spec.partition(":")
+            for provider_spec_str in providers:
+                provider_spec = parse_provider_spec(provider_spec_str)
+                p_type = provider_spec["type"]
                 
                 if p_type not in network_data["providers"]:
                     continue
@@ -138,8 +169,10 @@ def generate_providers(providers, networks, chains, single_provider=False):
                 chain_entry["providers"].append({
                     "name": f"{p_type.capitalize()}{count}",
                     "url": network_data["providers"][p_type],
-                    "authType": "token-auth",
-                    "authToken": p_token
+                    "authType": provider_spec["auth_type"],
+                    "authToken": provider_spec["auth_token"],
+                    "authLogin": provider_spec["auth_login"],
+                    "authPassword": provider_spec["auth_password"]
                 })
         
         if (single_provider and "provider" in chain_entry) or (not single_provider and chain_entry["providers"]):
@@ -150,7 +183,7 @@ def generate_providers(providers, networks, chains, single_provider=False):
 def main():
     parser = argparse.ArgumentParser(description="Generate providers.json configuration")
     parser.add_argument("--providers", nargs="+", required=True,
-                        help="Provider tokens in format provider:token (e.g. infura:abc123)")
+                        help="Provider tokens in format provider:token for token auth or provider:username:password for basic auth (e.g. infura:abc123 or grove:user:pass)")
     parser.add_argument("--networks", nargs="+", required=True,
                         choices=["mainnet", "sepolia"],
                         help="Networks to generate configs for")
@@ -163,11 +196,6 @@ def main():
                         help="Generate config with single provider per chain")
     
     args = parser.parse_args()
-    
-    # Validate provider format
-    for provider in args.providers:
-        if ":" not in provider:
-            raise ValueError(f"Invalid provider format: {provider}. Use provider:token format")
     
     config = generate_providers(args.providers, args.networks, args.chains, args.single_provider)
     
