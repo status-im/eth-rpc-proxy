@@ -92,6 +92,7 @@ func (s *E2ETestSuite) SetupSuite() {
 		Name:     "testprovider1",
 		URL:      fmt.Sprintf("http://localhost:%d", basePort),
 		AuthType: "no-auth",
+		ChainID:  1,
 	})
 
 	// Second default provider
@@ -100,6 +101,7 @@ func (s *E2ETestSuite) SetupSuite() {
 		Name:     "testprovider2",
 		URL:      fmt.Sprintf("http://localhost:%d", basePort+2),
 		AuthType: "no-auth",
+		ChainID:  1,
 	})
 
 	// Third default provider that returns errors
@@ -126,6 +128,7 @@ func (s *E2ETestSuite) SetupSuite() {
 		Name:     "testprovider3",
 		URL:      fmt.Sprintf("http://localhost:%d", basePort+4),
 		AuthType: "no-auth",
+		ChainID:  1,
 	})
 
 	// Fourth default provider that returns 404
@@ -134,6 +137,7 @@ func (s *E2ETestSuite) SetupSuite() {
 		Name:     "testprovider4",
 		URL:      fmt.Sprintf("http://localhost:%d", basePort+6),
 		AuthType: "no-auth",
+		ChainID:  1,
 	})
 
 	// Fifth default provider that returns malformed JSON
@@ -154,6 +158,7 @@ func (s *E2ETestSuite) SetupSuite() {
 		Name:     "testprovider5",
 		URL:      fmt.Sprintf("http://localhost:%d", basePort+8),
 		AuthType: "no-auth",
+		ChainID:  1,
 	})
 
 	// Create mock server for reference provider
@@ -162,6 +167,7 @@ func (s *E2ETestSuite) SetupSuite() {
 		Name:     "reference-testprovider",
 		URL:      fmt.Sprintf("http://localhost:%d", basePort+1),
 		AuthType: "no-auth",
+		ChainID:  1,
 	})
 
 	// Start all mock servers
