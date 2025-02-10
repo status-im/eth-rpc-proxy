@@ -21,7 +21,8 @@ func TestLoadChains(t *testing.T) {
 						"name": "infura",
 						"url": "https://mainnet.infura.io/v3",
 						"authType": "token-auth",
-						"authToken": "test"
+						"authToken": "test",
+						"chainId": 1
 					}
 				]
 			}
@@ -77,7 +78,8 @@ func TestLoadReferenceChains(t *testing.T) {
 					"name": "infura",
 					"url": "https://mainnet.infura.io/v3",
 					"authType": "token-auth",
-					"authToken": "test"
+					"authToken": "test",
+					"chainId": 1
 				}
 			}
 		]
@@ -143,7 +145,8 @@ func TestLoadReferenceChains(t *testing.T) {
 						"name": "infura",
 						"url": "https://mainnet.infura.io/v3",
 						"authType": "token-auth",
-						"authToken": "test"
+						"authToken": "test",
+						"chainId": 1
 					}
 				}
 			]
@@ -199,7 +202,8 @@ func TestGetReferenceProvider(t *testing.T) {
 			Network: "mainnet",
 			ChainId: 1,
 			Provider: provider.RPCProvider{
-				Name: "infura",
+				Name:    "infura",
+				ChainID: 1,
 			},
 		},
 		{
@@ -207,7 +211,8 @@ func TestGetReferenceProvider(t *testing.T) {
 			Network: "sepolia",
 			ChainId: 11155111,
 			Provider: provider.RPCProvider{
-				Name: "alchemy",
+				Name:    "alchemy",
+				ChainID: 11155111,
 			},
 		},
 	}
@@ -241,6 +246,7 @@ func TestValidateChainConfig(t *testing.T) {
 						Name:     "provider1",
 						URL:      "https://provider1.example.com",
 						AuthType: "no-auth",
+						ChainID:  1,
 					},
 				},
 			},
@@ -252,7 +258,7 @@ func TestValidateChainConfig(t *testing.T) {
 				Network: "mainnet",
 				ChainID: 1,
 				Providers: []provider.RPCProvider{
-					{Name: "provider1"},
+					{Name: "provider1", ChainID: 1},
 				},
 			},
 			wantErr: true,
@@ -263,7 +269,7 @@ func TestValidateChainConfig(t *testing.T) {
 				Name:    "ethereum",
 				ChainID: 1,
 				Providers: []provider.RPCProvider{
-					{Name: "provider1"},
+					{Name: "provider1", ChainID: 1},
 				},
 			},
 			wantErr: true,
@@ -283,7 +289,7 @@ func TestValidateChainConfig(t *testing.T) {
 				Name:    "ethereum",
 				Network: "mainnet",
 				Providers: []provider.RPCProvider{
-					{Name: "provider1"},
+					{Name: "provider1", ChainID: 1},
 				},
 			},
 			wantErr: true,
