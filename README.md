@@ -15,26 +15,26 @@ Run the complete system:
    # Create secrets directory if it doesn't exist
    mkdir -p secrets
    
-   # Generate default_providers.json with token authentication
+   # Generate default_providers.json with different authentication methods
    python3 rpc-health-checker/generate_providers.py \
-     --providers infura:YOUR_INFURA_TOKEN grove:YOUR_GROVE_TOKEN \
+     --providers infura:YOUR_INFURA_TOKEN grove:YOUR_GROVE_TOKEN status_network \
      --networks mainnet sepolia \
-     --chains ethereum optimism arbitrum base \
+     --chains ethereum optimism arbitrum base status \
      --output secrets/default_providers.json
    
-   # Or use mix of token and basic authentication for some providers
+   # Or use mix of token, basic auth, and no-auth providers
    python3 rpc-health-checker/generate_providers.py \
-     --providers infura:YOUR_INFURA_TOKEN grove:username:password \
+     --providers infura:YOUR_INFURA_TOKEN grove:username:password status_network \
      --networks mainnet sepolia \
-     --chains ethereum optimism arbitrum base \
+     --chains ethereum optimism arbitrum base status \
      --output secrets/default_providers.json
      
-   # Generate reference_providers.json
+   # Generate reference_providers.json with single provider per chain
    python3 rpc-health-checker/generate_providers.py \
      --single-provider \
-     --providers infura:YOUR_INFURA_TOKEN_REFERENCE \
+     --providers infura:YOUR_INFURA_TOKEN_REFERENCE status_network \
      --networks mainnet sepolia \
-     --chains ethereum optimism arbitrum base \
+     --chains ethereum optimism arbitrum base status \
      --output secrets/reference_providers.json
     ``` 
    Please replace:
@@ -43,11 +43,12 @@ Run the complete system:
    - Other provider credentials as needed
 
    **Note**: `--providers` accepts multiple providers with different authentication methods:
+   - No auth format: just provider name (e.g., `status_network`)
    - Token auth format: `provider:token` (e.g., `infura:abc123`)
    - Basic auth format: `provider:username:password` (e.g., `grove:user:pass`)
-   - Example: `--providers infura:TOKEN1 grove:user:pass nodefleet:TOKEN2`
+   - Example: `--providers infura:TOKEN1 grove:user:pass status_network nodefleet:TOKEN2`
 
-3. Create .htpasswd file for nginx proxy authentication:
+2. Create .htpasswd file for nginx proxy authentication:
    ```bash
    htpasswd -c secrets/.htpasswd dev
    ```
@@ -57,7 +58,13 @@ Run the complete system:
     ```
 4. Run test requests:
     ```bash
+    # For Ethereum mainnet
     curl -u dev:<password> -X POST http://localhost:8080/ethereum/mainnet \
+    -H "Content-Type: application/json" \
+    -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+
+    # For Status Network Sepolia
+    curl -u dev:<password> -X POST http://localhost:8080/status/sepolia \
     -H "Content-Type: application/json" \
     -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
     ```
@@ -65,7 +72,8 @@ The services will be accessible under:
 - RPC Health Checker: http://localhost:8081
   - Check the list of validated providers at http://localhost:8081/providers
 - nginx-proxy: http://localhost:8080
-  - The new RPC endpoint is now available http://localhost:8080/ethereum/mainnet (path is `/chain/network`)
+  - The new RPC endpoint is now available http://localhost:8080/{chain}/{network}
+  - Example paths: `/ethereum/mainnet`, `/status/sepolia`
 - Prometheus: http://localhost:9090
   - Metrics and monitoring interface
 - Grafana: http://localhost:3000 (default credentials: admin/admin)

@@ -39,18 +39,21 @@ func (suite *RpcProviderTestSuite) SetupSuite() {
       "name": "InfuraMainnet",
       "url": "https://mainnet.infura.io/v3",
       "authType": "token-auth",
-      "authToken": "infura-token"
+      "authToken": "infura-token",
+      "chainId": 1
     },
     {
       "name": "AlchemyMainnet",
       "url": "https://eth-mainnet.alchemyapi.io/v2",
       "authType": "token-auth",
-      "authToken": "alchemy-token"
+      "authToken": "alchemy-token",
+      "chainId": 1
     },
     {
       "name": "Example",
       "url": "https://another-provider.example.io/v2",
-      "authType": "no-auth"
+      "authType": "no-auth",
+      "chainId": 1
     }
   ]
 }`
@@ -150,12 +153,14 @@ func (suite *RpcProviderTestSuite) TestWriteRpcProvidersAndReadBack() {
 			URL:       "https://test1.example.com",
 			AuthType:  NoAuth,
 			AuthToken: "",
+			ChainID:   1,
 		},
 		{
 			Name:      "TestProvider2",
 			URL:       "https://test2.example.com",
 			AuthType:  TokenAuth,
 			AuthToken: "dummy_token",
+			ChainID:   1,
 		},
 	}
 

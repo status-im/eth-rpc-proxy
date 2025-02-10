@@ -5,6 +5,7 @@ from collections import defaultdict
 INFURA = "infura"
 GROVE = "grove"
 NODEFLEET = "nodefleet"
+STATUS_NETWORK = "status_network"
 
 NETWORK_DATA = [
     {
@@ -86,18 +87,32 @@ NETWORK_DATA = [
             GROVE: "https://base-testnet.rpc.grove.city/v1/",
             NODEFLEET: "https://base-sepolia.alphafleet.io/"
         }
+    },
+    {
+        "chain": "status",
+        "network": "sepolia",
+        "chainId": 1660990954,
+        "providers": {
+            STATUS_NETWORK: "https://public.sepolia.rpc.status.network/"
+        }
     }
 ]
 
 def parse_provider_spec(provider_spec):
     """Parse provider specification into provider type and auth details."""
     parts = provider_spec.split(":", 2)
-    
-    if len(parts) < 2:
-        raise ValueError(f"Invalid provider format: {provider_spec}. Use provider:token or provider:username:password format")
-    
+
+    if len(parts) == 1:
+        return {
+            "type": provider_spec,
+            "auth_type": "no-auth",
+            "auth_token": "",
+            "auth_login": "",
+            "auth_password": ""
+        }
+
     provider_type = parts[0]
-    
+
     if len(parts) == 2:
         # Token auth format: provider:token
         return {
@@ -117,65 +132,95 @@ def parse_provider_spec(provider_spec):
             "auth_password": parts[2]
         }
 
-def generate_providers(providers, networks, chains, single_provider=False):
+def create_provider_entry(p_type, provider_spec, network_data, count=None):
+    """Create a provider entry with consistent format."""
+    name = f"{p_type.capitalize()}{count}" if count is not None else p_type.capitalize()
+    return {
+        "name": name,
+        "url": network_data["providers"][p_type],
+        "authType": provider_spec["auth_type"],
+        "authToken": provider_spec["auth_token"],
+        "authLogin": provider_spec["auth_login"],
+        "authPassword": provider_spec["auth_password"],
+        "chainId": network_data["chainId"]
+    }
+
+def create_chain_entry(network_data):
+    """Create a base chain entry with consistent format."""
+    return {
+        "name": network_data["chain"],
+        "network": network_data["network"],
+        "chainId": network_data["chainId"]
+    }
+
+def create_single_provider_entry(providers, network_data):
+    """Find and create a single provider entry for the network."""
+    for provider_spec_str in providers:
+        provider_spec = parse_provider_spec(provider_spec_str)
+        p_type = provider_spec["type"]
+        
+        if p_type not in network_data["providers"]:
+            continue
+        
+        chain_entry = create_chain_entry(network_data)
+        chain_entry["provider"] = create_provider_entry(p_type, provider_spec, network_data)
+        return chain_entry
+    
+    return None
+
+def create_multi_provider_entry(providers, network_data):
+    """Create a chain entry with multiple providers."""
+    chain_entry = create_chain_entry(network_data)
+    chain_entry["providers"] = []
+    
+    provider_counts = defaultdict(int)
+    
+    for provider_spec_str in providers:
+        provider_spec = parse_provider_spec(provider_spec_str)
+        p_type = provider_spec["type"]
+        
+        if p_type not in network_data["providers"]:
+            continue
+            
+        provider_counts[p_type] += 1
+        count = provider_counts[p_type]
+        
+        chain_entry["providers"].append(
+            create_provider_entry(p_type, provider_spec, network_data, count)
+        )
+    
+    return chain_entry
+
+def is_valid_chain_entry(chain_entry, single_provider):
+    """Check if chain entry has valid providers."""
+    if single_provider:
+        return "provider" in chain_entry
+    return bool(chain_entry.get("providers", []))
+
+def generate_single_provider_config(providers, networks, chains):
+    """Generate configuration with single provider per chain."""
     output = {"chains": []}
     
     for network_data in NETWORK_DATA:
         if network_data["chain"] not in chains or network_data["network"] not in networks:
             continue
             
-        if single_provider:
-            # Use the first provider only
-            provider_spec = parse_provider_spec(providers[0])
-            p_type = provider_spec["type"]
+        chain_entry = create_single_provider_entry(providers, network_data)
+        if chain_entry and is_valid_chain_entry(chain_entry, single_provider=True):
+            output["chains"].append(chain_entry)
+    
+    return output
+
+def generate_multi_provider_config(providers, networks, chains):
+    """Generate configuration with multiple providers per chain."""
+    output = {"chains": []}
+    
+    for network_data in NETWORK_DATA:
+        if network_data["chain"] not in chains or network_data["network"] not in networks:
+            continue
             
-            if p_type not in network_data["providers"]:
-                continue
-                
-            chain_entry = {
-                "name": network_data['chain'],
-                "network": network_data["network"],
-                "chainId": network_data["chainId"],
-                "provider": {
-                    "name": p_type.capitalize(),
-                    "url": network_data["providers"][p_type],
-                    "authType": provider_spec["auth_type"],
-                    "authToken": provider_spec["auth_token"],
-                    "authLogin": provider_spec["auth_login"],
-                    "authPassword": provider_spec["auth_password"]
-                }
-            }
-        else:
-            # Original multiple providers format
-            chain_entry = {
-                "name": network_data["chain"],
-                "network": network_data["network"],
-                "chainId": network_data["chainId"],
-                "providers": []
-            }
-            
-            provider_counts = defaultdict(int)
-            
-            for provider_spec_str in providers:
-                provider_spec = parse_provider_spec(provider_spec_str)
-                p_type = provider_spec["type"]
-                
-                if p_type not in network_data["providers"]:
-                    continue
-                    
-                provider_counts[p_type] += 1
-                count = provider_counts[p_type]
-                
-                chain_entry["providers"].append({
-                    "name": f"{p_type.capitalize()}{count}",
-                    "url": network_data["providers"][p_type],
-                    "authType": provider_spec["auth_type"],
-                    "authToken": provider_spec["auth_token"],
-                    "authLogin": provider_spec["auth_login"],
-                    "authPassword": provider_spec["auth_password"]
-                })
-        
-        if (single_provider and "provider" in chain_entry) or (not single_provider and chain_entry["providers"]):
+        chain_entry = create_multi_provider_entry(providers, network_data)
+        if chain_entry and is_valid_chain_entry(chain_entry, single_provider=False):
             output["chains"].append(chain_entry)
     
     return output
@@ -183,12 +228,12 @@ def generate_providers(providers, networks, chains, single_provider=False):
 def main():
     parser = argparse.ArgumentParser(description="Generate providers.json configuration")
     parser.add_argument("--providers", nargs="+", required=True,
-                        help="Provider tokens in format provider:token for token auth or provider:username:password for basic auth (e.g. infura:abc123 or grove:user:pass)")
+                        help="Provider specification formats: provider (no auth), provider:token (token auth), or provider:username:password (basic auth) (e.g. status_network, infura:abc123, grove:user:pass)")
     parser.add_argument("--networks", nargs="+", required=True,
                         choices=["mainnet", "sepolia"],
                         help="Networks to generate configs for")
     parser.add_argument("--chains", nargs="+", required=True,
-                        choices=["ethereum", "optimism", "arbitrum", "base"],
+                        choices=["ethereum", "optimism", "arbitrum", "base", "status"],
                         help="Chains to generate configs for")
     parser.add_argument("--output", "-o", default="generated_providers.json",
                         help="Output file path")
@@ -196,8 +241,10 @@ def main():
                         help="Generate config with single provider per chain")
     
     args = parser.parse_args()
-    
-    config = generate_providers(args.providers, args.networks, args.chains, args.single_provider)
+
+    # Choose the appropriate generator function based on the single_provider flag
+    generator_func = generate_single_provider_config if args.single_provider else generate_multi_provider_config
+    config = generator_func(args.providers, args.networks, args.chains)
     
     with open(args.output, "w") as f:
         json.dump(config, f, indent=2)
