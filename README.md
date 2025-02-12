@@ -12,7 +12,7 @@ Run the complete system:
 
 1. Generate provider configuration files and store them in the secrets folder:
    ```bash
-   # Create secrets directory if it doesn't exist
+   # Create secrets directory if it doesn't exists
    mkdir -p secrets
    
    # Generate default_providers.json with different authentication methods
