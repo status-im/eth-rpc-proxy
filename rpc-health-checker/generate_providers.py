@@ -6,6 +6,7 @@ INFURA = "infura"
 GROVE = "grove"
 NODEFLEET = "nodefleet"
 STATUS_NETWORK = "status_network"
+ALCHEMY = "alchemy"
 
 NETWORK_DATA = [
     {
@@ -15,7 +16,8 @@ NETWORK_DATA = [
         "providers": {
             INFURA: "https://mainnet.infura.io/v3/",
             GROVE: "https://eth.rpc.grove.city/v1/",
-            NODEFLEET: "https://eth-mainnet.alphafleet.io/"
+            NODEFLEET: "https://eth-mainnet.alphafleet.io/",
+            ALCHEMY: "https://eth-mainnet.g.alchemy.com/v2/"
         }
     },
     {
@@ -25,7 +27,8 @@ NETWORK_DATA = [
         "providers": {
             INFURA: "https://sepolia.infura.io/v3/",
             GROVE: "https://eth-sepolia-testnet.rpc.grove.city/v1/",
-            NODEFLEET: "https://eth-sepolia.alphafleet.io/"
+            NODEFLEET: "https://eth-sepolia.alphafleet.io/",
+            ALCHEMY: "https://eth-sepolia.g.alchemy.com/v2/"
         }
     },
     {
@@ -35,7 +38,8 @@ NETWORK_DATA = [
         "providers": {
             INFURA: "https://optimism-mainnet.infura.io/v3/",
             GROVE: "https://optimism.rpc.grove.city/v1/",
-            NODEFLEET: "https://optimism-mainnet.alphafleet.io/"
+            NODEFLEET: "https://optimism-mainnet.alphafleet.io/",
+            ALCHEMY: "https://opt-mainnet.g.alchemy.com/v2/"
         }
     },
     {
@@ -45,7 +49,8 @@ NETWORK_DATA = [
         "providers": {
             INFURA: "https://optimism-sepolia.infura.io/v3/",
             GROVE: "https://optimism-sepolia-testnet.rpc.grove.city/v1/",
-            NODEFLEET: "https://optimism-sepolia.alphafleet.io/"
+            NODEFLEET: "https://optimism-sepolia.alphafleet.io/",
+            ALCHEMY: "https://opt-sepolia.g.alchemy.com/v2/"
         }
     },
     {
@@ -55,7 +60,8 @@ NETWORK_DATA = [
         "providers": {
             INFURA: "https://arbitrum-mainnet.infura.io/v3/",
             GROVE: "https://arbitrum-one.rpc.grove.city/v1/",
-            NODEFLEET: "https://arb-mainnet.alphafleet.io/"
+            NODEFLEET: "https://arb-mainnet.alphafleet.io/",
+            ALCHEMY: "https://arb-mainnet.g.alchemy.com/v2/"
         }
     },
     {
@@ -65,7 +71,8 @@ NETWORK_DATA = [
         "providers": {
             INFURA: "https://arbitrum-sepolia.infura.io/v3/",
             GROVE: "https://arbitrum-sepolia-testnet.rpc.grove.city/v1/",
-            NODEFLEET: "https://arb-sepolia.alphafleet.io/"
+            NODEFLEET: "https://arb-sepolia.alphafleet.io/",
+            ALCHEMY: "https://arb-sepolia.g.alchemy.com/v2/"
         }
     },
     {
@@ -75,7 +82,8 @@ NETWORK_DATA = [
         "providers": {
             INFURA: "https://base-mainnet.infura.io/v3/",
             GROVE: "https://base.rpc.grove.city/v1/",
-            NODEFLEET: "https://base-mainnet.alphafleet.io/"
+            NODEFLEET: "https://base-mainnet.alphafleet.io/",
+            ALCHEMY: "https://base-mainnet.g.alchemy.com/v2/"
         }
     },
     {
@@ -85,7 +93,8 @@ NETWORK_DATA = [
         "providers": {
             INFURA: "https://base-sepolia.infura.io/v3/",
             GROVE: "https://base-testnet.rpc.grove.city/v1/",
-            NODEFLEET: "https://base-sepolia.alphafleet.io/"
+            NODEFLEET: "https://base-sepolia.alphafleet.io/",
+            ALCHEMY: "https://base-sepolia.g.alchemy.com/v2/"
         }
     },
     {
