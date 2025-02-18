@@ -1,15 +1,16 @@
 local json = require("cjson")
 local http = require("resty.http")
 
--- Extract and validate chain and network from URL path
-local chain, network = ngx.var.uri:match("^/([^/]+)/([^/]+)")
+-- Extract and validate path parameters
+local chain, network, provider_id = ngx.var.uri:match("^/([^/]+)/([^/]+)/?([^/]*)$")
 if not chain or not network then
-    ngx.log(ngx.ERR, "Invalid URL format - must be /chain/network")
+    ngx.log(ngx.ERR, "Invalid URL format - must be /chain/network or /chain/network/provider_id")
     ngx.status = 400
-    ngx.say("Invalid URL format - must be /chain/network")
+    ngx.say("Invalid URL format - must be /chain/network or /chain/network/provider_id")
     return
 end
-ngx.log(ngx.ERR, "Chain: ", chain, " Network: ", network)
+
+ngx.log(ngx.INFO, "Chain: ", chain, " Network: ", network, provider_id and (" Provider: " .. provider_id) or "")
 
 -- Get providers for the requested chain/network
 local chain_network_key = chain .. ":" .. network
@@ -18,7 +19,7 @@ local providers_str = ngx.shared.providers:get(chain_network_key)
 if not providers_str then
     ngx.log(ngx.ERR, "No providers found for ", chain_network_key)
     ngx.status = 404
-    ngx.say("No providers available for this chain/network", chain_network_key)
+    ngx.say("No providers available for this chain/network")
     return
 end
 local providers = json.decode(providers_str)
@@ -28,11 +29,20 @@ ngx.log(ngx.INFO, "Request body: ", body_data)
 if #providers == 0 then
     ngx.log(ngx.ERR, "No providers found for ", chain_network_key)
     ngx.status = 404
-    ngx.say("No providers available for this chain/network", chain_network_key)
+    ngx.say("No providers available for this chain/network")
     return
 end
 
+local tried_specific_provider = false
 for _, provider in ipairs(providers) do
+    -- Skip providers that don't match requested provider_id
+    if provider_id and provider_id ~= "" then
+        if provider.id ~= provider_id then
+            goto continue
+        end
+        tried_specific_provider = true
+    end
+
     ngx.log(ngx.INFO, "provider: ", provider.url)
     local httpc = http.new()
 
@@ -73,7 +83,14 @@ for _, provider in ipairs(providers) do
             ngx.log(ngx.ERR, "Failed to decode response: ", decoded_body)
         end
     end
+
+    ::continue::
 end
 
-ngx.status = 502
-ngx.say("All providers failed") 
+if provider_id and provider_id ~= "" and not tried_specific_provider then
+    ngx.status = 404
+    ngx.say("Provider not found: " .. provider_id)
+else
+    ngx.status = 502
+    ngx.say("All providers failed")
+end 
