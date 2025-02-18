@@ -17,14 +17,14 @@ Run the complete system:
    
    # Generate default_providers.json with different authentication methods
    python3 rpc-health-checker/generate_providers.py \
-     --providers infura:YOUR_INFURA_TOKEN grove:YOUR_GROVE_TOKEN status_network \
+     --providers infura:YOUR_INFURA_TOKEN grove:YOUR_GROVE_TOKEN alchemy:YOUR_ALCHEMY_TOKEN status_network \
      --networks mainnet sepolia \
      --chains ethereum optimism arbitrum base status \
      --output secrets/default_providers.json
    
    # Or use mix of token, basic auth, and no-auth providers
    python3 rpc-health-checker/generate_providers.py \
-     --providers infura:YOUR_INFURA_TOKEN grove:username:password status_network \
+     --providers infura:YOUR_INFURA_TOKEN grove:username:password alchemy:YOUR_ALCHEMY_TOKEN status_network \
      --networks mainnet sepolia \
      --chains ethereum optimism arbitrum base status \
      --output secrets/default_providers.json
@@ -32,7 +32,7 @@ Run the complete system:
    # Generate reference_providers.json with single provider per chain
    python3 rpc-health-checker/generate_providers.py \
      --single-provider \
-     --providers infura:YOUR_INFURA_TOKEN_REFERENCE status_network \
+     --providers infura:YOUR_INFURA_TOKEN_REFERENCE alchemy:YOUR_ALCHEMY_TOKEN status_network \
      --networks mainnet sepolia \
      --chains ethereum optimism arbitrum base status \
      --output secrets/reference_providers.json
@@ -40,13 +40,14 @@ Run the complete system:
    Please replace:
    - `YOUR_INFURA_TOKEN` and `YOUR_INFURA_TOKEN_REFERENCE` with your Infura API tokens
    - `YOUR_GROVE_TOKEN` with your Grove API token, or use `username:password` for basic auth
+   - `YOUR_ALCHEMY_TOKEN` with your Alchemy API token
    - Other provider credentials as needed
 
    **Note**: `--providers` accepts multiple providers with different authentication methods:
    - No auth format: just provider name (e.g., `status_network`)
-   - Token auth format: `provider:token` (e.g., `infura:abc123`)
+   - Token auth format: `provider:token` (e.g., `infura:abc123`, `alchemy:xyz789`)
    - Basic auth format: `provider:username:password` (e.g., `grove:user:pass`)
-   - Example: `--providers infura:TOKEN1 grove:user:pass status_network nodefleet:TOKEN2`
+   - Example: `--providers infura:TOKEN1 grove:user:pass status_network nodefleet:TOKEN2 alchemy:TOKEN3`
 
 2. Create .htpasswd file for nginx proxy authentication:
    ```bash
