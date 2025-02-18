@@ -74,14 +74,41 @@ for _, provider in ipairs(providers) do
     if not res then
         ngx.log(ngx.ERR, "HTTP request failed: ", err)
     else
-        ngx.log(ngx.INFO, "Response body: ", res.body)
-        local ok, decoded_body = pcall(json.decode, res.body)
-        if ok then
-            ngx.say(json.encode(decoded_body))
-            return
-        else
-            ngx.log(ngx.ERR, "Failed to decode response: ", decoded_body)
+        ngx.log(ngx.DEBUG, "Response body: ", res.body)
+        if res.status == 401 or res.status == 402 or res.status == 403 or res.status == 429 or
+           (res.status >= 500 and res.status < 600) then
+            ngx.log(ngx.ERR, "Error status ", res.status, ", trying next provider")
+            goto continue
         end
+
+        local ok, decoded_body = pcall(json.decode, res.body)
+        if ok and decoded_body.error and decoded_body.error.code then
+            if decoded_body.error.code == 32005 or
+               decoded_body.error.code == 33000 or
+               decoded_body.error.code == 33300 or
+               decoded_body.error.code == 33400 then
+                ngx.log(ngx.ERR, "JSON error code ", decoded_body.error.code, ", trying next provider")
+                goto continue
+            end
+        end
+
+        -- Set Content-Type header
+        if res.headers["Content-Type"] then
+            ngx.header["Content-Type"] = res.headers["Content-Type"]
+        end
+
+        -- Set Content-Length header if present
+        if res.headers["Content-Length"] then
+            ngx.header["Content-Length"] = res.headers["Content-Length"]
+        end
+
+        -- Set Vary header if present
+        if res.headers["Vary"] then
+            ngx.header["Vary"] = res.headers["Vary"]
+        end
+
+        ngx.say(res.body)
+        return
     end
 
     ::continue::
@@ -93,4 +120,4 @@ if provider_type and provider_type ~= "" and not tried_specific_provider then
 else
     ngx.status = 502
     ngx.say("All providers failed")
-end 
+end
