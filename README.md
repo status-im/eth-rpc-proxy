@@ -59,22 +59,33 @@ Run the complete system:
     ```
 4. Run test requests:
     ```bash
-    # For Ethereum mainnet
+    # For Ethereum mainnet using any available provider (with automatic failover between all providers)
     curl -u dev:<password> -X POST http://localhost:8080/ethereum/mainnet \
     -H "Content-Type: application/json" \
     -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 
-    # For Status Network Sepolia
-    curl -u dev:<password> -X POST http://localhost:8080/status/sepolia \
+    # For Status Network Sepolia using specific provider type
+    curl -u dev:<password> -X POST http://localhost:8080/status/sepolia/status_network \
+    -H "Content-Type: application/json" \
+    -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+
+    # For Ethereum mainnet using Infura providers (with automatic failover between all Infura instances)
+    curl -u dev:<password> -X POST http://localhost:8080/ethereum/mainnet/infura \
     -H "Content-Type: application/json" \
     -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
     ```
+
 The services will be accessible under:
 - RPC Health Checker: http://localhost:8081
   - Check the list of validated providers at http://localhost:8081/providers
 - nginx-proxy: http://localhost:8080
-  - The new RPC endpoint is now available http://localhost:8080/{chain}/{network}
-  - Example paths: `/ethereum/mainnet`, `/status/sepolia`
+  - The RPC endpoint is available in two formats:
+    - `http://localhost:8080/{chain}/{network}` - uses any available provider with failover across all providers
+    - `http://localhost:8080/{chain}/{network}/{provider_type}` - uses providers of the specified type with failover between instances of that type
+  - Example paths: 
+    - `/ethereum/mainnet` - tries all available providers until success
+    - `/ethereum/mainnet/infura` - tries all available Infura providers until success
+    - `/status/sepolia/status_network` - tries all available Status Network providers until success
 - Prometheus: http://localhost:9090
   - Metrics and monitoring interface
 - Grafana: http://localhost:3000 (default credentials: admin/admin)

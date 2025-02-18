@@ -36,6 +36,7 @@ func (suite *RpcProviderTestSuite) SetupSuite() {
 	suite.validJSON = `{
   "providers": [
     {
+      "type": "infura",
       "name": "InfuraMainnet",
       "url": "https://mainnet.infura.io/v3",
       "authType": "token-auth",
@@ -43,6 +44,7 @@ func (suite *RpcProviderTestSuite) SetupSuite() {
       "chainId": 1
     },
     {
+      "type": "alchemy",
       "name": "AlchemyMainnet",
       "url": "https://eth-mainnet.alchemyapi.io/v2",
       "authType": "token-auth",
@@ -50,6 +52,7 @@ func (suite *RpcProviderTestSuite) SetupSuite() {
       "chainId": 1
     },
     {
+      "type": "status_network",
       "name": "Example",
       "url": "https://another-provider.example.io/v2",
       "authType": "no-auth",
@@ -62,14 +65,16 @@ func (suite *RpcProviderTestSuite) SetupSuite() {
 	suite.invalidJSON = `{
   "providers": [
     {
+      "type": "infura",
       "name": "BadProvider",
       "url": "https://bad-provider.example.io",
       "authType": "no-auth"
     }
   ]` // Note the missing comma and closing brace
 
-	suite.invalidAuthTypeJSON = `{	
+	suite.invalidAuthTypeJSON = `{    
 		"providers": [{
+			"type": "infura",
 			"name": "InfuraMainnet",
 			"url": "https://mainnet.infura.io/v3",
 			"authType": "invalid-auth"
@@ -111,6 +116,7 @@ func (suite *RpcProviderTestSuite) TestReadRpcProvidersSuccess() {
 
 	// Check the fields of the first provider
 	first := providers[0]
+	suite.Equal("infura", first.Type, "First provider type mismatch")
 	suite.Equal("InfuraMainnet", first.Name, "First provider name mismatch")
 	suite.Equal("https://mainnet.infura.io/v3", first.URL, "First provider URL mismatch")
 	suite.Equal(TokenAuth, first.AuthType, "First provider AuthType mismatch")
@@ -149,6 +155,7 @@ func (suite *RpcProviderTestSuite) TestWriteRpcProvidersAndReadBack() {
 	// Create test providers
 	wantProviders := []RPCProvider{
 		{
+			Type:      "infura",
 			Name:      "TestProvider1",
 			URL:       "https://test1.example.com",
 			AuthType:  NoAuth,
@@ -156,6 +163,7 @@ func (suite *RpcProviderTestSuite) TestWriteRpcProvidersAndReadBack() {
 			ChainID:   1,
 		},
 		{
+			Type:      "alchemy",
 			Name:      "TestProvider2",
 			URL:       "https://test2.example.com",
 			AuthType:  TokenAuth,

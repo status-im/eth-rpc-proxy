@@ -145,6 +145,7 @@ def create_provider_entry(p_type, provider_spec, network_data, count=None):
     """Create a provider entry with consistent format."""
     name = f"{p_type.capitalize()}{count}" if count is not None else p_type.capitalize()
     return {
+        "type": p_type,
         "name": name,
         "url": network_data["providers"][p_type],
         "authType": provider_spec["auth_type"],

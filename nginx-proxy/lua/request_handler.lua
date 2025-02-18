@@ -2,15 +2,15 @@ local json = require("cjson")
 local http = require("resty.http")
 
 -- Extract and validate path parameters
-local chain, network, provider_id = ngx.var.uri:match("^/([^/]+)/([^/]+)/?([^/]*)$")
+local chain, network, provider_type = ngx.var.uri:match("^/([^/]+)/([^/]+)/?([^/]*)$")
 if not chain or not network then
-    ngx.log(ngx.ERR, "Invalid URL format - must be /chain/network or /chain/network/provider_id")
+    ngx.log(ngx.ERR, "Invalid URL format - must be /chain/network or /chain/network/provider_type")
     ngx.status = 400
-    ngx.say("Invalid URL format - must be /chain/network or /chain/network/provider_id")
+    ngx.say("Invalid URL format - must be /chain/network or /chain/network/provider_type")
     return
 end
 
-ngx.log(ngx.INFO, "Chain: ", chain, " Network: ", network, provider_id and (" Provider: " .. provider_id) or "")
+ngx.log(ngx.INFO, "Chain: ", chain, " Network: ", network, provider_type and (" Provider: " .. provider_type) or "")
 
 -- Get providers for the requested chain/network
 local chain_network_key = chain .. ":" .. network
@@ -35,9 +35,9 @@ end
 
 local tried_specific_provider = false
 for _, provider in ipairs(providers) do
-    -- Skip providers that don't match requested provider_id
-    if provider_id and provider_id ~= "" then
-        if provider.id ~= provider_id then
+    -- Skip providers that don't match requested provider_type
+    if provider_type and provider_type ~= "" then
+        if provider.type ~= provider_type then
             goto continue
         end
         tried_specific_provider = true
@@ -87,9 +87,9 @@ for _, provider in ipairs(providers) do
     ::continue::
 end
 
-if provider_id and provider_id ~= "" and not tried_specific_provider then
+if provider_type and provider_type ~= "" and not tried_specific_provider then
     ngx.status = 404
-    ngx.say("Provider not found: " .. provider_id)
+    ngx.say("Provider not found: " .. provider_type)
 else
     ngx.status = 502
     ngx.say("All providers failed")
