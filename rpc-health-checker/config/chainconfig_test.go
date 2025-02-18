@@ -18,6 +18,7 @@ func TestLoadChains(t *testing.T) {
 				"chainId": 1,
 				"providers": [
 					{
+						"type": "infura",
 						"name": "infura",
 						"url": "https://mainnet.infura.io/v3",
 						"authType": "token-auth",
@@ -45,6 +46,7 @@ func TestLoadChains(t *testing.T) {
 		assert.Equal(t, "mainnet", chains.Chains[0].Network)
 		assert.Equal(t, 1, chains.Chains[0].ChainID)
 		assert.Len(t, chains.Chains[0].Providers, 1)
+		assert.Equal(t, "infura", chains.Chains[0].Providers[0].Type)
 	})
 
 	t.Run("file not found", func(t *testing.T) {
@@ -75,6 +77,7 @@ func TestLoadReferenceChains(t *testing.T) {
 				"network": "mainnet",
 				"chainId": 1,
 				"provider": {
+					"type": "infura",
 					"name": "infura",
 					"url": "https://mainnet.infura.io/v3",
 					"authType": "token-auth",
@@ -101,6 +104,7 @@ func TestLoadReferenceChains(t *testing.T) {
 		assert.Equal(t, "mainnet", chains.Chains[0].Network)
 		assert.Equal(t, 1, chains.Chains[0].ChainId)
 		assert.Equal(t, "infura", chains.Chains[0].Provider.Name)
+		assert.Equal(t, "infura", chains.Chains[0].Provider.Type)
 	})
 
 	t.Run("file not found", func(t *testing.T) {
@@ -142,6 +146,7 @@ func TestLoadReferenceChains(t *testing.T) {
 					"network": "MAINNET",
 					"chainId": 1,
 					"provider": {
+						"type": "INFURA",
 						"name": "infura",
 						"url": "https://mainnet.infura.io/v3",
 						"authType": "token-auth",
@@ -165,6 +170,7 @@ func TestLoadReferenceChains(t *testing.T) {
 		assert.Equal(t, "ethereum", chains.Chains[0].Name)
 		assert.Equal(t, "mainnet", chains.Chains[0].Network)
 		assert.Equal(t, 1, chains.Chains[0].ChainId)
+		assert.Equal(t, "infura", chains.Chains[0].Provider.Type)
 	})
 }
 
@@ -202,6 +208,7 @@ func TestGetReferenceProvider(t *testing.T) {
 			Network: "mainnet",
 			ChainId: 1,
 			Provider: provider.RPCProvider{
+				Type:    "infura",
 				Name:    "infura",
 				ChainID: 1,
 			},
@@ -211,6 +218,7 @@ func TestGetReferenceProvider(t *testing.T) {
 			Network: "sepolia",
 			ChainId: 11155111,
 			Provider: provider.RPCProvider{
+				Type:    "alchemy",
 				Name:    "alchemy",
 				ChainID: 11155111,
 			},
@@ -221,6 +229,7 @@ func TestGetReferenceProvider(t *testing.T) {
 		provider, err := GetReferenceProvider(chains, "ethereum", "mainnet")
 		assert.NoError(t, err)
 		assert.Equal(t, "infura", provider.Name)
+		assert.Equal(t, "infura", provider.Type)
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -243,6 +252,7 @@ func TestValidateChainConfig(t *testing.T) {
 				ChainID: 1,
 				Providers: []provider.RPCProvider{
 					{
+						Type:     "infura",
 						Name:     "provider1",
 						URL:      "https://provider1.example.com",
 						AuthType: "no-auth",
@@ -258,7 +268,7 @@ func TestValidateChainConfig(t *testing.T) {
 				Network: "mainnet",
 				ChainID: 1,
 				Providers: []provider.RPCProvider{
-					{Name: "provider1", ChainID: 1},
+					{Type: "infura", Name: "provider1", ChainID: 1},
 				},
 			},
 			wantErr: true,
@@ -269,7 +279,7 @@ func TestValidateChainConfig(t *testing.T) {
 				Name:    "ethereum",
 				ChainID: 1,
 				Providers: []provider.RPCProvider{
-					{Name: "provider1", ChainID: 1},
+					{Type: "infura", Name: "provider1", ChainID: 1},
 				},
 			},
 			wantErr: true,
@@ -289,7 +299,7 @@ func TestValidateChainConfig(t *testing.T) {
 				Name:    "ethereum",
 				Network: "mainnet",
 				Providers: []provider.RPCProvider{
-					{Name: "provider1", ChainID: 1},
+					{Type: "infura", Name: "provider1", ChainID: 1},
 				},
 			},
 			wantErr: true,

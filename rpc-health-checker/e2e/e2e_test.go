@@ -89,6 +89,7 @@ func (s *E2ETestSuite) SetupSuite() {
 	// First default provider
 	s.providerSetup.AddProvider(basePort, firstProviderResponses)
 	defaultProviders = append(defaultProviders, rpcprovider.RPCProvider{
+		Type:     "test_provider1",
 		Name:     "testprovider1",
 		URL:      fmt.Sprintf("http://localhost:%d", basePort),
 		AuthType: "no-auth",
@@ -98,6 +99,7 @@ func (s *E2ETestSuite) SetupSuite() {
 	// Second default provider
 	s.providerSetup.AddProvider(basePort+2, referenceResponses)
 	defaultProviders = append(defaultProviders, rpcprovider.RPCProvider{
+		Type:     "test_provider2",
 		Name:     "testprovider2",
 		URL:      fmt.Sprintf("http://localhost:%d", basePort+2),
 		AuthType: "no-auth",
@@ -125,6 +127,7 @@ func (s *E2ETestSuite) SetupSuite() {
 	}
 	s.providerSetup.AddProvider(basePort+4, errorResponses)
 	defaultProviders = append(defaultProviders, rpcprovider.RPCProvider{
+		Type:     "test_provider3",
 		Name:     "testprovider3",
 		URL:      fmt.Sprintf("http://localhost:%d", basePort+4),
 		AuthType: "no-auth",
@@ -134,6 +137,7 @@ func (s *E2ETestSuite) SetupSuite() {
 	// Fourth default provider that returns 404
 	s.providerSetup.Add404Provider(basePort + 6)
 	defaultProviders = append(defaultProviders, rpcprovider.RPCProvider{
+		Type:     "test_provider4",
 		Name:     "testprovider4",
 		URL:      fmt.Sprintf("http://localhost:%d", basePort+6),
 		AuthType: "no-auth",
@@ -155,6 +159,7 @@ func (s *E2ETestSuite) SetupSuite() {
 	}
 	s.providerSetup.AddProvider(basePort+8, malformedResponses)
 	defaultProviders = append(defaultProviders, rpcprovider.RPCProvider{
+		Type:     "test_provider5",
 		Name:     "testprovider5",
 		URL:      fmt.Sprintf("http://localhost:%d", basePort+8),
 		AuthType: "no-auth",
@@ -164,6 +169,7 @@ func (s *E2ETestSuite) SetupSuite() {
 	// Create mock server for reference provider
 	s.providerSetup.AddProvider(basePort+1, referenceResponses)
 	referenceProviders = append(referenceProviders, rpcprovider.RPCProvider{
+		Type:     "reference_provider",
 		Name:     "reference-testprovider",
 		URL:      fmt.Sprintf("http://localhost:%d", basePort+1),
 		AuthType: "no-auth",
@@ -354,6 +360,7 @@ func (s *E2ETestSuite) TestE2E() {
 		providers := output.Chains[0].Providers
 		s.Equal(len(providers), 1)
 		s.Equal("testprovider2", providers[0].Name)
+		s.Equal("test_provider2", providers[0].Type)
 		s.Equal("http://localhost:8547", providers[0].URL)
 	})
 

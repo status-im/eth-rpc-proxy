@@ -11,6 +11,7 @@ const (
 
 // RPCProvider represents the configuration of an RPC provider with various options
 type RPCProvider struct {
+	Type         string              `json:"type" validate:"required,min=1"`                                          // Provider type (infura, alchemy, etc)
 	Name         string              `json:"name" validate:"required,min=1"`                                          // Provider name for identification
 	URL          string              `json:"url" validate:"required,url"`                                             // URL of the current provider
 	AuthType     RPCProviderAuthType `json:"authType" validate:"required,oneof=no-auth basic-auth token-auth"`        // Authentication type

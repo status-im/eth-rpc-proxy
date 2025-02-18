@@ -22,14 +22,22 @@ graph TD
 
 The nginx RPC proxy handles requests through the following process:
 
-1. Receives HTTP POST requests with chain/network in the URL path (format: `/chain/network`)
+1. Receives HTTP POST requests with chain/network in the URL path:
+   - Format 1: `/chain/network` - uses any available provider with failover across all providers
+   - Format 2: `/chain/network/provider_type` - uses providers of the specified type with failover between instances of that type
 2. Validates the chain/network format
 3. Looks up available providers for the requested chain/network combination
-4. Attempts to forward the request to the first available provider
-5. If the provider fails, automatically tries the next provider in the list
-6. Returns the successful provider's response to the client
-7. If all providers fail, returns an error response
-8. Periodically reloads provider configuration to maintain up-to-date provider lists
+4. For requests without provider_type:
+   - Attempts to forward the request to each available provider in sequence
+   - Returns the first successful response
+   - If all providers fail, returns a 502 error
+5. For requests with provider_type:
+   - Finds all providers matching the requested type
+   - Attempts to forward the request to each matching provider in sequence
+   - Returns the first successful response
+   - If no matching providers found, returns a 404 error
+   - If all matching providers fail, returns a 502 error
+6. Periodically reloads provider configuration to maintain up-to-date provider lists
 
 ## Local Development
 
@@ -78,6 +86,8 @@ The providers list is a JSON file with the following structure:
       "network": "network-name-lowercase",
       "providers": [
         {
+          "type": "provider-type",
+          "name": "provider-name",
           "url": "http://provider1",
           "authType": "no-auth|token-auth|basic-auth",
           "authToken": "optional-token",
@@ -103,22 +113,29 @@ sequenceDiagram
     loop Try Providers
         Proxy->>Provider: Forward request
         Provider-->>Proxy: Return response/error
-    end
+        end
     Proxy-->>Client: Return final response
 ```
 
 ## Request Format
 
-Requests must be in the format:
+Requests must be in one of two formats:
 ```
 POST /chain/network
+POST /chain/network/provider_type
 ```
 
 With JSON body containing the RPC request.
 
-Example:
+Examples:
 ```bash
+# Use any available provider with failover
 curl -X POST http://localhost:8080/ethereum/mainnet \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+
+# Use Infura providers with failover between Infura instances
+curl -X POST http://localhost:8080/ethereum/mainnet/infura \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ```

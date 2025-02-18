@@ -186,12 +186,16 @@ func GetReferenceProvider(chains []ReferenceChainConfig, name, network string) (
 func (c *ChainConfig) normalize() {
 	c.Name = strings.ToLower(c.Name)
 	c.Network = strings.ToLower(c.Network)
+	for i := range c.Providers {
+		c.Providers[i].Type = strings.ToLower(c.Providers[i].Type)
+	}
 }
 
 // normalize ensures reference chain name and network are lowercase
 func (c *ReferenceChainConfig) normalize() {
 	c.Name = strings.ToLower(c.Name)
 	c.Network = strings.ToLower(c.Network)
+	c.Provider.Type = strings.ToLower(c.Provider.Type)
 }
 
 // WriteChains writes chain configurations to a JSON file
