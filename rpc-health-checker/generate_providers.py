@@ -236,14 +236,24 @@ def generate_multi_provider_config(providers, networks, chains):
     return output
 
 def main():
+    # Automatically generate the list of supported chains and networks from NETWORK_DATA
+    supported_chains = sorted(list(set(network["chain"] for network in NETWORK_DATA)))
+    supported_networks = sorted(list(set(network["network"] for network in NETWORK_DATA)))
+    
+    # Get all unique provider types used in NETWORK_DATA
+    all_provider_types = set()
+    for network in NETWORK_DATA:
+        all_provider_types.update(network["providers"].keys())
+    supported_providers = sorted(list(all_provider_types))
+    
     parser = argparse.ArgumentParser(description="Generate providers.json configuration")
     parser.add_argument("--providers", nargs="+", required=True,
-                        help="Provider specification formats: provider (no auth), provider:token (token auth), or provider:username:password (basic auth) (e.g. status_network, infura:abc123, grove:user:pass)")
+                        help=f"Provider specification formats: provider (no auth), provider:token (token auth), or provider:username:password (basic auth). Supported providers: {', '.join(supported_providers)}")
     parser.add_argument("--networks", nargs="+", required=True,
-                        choices=["mainnet", "sepolia"],
+                        choices=supported_networks,
                         help="Networks to generate configs for")
     parser.add_argument("--chains", nargs="+", required=True,
-                        choices=["ethereum", "optimism", "arbitrum", "base", "status"],
+                        choices=supported_chains,
                         help="Chains to generate configs for")
     parser.add_argument("--output", "-o", default="generated_providers.json",
                         help="Output file path")
