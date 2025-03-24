@@ -98,6 +98,28 @@ NETWORK_DATA = [
         }
     },
     {
+        "chain": "linea",
+        "network": "mainnet",
+        "chainId": 59144,
+        "providers": {
+            INFURA: "https://linea-mainnet.infura.io/v3/",
+            GROVE: "https://linea.rpc.grove.city/v1/",
+            NODEFLEET: "https://linea-mainnet.alphafleet.io/",
+            ALCHEMY: "https://linea-mainnet.g.alchemy.com/v2/",
+        },
+    },
+    {
+        "chain": "linea",
+        "network": "sepolia",
+        "chainId": 59141,
+        "providers": {
+            INFURA: "https://linea-sepolia.infura.io/v3/",
+            GROVE: "https://linea-testnet.rpc.grove.city/v1/",
+            NODEFLEET: "https://linea-sepolia.alphafleet.io/",
+            ALCHEMY: "https://linea-sepolia.g.alchemy.com/v2/",
+        },
+    },
+    {
         "chain": "status",
         "network": "sepolia",
         "chainId": 1660990954,
