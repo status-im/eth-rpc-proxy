@@ -142,7 +142,7 @@ NETWORK_DATA = [
         }
     },
     {
-        "chain": "zksync-era",
+        "chain": "zksync",
         "network": "mainnet",
         "chainId": 324,
         "providers": {
@@ -153,7 +153,7 @@ NETWORK_DATA = [
         }
     },
     {
-        "chain": "zksync-era",
+        "chain": "zksync",
         "network": "sepolia",
         "chainId": 300,
         "providers": {
@@ -163,12 +163,72 @@ NETWORK_DATA = [
             ALCHEMY: "https://zksync-sepolia.g.alchemy.com/v2/"
         }
     },
-
-
-# ZkSync
-# Mantle Era
-# Abstract and
-# Unichain
+    {
+        "chain": "mantle",
+        "network": "mainnet",
+        "chainId": 5000,
+        "providers": {
+            INFURA: "https://mantle-mainnet.infura.io/v3/",
+            GROVE: "https://mantle.rpc.grove.city/v1/",
+            NODEFLEET: "https://mantle-mainnet.alphafleet.io/",
+            ALCHEMY: "https://mantle-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "mantle",
+        "network": "sepolia",
+        "chainId": 5003,
+        "providers": {
+            INFURA: "https://mantle-sepolia.infura.io/v3/",
+            GROVE: "",
+            NODEFLEET: "https://mantle-sepolia.alphafleet.io/",
+            ALCHEMY: "https://mantle-sepolia.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "abstract",
+        "network": "mainnet",
+        "chainId": 2741,
+        "providers": {
+            INFURA: "",
+            GROVE: "",
+            NODEFLEET: "https://abstract-mainnet.alphafleet.io/",
+            ALCHEMY: "https://abstract-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "abstract",
+        "network": "testnet",
+        "chainId": 11124,
+        "providers": {
+            INFURA: "",
+            GROVE: "",
+            NODEFLEET: "https://abstract-testnet.alphafleet.io/",
+            ALCHEMY: "https://abstract-testnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "unichain",
+        "network": "mainnet",
+        "chainId": 130,
+        "providers": {
+            INFURA: "https://unichain-mainnet.infura.io/v3/",
+            GROVE: "",
+            NODEFLEET: "https://unichain-mainnet.alphafleet.io/",
+            ALCHEMY: "https://unichain-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "unichain",
+        "network": "sepolia",
+        "chainId": 1301,
+        "providers": {
+            INFURA: "https://unichain-sepolia.infura.io/v3/",
+            GROVE: "",
+            NODEFLEET: "https://unichain-sepolia.alphafleet.io/",
+            ALCHEMY: "https://unichain-sepolia.g.alchemy.com/v2/"
+        }
+    },
     {
         "chain": "status",
         "network": "sepolia",
