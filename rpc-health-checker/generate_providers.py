@@ -114,11 +114,61 @@ NETWORK_DATA = [
         "chainId": 59141,
         "providers": {
             INFURA: "https://linea-sepolia.infura.io/v3/",
-            GROVE: "https://linea-testnet.rpc.grove.city/v1/",
+            GROVE: "",
             NODEFLEET: "https://linea-sepolia.alphafleet.io/",
             ALCHEMY: "https://linea-sepolia.g.alchemy.com/v2/",
-        },
+        }
     },
+    {
+        "chain": "blast",
+        "network": "mainnet",
+        "chainId": 81457,
+        "providers": {
+            INFURA: "https://blast-mainnet.infura.io/v3/",
+            GROVE: "https://blast.rpc.grove.city/v1/",
+            NODEFLEET: "https://blast-mainnet.alphafleet.io/",
+            ALCHEMY: "https://blast-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "blast",
+        "network": "sepolia",
+        "chainId": 168587773,
+        "providers": {
+            INFURA: "https://blast-sepolia.infura.io/v3/",
+            GROVE: "",
+            NODEFLEET: "https://blast-sepolia.alphafleet.io/",
+            ALCHEMY: "https://blast-sepolia.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "zksync-era",
+        "network": "mainnet",
+        "chainId": 324,
+        "providers": {
+            INFURA: "https://zksync-mainnet.infura.io/v3/",
+            GROVE: "https://zksync-era.rpc.grove.city/v1/",
+            NODEFLEET: "https://zksync-era-mainnet.alphafleet.io/",
+            ALCHEMY: "https://zksync-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "zksync-era",
+        "network": "sepolia",
+        "chainId": 300,
+        "providers": {
+            INFURA: "https://zksync-sepolia.infura.io/v3/",
+            GROVE: "",
+            NODEFLEET: "https://zksync-era-sepolia.alphafleet.io/",
+            ALCHEMY: "https://zksync-sepolia.g.alchemy.com/v2/"
+        }
+    },
+
+
+# ZkSync
+# Mantle Era
+# Abstract and
+# Unichain
     {
         "chain": "status",
         "network": "sepolia",
