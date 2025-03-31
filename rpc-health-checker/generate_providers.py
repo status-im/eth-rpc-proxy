@@ -114,7 +114,6 @@ NETWORK_DATA = [
         "chainId": 59141,
         "providers": {
             INFURA: "https://linea-sepolia.infura.io/v3/",
-            NODEFLEET: "https://linea-sepolia.alphafleet.io/",
             ALCHEMY: "https://linea-sepolia.g.alchemy.com/v2/",
         }
     },
@@ -135,7 +134,6 @@ NETWORK_DATA = [
         "chainId": 168587773,
         "providers": {
             INFURA: "https://blast-sepolia.infura.io/v3/",
-            NODEFLEET: "https://blast-sepolia.alphafleet.io/",
             ALCHEMY: "https://blast-sepolia.g.alchemy.com/v2/"
         }
     },
@@ -146,7 +144,6 @@ NETWORK_DATA = [
         "providers": {
             INFURA: "https://zksync-mainnet.infura.io/v3/",
             GROVE: "https://zksync-era.rpc.grove.city/v1/",
-            NODEFLEET: "https://zksync-era-mainnet.alphafleet.io/",
             ALCHEMY: "https://zksync-mainnet.g.alchemy.com/v2/"
         }
     },
@@ -156,7 +153,6 @@ NETWORK_DATA = [
         "chainId": 300,
         "providers": {
             INFURA: "https://zksync-sepolia.infura.io/v3/",
-            NODEFLEET: "https://zksync-era-sepolia.alphafleet.io/",
             ALCHEMY: "https://zksync-sepolia.g.alchemy.com/v2/"
         }
     },
@@ -167,7 +163,6 @@ NETWORK_DATA = [
         "providers": {
             INFURA: "https://mantle-mainnet.infura.io/v3/",
             GROVE: "https://mantle.rpc.grove.city/v1/",
-            NODEFLEET: "https://mantle-mainnet.alphafleet.io/",
             ALCHEMY: "https://mantle-mainnet.g.alchemy.com/v2/"
         }
     },
@@ -177,7 +172,6 @@ NETWORK_DATA = [
         "chainId": 5003,
         "providers": {
             INFURA: "https://mantle-sepolia.infura.io/v3/",
-            NODEFLEET: "https://mantle-sepolia.alphafleet.io/",
             ALCHEMY: "https://mantle-sepolia.g.alchemy.com/v2/"
         }
     },
@@ -186,7 +180,6 @@ NETWORK_DATA = [
         "network": "mainnet",
         "chainId": 2741,
         "providers": {
-            NODEFLEET: "https://abstract-mainnet.alphafleet.io/",
             ALCHEMY: "https://abstract-mainnet.g.alchemy.com/v2/"
         }
     },
@@ -195,7 +188,6 @@ NETWORK_DATA = [
         "network": "testnet",
         "chainId": 11124,
         "providers": {
-            NODEFLEET: "https://abstract-testnet.alphafleet.io/",
             ALCHEMY: "https://abstract-testnet.g.alchemy.com/v2/"
         }
     },
@@ -205,7 +197,6 @@ NETWORK_DATA = [
         "chainId": 130,
         "providers": {
             INFURA: "https://unichain-mainnet.infura.io/v3/",
-            NODEFLEET: "https://unichain-mainnet.alphafleet.io/",
             ALCHEMY: "https://unichain-mainnet.g.alchemy.com/v2/"
         }
     },
@@ -215,7 +206,6 @@ NETWORK_DATA = [
         "chainId": 1301,
         "providers": {
             INFURA: "https://unichain-sepolia.infura.io/v3/",
-            NODEFLEET: "https://unichain-sepolia.alphafleet.io/",
             ALCHEMY: "https://unichain-sepolia.g.alchemy.com/v2/"
         }
     },
