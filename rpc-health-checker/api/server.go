@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -110,7 +111,7 @@ func (s *httpServer) providersHandler(w http.ResponseWriter, r *http.Request) {
 		s.logger.Info("failed to load output providers, falling back to default", "error", err)
 
 		// Return HTTP error for file permission or corruption issues
-		if err != os.ErrNotExist && err != io.EOF {
+		if !errors.Is(err, os.ErrNotExist) && !errors.Is(err, io.EOF) {
 			http.Error(w, fmt.Sprintf("Error reading output providers: %v", err), http.StatusInternalServerError)
 			return
 		}
@@ -125,7 +126,7 @@ func (s *httpServer) providersHandler(w http.ResponseWriter, r *http.Request) {
 		s.logger.Error("failed to load default providers", "error", err)
 
 		// Return HTTP error for file permission or corruption issues
-		if err != os.ErrNotExist && err != io.EOF {
+		if !errors.Is(err, os.ErrNotExist) && !errors.Is(err, io.EOF) {
 			http.Error(w, fmt.Sprintf("Error reading default providers: %v", err), http.StatusInternalServerError)
 			return
 		}
