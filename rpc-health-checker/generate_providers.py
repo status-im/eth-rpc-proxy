@@ -98,6 +98,118 @@ NETWORK_DATA = [
         }
     },
     {
+        "chain": "linea",
+        "network": "mainnet",
+        "chainId": 59144,
+        "providers": {
+            INFURA: "https://linea-mainnet.infura.io/v3/",
+            GROVE: "https://linea.rpc.grove.city/v1/",
+            NODEFLEET: "https://linea-mainnet.alphafleet.io/",
+            ALCHEMY: "https://linea-mainnet.g.alchemy.com/v2/",
+        },
+    },
+    {
+        "chain": "linea",
+        "network": "sepolia",
+        "chainId": 59141,
+        "providers": {
+            INFURA: "https://linea-sepolia.infura.io/v3/",
+            ALCHEMY: "https://linea-sepolia.g.alchemy.com/v2/",
+        }
+    },
+    {
+        "chain": "blast",
+        "network": "mainnet",
+        "chainId": 81457,
+        "providers": {
+            INFURA: "https://blast-mainnet.infura.io/v3/",
+            GROVE: "https://blast.rpc.grove.city/v1/",
+            NODEFLEET: "https://blast-mainnet.alphafleet.io/",
+            ALCHEMY: "https://blast-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "blast",
+        "network": "sepolia",
+        "chainId": 168587773,
+        "providers": {
+            INFURA: "https://blast-sepolia.infura.io/v3/",
+            ALCHEMY: "https://blast-sepolia.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "zksync",
+        "network": "mainnet",
+        "chainId": 324,
+        "providers": {
+            INFURA: "https://zksync-mainnet.infura.io/v3/",
+            GROVE: "https://zksync-era.rpc.grove.city/v1/",
+            ALCHEMY: "https://zksync-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "zksync",
+        "network": "sepolia",
+        "chainId": 300,
+        "providers": {
+            INFURA: "https://zksync-sepolia.infura.io/v3/",
+            ALCHEMY: "https://zksync-sepolia.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "mantle",
+        "network": "mainnet",
+        "chainId": 5000,
+        "providers": {
+            INFURA: "https://mantle-mainnet.infura.io/v3/",
+            GROVE: "https://mantle.rpc.grove.city/v1/",
+            ALCHEMY: "https://mantle-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "mantle",
+        "network": "sepolia",
+        "chainId": 5003,
+        "providers": {
+            INFURA: "https://mantle-sepolia.infura.io/v3/",
+            ALCHEMY: "https://mantle-sepolia.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "abstract",
+        "network": "mainnet",
+        "chainId": 2741,
+        "providers": {
+            ALCHEMY: "https://abstract-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "abstract",
+        "network": "testnet",
+        "chainId": 11124,
+        "providers": {
+            ALCHEMY: "https://abstract-testnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "unichain",
+        "network": "mainnet",
+        "chainId": 130,
+        "providers": {
+            INFURA: "https://unichain-mainnet.infura.io/v3/",
+            ALCHEMY: "https://unichain-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "unichain",
+        "network": "sepolia",
+        "chainId": 1301,
+        "providers": {
+            INFURA: "https://unichain-sepolia.infura.io/v3/",
+            ALCHEMY: "https://unichain-sepolia.g.alchemy.com/v2/"
+        }
+    },
+    {
         "chain": "status",
         "network": "sepolia",
         "chainId": 1660990954,
