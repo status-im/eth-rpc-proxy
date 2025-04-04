@@ -24,6 +24,7 @@ var (
 		Help: "Total number of RPC requests made for validation checks",
 	}, []string{
 		"chain_id",
+		"chain_name",
 		"provider_name",
 		"provider_url",
 		"method",
@@ -62,26 +63,40 @@ func RecordProviderStatuses(chainId int64, chainName, networkName string, provid
 	}
 }
 
+// RPCRequestMetrics contains all the parameters needed for recording RPC request metrics
+type RPCRequestMetrics struct {
+	ChainID      int64
+	ChainName    string
+	ProviderName string
+	ProviderURL  string
+	Method       string
+	AuthToken    string
+	RequestErr   error
+	HTTPStatus   int
+	EVMErrorCode int
+}
+
 // RecordRPCRequest records a single RPC request with its metadata and error information
-func RecordRPCRequest(chainId int64, providerName, providerURL, method, authToken string, requestErr error, httpStatus int, evmErrorCode int) {
+func RecordRPCRequest(metrics RPCRequestMetrics) {
 	// Mask the auth token by keeping only first and last 4 characters if it's long enough
-	maskedToken := maskAuthToken(authToken)
+	maskedToken := maskAuthToken(metrics.AuthToken)
 
 	// Format error message, use "none" if no error
 	errMsg := "none"
-	if requestErr != nil {
-		errMsg = requestErr.Error()
+	if metrics.RequestErr != nil {
+		errMsg = metrics.RequestErr.Error()
 	}
 
 	rpcRequestsTotal.WithLabelValues(
-		fmt.Sprintf("%d", chainId),
-		providerName,
-		providerURL,
-		method,
+		fmt.Sprintf("%d", metrics.ChainID),
+		metrics.ChainName,
+		metrics.ProviderName,
+		metrics.ProviderURL,
+		metrics.Method,
 		maskedToken,
 		errMsg,
-		fmt.Sprintf("%d", httpStatus),
-		fmt.Sprintf("%d", evmErrorCode),
+		fmt.Sprintf("%d", metrics.HTTPStatus),
+		fmt.Sprintf("%d", metrics.EVMErrorCode),
 	).Inc()
 }
 

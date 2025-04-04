@@ -125,6 +125,12 @@ func LoadChains(filePath string) (ChainsConfig, error) {
 	// Validate and normalize each chain
 	for i := range config.Chains {
 		config.Chains[i].normalize()
+
+		// Set ChainName for all providers
+		for j := range config.Chains[i].Providers {
+			config.Chains[i].Providers[j].ChainName = config.Chains[i].Name
+		}
+
 		if err := config.Chains[i].Validate(); err != nil {
 			return ChainsConfig{}, fmt.Errorf("invalid chain configuration: %w", err)
 		}
@@ -152,8 +158,10 @@ func LoadReferenceChains(filePath string) (ReferenceChainsConfig, error) {
 	// Validate and normalize each reference chain
 	for i := range config.Chains {
 		config.Chains[i].normalize()
-		// Set ChainID for the provider
+		// Set ChainID and ChainName for the provider
 		config.Chains[i].Provider.ChainID = int64(config.Chains[i].ChainId)
+		config.Chains[i].Provider.ChainName = config.Chains[i].Name
+
 		if err := config.Chains[i].Validate(); err != nil {
 			return ReferenceChainsConfig{}, fmt.Errorf("invalid reference chain configuration: %w", err)
 		}
