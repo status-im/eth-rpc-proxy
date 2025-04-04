@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -107,6 +108,12 @@ func (s *httpServer) providersHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.logger.Info("failed to load output providers, falling back to default", "error", err)
+
+		// Return HTTP error for file permission or corruption issues
+		if err != os.ErrNotExist && err != io.EOF {
+			http.Error(w, fmt.Sprintf("Error reading output providers: %v", err), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// If output providers don't exist or failed to load, use default providers
@@ -116,11 +123,16 @@ func (s *httpServer) providersHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.logger.Error("failed to load default providers", "error", err)
+
+		// Return HTTP error for file permission or corruption issues
+		if err != os.ErrNotExist && err != io.EOF {
+			http.Error(w, fmt.Sprintf("Error reading default providers: %v", err), http.StatusInternalServerError)
+			return
+		}
 	}
 
-	// If both paths failed, return an empty object instead of an error
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"chains":[]}`))
+	// If no providers are available, return 404 Not Found
+	http.Error(w, `{"error":"No providers found"}`, http.StatusNotFound)
 }
 
 func (s *httpServer) healthHandler(w http.ResponseWriter, r *http.Request) {
