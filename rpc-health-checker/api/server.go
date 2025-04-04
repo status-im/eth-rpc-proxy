@@ -110,11 +110,17 @@ func (s *httpServer) providersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If output providers don't exist or failed to load, use default providers
-	err := s.loadProviders(w, s.config.DefaultProvidersPath)
-	if err != nil {
+	if s.fileExists(s.config.DefaultProvidersPath) {
+		err := s.loadProviders(w, s.config.DefaultProvidersPath)
+		if err == nil {
+			return
+		}
 		s.logger.Error("failed to load default providers", "error", err)
-		http.Error(w, "no providers available", http.StatusServiceUnavailable)
 	}
+
+	// If both paths failed, return an empty object instead of an error
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"chains":[]}`))
 }
 
 func (s *httpServer) healthHandler(w http.ResponseWriter, r *http.Request) {

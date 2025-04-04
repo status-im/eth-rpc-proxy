@@ -21,21 +21,24 @@ func TestValidateMultipleEVMMethods(t *testing.T) {
 
 	// Create mock providers
 	referenceProvider := provider.RPCProvider{
-		Name:     "reference",
-		URL:      "http://reference.com",
-		AuthType: provider.NoAuth,
+		Name:      "reference",
+		URL:       "http://reference.com",
+		AuthType:  provider.NoAuth,
+		ChainName: "ethereum",
 	}
 
 	providerA := provider.RPCProvider{
-		Name:     "providerA",
-		URL:      "http://providerA.com",
-		AuthType: provider.NoAuth,
+		Name:      "providerA",
+		URL:       "http://providerA.com",
+		AuthType:  provider.NoAuth,
+		ChainName: "ethereum",
 	}
 
 	providerB := provider.RPCProvider{
-		Name:     "providerB",
-		URL:      "http://providerB.com",
-		AuthType: provider.NoAuth,
+		Name:      "providerB",
+		URL:       "http://providerB.com",
+		AuthType:  provider.NoAuth,
+		ChainName: "ethereum",
 	}
 
 	// Create mock MethodCaller
@@ -186,9 +189,10 @@ func TestValidateMultipleEVMMethods(t *testing.T) {
 func TestFailedMethodResultResponse(t *testing.T) {
 	// Create a mock provider
 	provider := provider.RPCProvider{
-		Name:     "testProvider",
-		URL:      "http://test.com",
-		AuthType: provider.NoAuth,
+		Name:      "testProvider",
+		URL:       "http://test.com",
+		AuthType:  provider.NoAuth,
+		ChainName: "testchain",
 	}
 
 	// Create mock MethodCaller with test response

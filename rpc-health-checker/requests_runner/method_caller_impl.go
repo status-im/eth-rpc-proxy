@@ -39,16 +39,17 @@ func (r *RequestsRunner) CallMethod(
 
 	// Defer the metrics recording
 	defer func() {
-		metrics.RecordRPCRequest(
-			provider.ChainID,
-			provider.Name,
-			provider.URL,
-			method,
-			provider.AuthToken,
-			requestErr,
-			httpStatus,
-			evmErrorCode,
-		)
+		metrics.RecordRPCRequest(metrics.RPCRequestMetrics{
+			ChainID:      provider.ChainID,
+			ChainName:    provider.ChainName,
+			ProviderName: provider.Name,
+			ProviderURL:  provider.URL,
+			Method:       method,
+			AuthToken:    provider.AuthToken,
+			RequestErr:   requestErr,
+			HTTPStatus:   httpStatus,
+			EVMErrorCode: evmErrorCode,
+		})
 	}()
 
 	// Create JSON-RPC 2.0 request body

@@ -25,15 +25,17 @@ type ParallelCheckProvidersTestSuite struct {
 func getSampleProviders() []provider.RPCProvider {
 	return []provider.RPCProvider{
 		{
-			Name:     "Provider1",
-			URL:      "https://provider1.example.com",
-			AuthType: provider.NoAuth,
+			Name:      "Provider1",
+			URL:       "https://provider1.example.com",
+			AuthType:  provider.NoAuth,
+			ChainName: "ethereum",
 		},
 		{
 			Name:      "Provider2",
 			URL:       "https://provider2.example.com",
 			AuthType:  provider.TokenAuth,
 			AuthToken: "dummy_token",
+			ChainName: "ethereum",
 		},
 		{
 			Name:         "Provider3",
@@ -41,6 +43,7 @@ func getSampleProviders() []provider.RPCProvider {
 			AuthType:     provider.BasicAuth,
 			AuthLogin:    "user",
 			AuthPassword: "pass",
+			ChainName:    "ethereum",
 		},
 	}
 }
@@ -202,6 +205,7 @@ func (suite *ParallelCheckProvidersTestSuite) TestParallelCheckProviders() {
 					URL:       "https://provider1.example.com",
 					AuthType:  provider.RPCProviderAuthType("invalid-auth"), // Assuming RPCProviderAuthType is a string alias
 					AuthToken: "",
+					ChainName: "ethereum",
 				},
 			},
 			failProviders: map[string]error{
@@ -242,14 +246,16 @@ func TestParallelCallEVMMethods(t *testing.T) {
 	// Create test providers
 	providers := []provider.RPCProvider{
 		{
-			Name:     "Provider1",
-			URL:      server.URL,
-			AuthType: provider.NoAuth,
+			Name:      "Provider1",
+			URL:       server.URL,
+			AuthType:  provider.NoAuth,
+			ChainName: "testchain",
 		},
 		{
-			Name:     "Provider2",
-			URL:      server.URL,
-			AuthType: provider.NoAuth,
+			Name:      "Provider2",
+			URL:       server.URL,
+			AuthType:  provider.NoAuth,
+			ChainName: "testchain",
 		},
 	}
 
@@ -282,14 +288,16 @@ func TestParallelCallEVMMethods(t *testing.T) {
 		// Create providers pointing to the slow server
 		slowProviders := []provider.RPCProvider{
 			{
-				Name:     "SlowProvider1",
-				URL:      slowServer.URL,
-				AuthType: provider.NoAuth,
+				Name:      "SlowProvider1",
+				URL:       slowServer.URL,
+				AuthType:  provider.NoAuth,
+				ChainName: "testchain",
 			},
 			{
-				Name:     "SlowProvider2",
-				URL:      slowServer.URL,
-				AuthType: provider.NoAuth,
+				Name:      "SlowProvider2",
+				URL:       slowServer.URL,
+				AuthType:  provider.NoAuth,
+				ChainName: "testchain",
 			},
 		}
 
@@ -376,9 +384,10 @@ func TestCallEVMMethod(t *testing.T) {
 		{
 			name: "Successful NoAuth request",
 			provider: provider.RPCProvider{
-				Name:     "test",
-				URL:      "", // Will be set to test server URL
-				AuthType: provider.NoAuth,
+				Name:      "test",
+				URL:       "", // Will be set to test server URL
+				AuthType:  provider.NoAuth,
+				ChainName: "testchain",
 			},
 			method: "eth_blockNumber",
 			params: []interface{}{},
@@ -408,6 +417,7 @@ func TestCallEVMMethod(t *testing.T) {
 				AuthType:     provider.BasicAuth,
 				AuthLogin:    "user",
 				AuthPassword: "pass",
+				ChainName:    "testchain",
 			},
 			method: "eth_getBalance",
 			params: []interface{}{"0x123", "latest"},
