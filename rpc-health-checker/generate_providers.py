@@ -216,6 +216,47 @@ NETWORK_DATA = [
         "providers": {
             STATUS_NETWORK: "https://public.sepolia.rpc.status.network/"
         }
+    },
+    {
+        "chain": "bsc",
+        "network": "mainnet",
+        "chainId": 56,
+        "providers": {
+            INFURA: "https://bsc-mainnet.infura.io/v3/",
+            GROVE: "https://bsc.rpc.grove.city/v1/",
+            NODEFLEET: "https://bsc-mainnet.alphafleet.io/",
+            ALCHEMY: "https://bnb-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "bsc",
+        "network": "testnet",
+        "chainId": 97,
+        "providers": {
+            INFURA: "https://bsc-testnet.infura.io/v3/",
+            ALCHEMY: "https://bnb-testnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "polygon",
+        "network": "mainnet",
+        "chainId": 137,
+        "providers": {
+            INFURA: "https://polygon-mainnet.infura.io/v3/",
+            GROVE: "https://polygon.rpc.grove.city/v1/",
+            NODEFLEET: "https://polygon-mainnet.alphafleet.io/",
+            ALCHEMY: "https://polygon-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "polygon",
+        "network": "amoy",
+        "chainId": 80002,
+        "providers": {
+            INFURA: "https://polygon-amoy.infura.io/v3/",
+            GROVE: "https://polygon-amoy-testnet.rpc.grove.city/v1/",
+            ALCHEMY: "https://polygon-amoy.g.alchemy.com/v2/"
+        }
     }
 ]
 
