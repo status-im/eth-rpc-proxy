@@ -1,6 +1,13 @@
 package metrics
 
-// ErrorCategory represents a categorized error type for RPC requests
+import (
+	"errors"
+	"net"
+	"net/http"
+	"strings"
+)
+
+// ErrorCategory represents the type of error that occurred
 type ErrorCategory string
 
 const (
@@ -23,42 +30,57 @@ const (
 	UnknownError ErrorCategory = "unknown_error"
 )
 
-// CategorizeError takes an error and returns the appropriate ErrorCategory
-func CategorizeError(err error, httpStatus, evmErrorCode int) ErrorCategory {
-	if err == nil {
-		return NoError
-	}
+// JSON-RPC error codes
+const (
+	JSONRPCInvalidRequest = -32600
+	JSONRPCMethodNotFound = -32601
+	JSONRPCInvalidParams  = -32602
+	JSONRPCParseError     = -32700
+)
 
-	errStr := err.Error()
-
-	// Check for network-related errors
-	if errStr == "context deadline exceeded" ||
-		errStr == "context canceled" ||
-		errStr == "connection reset by peer" ||
-		errStr == "connection refused" ||
-		errStr == "no such host" ||
-		errStr == "i/o timeout" {
-		return NetworkError
-	}
-
-	// Check for HTTP errors
-	if httpStatus != 0 && httpStatus != 200 {
+// CategorizeError determines the category of an error based on its type and content
+func CategorizeError(err error, httpStatus int, evmErrorCode int) ErrorCategory {
+	// Check for HTTP errors first
+	if httpStatus != 0 && httpStatus != http.StatusOK {
 		return HTTPError
 	}
 
-	// Check for EVM errors
+	// Check for JSON-RPC errors
+	if evmErrorCode == JSONRPCInvalidRequest ||
+		evmErrorCode == JSONRPCMethodNotFound ||
+		evmErrorCode == JSONRPCInvalidParams ||
+		evmErrorCode == JSONRPCParseError {
+		return JSONRPCError
+	}
+
+	// Check for other EVM errors
 	if evmErrorCode != 0 {
 		return EVMError
 	}
 
-	// Check for JSON-RPC errors
-	if errStr == "invalid json" ||
-		errStr == "invalid request" ||
-		errStr == "method not found" ||
-		errStr == "invalid params" {
-		return JSONRPCError
+	// If there's no error and no error codes, return NoError
+	if err == nil {
+		return NoError
 	}
 
-	// Default to unknown error
+	// Check for network errors
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		if netErr.Timeout() {
+			return NetworkError
+		}
+	}
+
+	// Check for common network errors from standard library
+	errMsg := err.Error()
+	if strings.Contains(errMsg, "connection refused") ||
+		strings.Contains(errMsg, "connection reset") ||
+		strings.Contains(errMsg, "no such host") ||
+		strings.Contains(errMsg, "context canceled") ||
+		strings.Contains(errMsg, "context deadline exceeded") {
+		return NetworkError
+	}
+
+	// If we can't categorize the error, return unknown
 	return UnknownError
 }

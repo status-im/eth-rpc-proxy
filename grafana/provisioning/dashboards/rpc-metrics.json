@@ -454,7 +454,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by(provider_name, status_code) (increase(rpc_requests_total{status_code!='0'}[5m]))",
+          "expr": "sum by(provider_name, status_code) (increase(rpc_requests_total{status_code!='success'}[5m]))",
           "legendFormat": "{{provider_name}} - {{status_code}}",
           "refId": "A"
         }
