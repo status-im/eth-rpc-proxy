@@ -9,6 +9,8 @@ import (
 )
 
 var (
+
+	// cardinality: 1
 	validationCycleDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name: "validation_cycle_duration_seconds",
 		Help: "Duration of validation cycle in seconds",
@@ -19,19 +21,15 @@ var (
 		Help: "Status of providers (1 = working, 0 = not working)",
 	}, []string{"chain_id", "chain_name", "network_name", "provider_name", "provider_url", "auth_token_masked"})
 
+	// approximate cardinality: 10 (chain_id) × 10 (provider_name) × 6 (error_type) × 20 (status_code) = 12k
 	rpcRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "rpc_requests_total",
 		Help: "Total number of RPC requests made for validation checks",
 	}, []string{
-		"chain_id",
-		"chain_name",
-		"provider_name",
-		"provider_url",
-		"method",
-		"auth_token_masked",
-		"request_err",    // Error message if request failed, "none" if successful
-		"http_status",    // HTTP status code, "0" if request failed before getting response
-		"evm_error_code", // EVM error code from JSON-RPC response, "0" if successful
+		"chain_id",      // Chain ID for identification
+		"provider_name", // Provider name for identification
+		"error_type",    // Categorized error type (none, network_error, http_error, jsonrpc_error, evm_error, unknown_error)
+		"status_code",   // Combined status code: HTTP status or EVM error code
 	})
 )
 
@@ -78,25 +76,22 @@ type RPCRequestMetrics struct {
 
 // RecordRPCRequest records a single RPC request with its metadata and error information
 func RecordRPCRequest(metrics RPCRequestMetrics) {
-	// Mask the auth token by keeping only first and last 4 characters if it's long enough
-	maskedToken := maskAuthToken(metrics.AuthToken)
+	// Categorize the error
+	errCategory := CategorizeError(metrics.RequestErr, metrics.HTTPStatus, metrics.EVMErrorCode)
 
-	// Format error message, use "none" if no error
-	errMsg := "none"
-	if metrics.RequestErr != nil {
-		errMsg = metrics.RequestErr.Error()
+	// Determine status code based on error type
+	statusCode := "0"
+	if errCategory == HTTPError {
+		statusCode = fmt.Sprintf("http_%d", metrics.HTTPStatus)
+	} else if errCategory == EVMError {
+		statusCode = fmt.Sprintf("evm_%d", metrics.EVMErrorCode)
 	}
 
 	rpcRequestsTotal.WithLabelValues(
 		fmt.Sprintf("%d", metrics.ChainID),
-		metrics.ChainName,
 		metrics.ProviderName,
-		metrics.ProviderURL,
-		metrics.Method,
-		maskedToken,
-		errMsg,
-		fmt.Sprintf("%d", metrics.HTTPStatus),
-		fmt.Sprintf("%d", metrics.EVMErrorCode),
+		string(errCategory),
+		statusCode,
 	).Inc()
 }
 
