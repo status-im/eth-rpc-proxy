@@ -365,7 +365,9 @@ func (s *E2ETestSuite) TestE2E() {
 	})
 
 	// Cleanup server
-	server.Stop()
+	if err := server.Stop(); err != nil {
+		s.T().Logf("error stopping server: %v", err)
+	}
 	cancel()
 	select {
 	case err := <-serverDone:

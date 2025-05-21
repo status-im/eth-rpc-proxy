@@ -30,11 +30,9 @@ type Server interface {
 }
 
 type httpServer struct {
-	config        ServerConfig
-	server        *http.Server
-	logger        *slog.Logger
-	lastReload    time.Time
-	reloadTimeout time.Duration
+	config ServerConfig
+	server *http.Server
+	logger *slog.Logger
 }
 
 func New(port, providersPath, defaultProvidersPath string) Server {
@@ -138,5 +136,7 @@ func (s *httpServer) providersHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *httpServer) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("ok"))
+	if _, err := w.Write([]byte("ok")); err != nil {
+		s.logger.Error("failed to write health response", "error", err)
+	}
 }

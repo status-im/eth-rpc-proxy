@@ -98,11 +98,3 @@ func RecordRPCRequest(metrics RPCRequestMetrics) {
 		statusCode,
 	).Inc()
 }
-
-// maskAuthToken masks the auth token for security
-func maskAuthToken(token string) string {
-	if len(token) <= 8 {
-		return "***"
-	}
-	return token[:4] + "..." + token[len(token)-4:]
-}

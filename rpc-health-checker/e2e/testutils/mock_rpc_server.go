@@ -3,6 +3,7 @@ package testutils
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -57,7 +58,10 @@ func (s *MockRPCServer) Start() error {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		s.server.ListenAndServe()
+		err := s.server.ListenAndServe()
+		if err != nil && err.Error() != "http: Server closed" {
+			log.Printf("mock server ListenAndServe error: %v", err)
+		}
 	}()
 
 	// Wait briefly to ensure server is up
@@ -113,7 +117,12 @@ func (s *MockRPCServer) handleRPCRequest(w http.ResponseWriter, r *http.Request)
 // writeJSONResponse writes a JSON response with the appropriate headers
 func writeJSONResponse(w http.ResponseWriter, response interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err := json.NewEncoder(w).Encode(response)
+	if err != nil {
+		log.Printf("failed to encode JSON response: %v", err)
+		http.Error(w, fmt.Sprintf("failed to encode JSON response: %v", err), http.StatusInternalServerError)
+		return
+	}
 }
 
 // writeSuccess writes a successful JSON-RPC response
