@@ -98,8 +98,8 @@ func (p *ProviderSetup) StopAll() error {
 }
 
 // Close ensures all resources are properly cleaned up
-func (p *ProviderSetup) Close() {
-	p.StopAll()
+func (p *ProviderSetup) Close() error {
+	return p.StopAll()
 }
 
 // http404Server wraps http.Server to implement httpServer interface

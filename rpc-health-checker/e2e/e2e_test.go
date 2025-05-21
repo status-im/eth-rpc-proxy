@@ -237,7 +237,7 @@ func (s *E2ETestSuite) SetupSuite() {
 
 func (s *E2ETestSuite) TearDownSuite() {
 	// Stop all mock servers
-	if err := s.providerSetup.StopAll(); err != nil {
+	if err := s.providerSetup.Close(); err != nil {
 		s.T().Logf("error stopping mock servers: %v", err)
 	}
 	os.RemoveAll(testTempDir)
