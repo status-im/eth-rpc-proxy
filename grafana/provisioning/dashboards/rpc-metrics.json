@@ -76,7 +76,7 @@
       "targets": [
         {
           "expr": "provider_status",
-          "legendFormat": "{{provider_name}} ({{chain_name}})",
+          "legendFormat": "{{provider_name}} (Chain {{chain_id}})",
           "refId": "A"
         }
       ]
@@ -308,12 +308,12 @@
           "sort": "desc"
         }
       },
-      "title": "Requests by Chain/Token (Cost Estimation)",
+      "title": "Requests by Chain",
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by(chain_id, auth_token_masked) (rate(rpc_requests_total[5m]) * 60)",
-          "legendFormat": "Chain {{chain_id}} - {{auth_token_masked}}",
+          "expr": "sum by(chain_id) (rate(rpc_requests_total[5m]) * 60)",
+          "legendFormat": "Chain {{chain_id}}",
           "refId": "A"
         }
       ]
@@ -379,12 +379,12 @@
           "sort": "desc"
         }
       },
-      "title": "Error Breakdown by Provider",
+      "title": "Error Breakdown by Type",
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by(provider_name, request_err) (increase(rpc_requests_total{request_err!='none'}[5m]))",
-          "legendFormat": "{{provider_name}} - {{request_err}}",
+          "expr": "sum by(error_type) (increase(rpc_requests_total{error_type!='none'}[5m]))",
+          "legendFormat": "{{error_type}}",
           "refId": "A"
         }
       ]
@@ -450,18 +450,13 @@
           "sort": "desc"
         }
       },
-      "title": "HTTP Status Codes & EVM Errors by Provider",
+      "title": "Status Codes by Provider",
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by(provider_name, http_status) (increase(rpc_requests_total{http_status!='200'}[5m]))",
-          "legendFormat": "{{provider_name}} - HTTP {{http_status}}",
+          "expr": "sum by(provider_name, status_code) (increase(rpc_requests_total{status_code!='0'}[5m]))",
+          "legendFormat": "{{provider_name}} - {{status_code}}",
           "refId": "A"
-        },
-        {
-          "expr": "sum by(provider_name, evm_error_code) (increase(rpc_requests_total{evm_error_code!='0'}[5m]))",
-          "legendFormat": "{{provider_name}} - EVM Error {{evm_error_code}}",
-          "refId": "B"
         }
       ]
     }
