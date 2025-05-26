@@ -239,7 +239,9 @@ func TestParallelCallEVMMethods(t *testing.T) {
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"jsonrpc":"2.0","result":"0x1"}`))
+		if _, err := w.Write([]byte(`{"jsonrpc":"2.0","result":"0x1"}`)); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -281,7 +283,9 @@ func TestParallelCallEVMMethods(t *testing.T) {
 		slowServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			time.Sleep(100 * time.Millisecond)
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"jsonrpc":"2.0","result":"0x1"}`))
+			if _, err := w.Write([]byte(`{"jsonrpc":"2.0","result":"0x1"}`)); err != nil {
+				t.Errorf("failed to write response: %v", err)
+			}
 		}))
 		defer slowServer.Close()
 
@@ -404,7 +408,9 @@ func TestCallEVMMethod(t *testing.T) {
 				assert.Equal(t, float64(1), req["id"])
 
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"jsonrpc":"2.0","result":"0x1"}`))
+				if _, err := w.Write([]byte(`{"jsonrpc":"2.0","result":"0x1"}`)); err != nil {
+					t.Errorf("failed to write response: %v", err)
+				}
 			},
 			wantSuccess: true,
 			wantResult:  "0x1",
@@ -428,7 +434,9 @@ func TestCallEVMMethod(t *testing.T) {
 				assert.Equal(t, "pass", pass)
 
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"jsonrpc":"2.0","result":"0x100"}`))
+				if _, err := w.Write([]byte(`{"jsonrpc":"2.0","result":"0x100"}`)); err != nil {
+					t.Errorf("failed to write response: %v", err)
+				}
 			},
 			wantSuccess: true,
 			wantResult:  "0x100",
@@ -460,7 +468,9 @@ func TestCallEVMMethod(t *testing.T) {
 				assert.Equal(t, float64(1), req["id"])
 
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"jsonrpc":"2.0","result":"0x1"}`))
+				if _, err := w.Write([]byte(`{"jsonrpc":"2.0","result":"0x1"}`)); err != nil {
+					t.Errorf("failed to write response: %v", err)
+				}
 			},
 			wantSuccess: true,
 			wantResult:  "0x1",
@@ -491,7 +501,9 @@ func TestCallEVMMethod(t *testing.T) {
 			params: []interface{}{},
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`invalid json`))
+				if _, err := w.Write([]byte(`invalid json`)); err != nil {
+					t.Errorf("failed to write response: %v", err)
+				}
 			},
 			wantSuccess: false,
 		},

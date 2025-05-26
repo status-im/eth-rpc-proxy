@@ -217,7 +217,7 @@ func (s *E2ETestSuite) SetupSuite() {
 	testMethods := []config.EVMMethodTestJSON{
 		{
 			Method:        "eth_blockNumber",
-			Params:        []interface{}{}, // Explicit empty array instead of null
+			Params:        []interface{}{},
 			MaxDifference: "0",
 		},
 		{
@@ -237,7 +237,7 @@ func (s *E2ETestSuite) SetupSuite() {
 
 func (s *E2ETestSuite) TearDownSuite() {
 	// Stop all mock servers
-	if err := s.providerSetup.StopAll(); err != nil {
+	if err := s.providerSetup.Close(); err != nil {
 		s.T().Logf("error stopping mock servers: %v", err)
 	}
 	os.RemoveAll(testTempDir)
@@ -290,8 +290,26 @@ func (s *E2ETestSuite) TestE2E() {
 	validationTask.Start()
 	defer validationTask.Stop()
 
-	// Wait for first run to complete
-	time.Sleep(2 * time.Second)
+	// Wait for first run to complete and output file to be created
+	maxWait := 10 * time.Second
+	start := time.Now()
+
+	for {
+		if time.Since(start) > maxWait {
+			s.FailNow("timeout waiting for output file to be created")
+		}
+
+		// Check if file exists and has content
+		outputBytes, err := os.ReadFile(s.cfg.OutputProvidersPath)
+		if err == nil && len(outputBytes) > 0 {
+			// Try to parse JSON to ensure it's valid
+			var testOutput config.ChainsConfig
+			if err := json.Unmarshal(outputBytes, &testOutput); err == nil {
+				break
+			}
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
 
 	// Test provider connectivity
 	s.Run("Test provider is accessible", func() {
@@ -365,7 +383,9 @@ func (s *E2ETestSuite) TestE2E() {
 	})
 
 	// Cleanup server
-	server.Stop()
+	if err := server.Stop(); err != nil {
+		s.T().Logf("error stopping server: %v", err)
+	}
 	cancel()
 	select {
 	case err := <-serverDone:

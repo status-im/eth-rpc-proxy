@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -132,7 +131,7 @@ func (suite *RpcProviderTestSuite) TestReadRpcProvidersFileNotFound() {
 // TestReadRpcProvidersInvalidJSON checks that the function returns an error for invalid JSON
 func (suite *RpcProviderTestSuite) TestReadRpcProvidersInvalidJSON() {
 	// Write invalid JSON to the temporary file
-	err := ioutil.WriteFile(suite.tempFile, []byte(suite.invalidJSON), 0644)
+	err := os.WriteFile(suite.tempFile, []byte(suite.invalidJSON), 0644)
 	suite.Require().NoError(err, "Failed to write invalid JSON to temp file")
 
 	// Attempt to read providers from the file
@@ -142,7 +141,7 @@ func (suite *RpcProviderTestSuite) TestReadRpcProvidersInvalidJSON() {
 
 // TestInvalidAuthTypeJSON checks that the function returns an error for invalid JSON
 func (suite *RpcProviderTestSuite) TestInvalidAuthTypeJSON() {
-	err := ioutil.WriteFile(suite.tempFile, []byte(suite.invalidAuthTypeJSON), 0644)
+	err := os.WriteFile(suite.tempFile, []byte(suite.invalidAuthTypeJSON), 0644)
 	suite.Require().NoError(err, "Failed to write invalid JSON to temp file")
 
 	// Attempt to read providers from the file

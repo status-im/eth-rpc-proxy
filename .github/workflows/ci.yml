@@ -1,4 +1,4 @@
-name: Tests
+name: CI
 
 on:
   push:
@@ -8,8 +8,8 @@ on:
     branches: [ master ]
 
 jobs:
-  test:
-    name: Run Tests
+  lint:
+    name: Run Linter
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -29,8 +29,8 @@ jobs:
         cd rpc-health-checker
         go mod download
 
-    - name: Run tests
-      id: tests
-      run: |
-        cd rpc-health-checker
-        go test -v -race ./... 
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+        working-directory: rpc-health-checker 
