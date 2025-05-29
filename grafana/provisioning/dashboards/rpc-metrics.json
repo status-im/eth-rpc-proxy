@@ -76,7 +76,7 @@
       "targets": [
         {
           "expr": "provider_status",
-          "legendFormat": "{{provider_name}} (Chain {{chain_id}})",
+          "legendFormat": "{{provider_name}} ({{chain_id}})",
           "refId": "A"
         }
       ]

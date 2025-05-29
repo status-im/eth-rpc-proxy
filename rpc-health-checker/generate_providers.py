@@ -41,7 +41,8 @@ def create_provider_entry(p_type, provider_spec, network_data, count=None):
     """Create a provider entry with consistent format."""
     base_name = f"{p_type.capitalize()}-{count}" if count is not None else p_type.capitalize()
     chain_name = network_data["chain"].capitalize()
-    name = f"{base_name} {chain_name}"
+    network_name = network_data["network"].capitalize()
+    name = f"{base_name} {chain_name} {network_name}"
     return {
         "type": p_type,
         "name": name,
