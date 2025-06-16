@@ -8,6 +8,7 @@ services:
       CONFIG_HEALTH_CHECKER_URL: 'http://health-checker:8082/providers'
       CUSTOM_DNS: '127.0.0.11'
       RELOAD_INTERVAL: '10'
+      REQUESTS_PER_TOKEN: '100'
     ports:
       - '8080:8080'
     networks:
