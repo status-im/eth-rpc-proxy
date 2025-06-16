@@ -8,15 +8,34 @@ services:
       CONFIG_HEALTH_CHECKER_URL: 'http://health-checker:8082/providers'
       CUSTOM_DNS: '127.0.0.11'
       RELOAD_INTERVAL: '10'
+      JWT_SECRET: 'supersecret'  # JWT secret for token validation
     ports:
       - '8080:8080'
     networks:
       - 'rpc-network'
     depends_on:
       - 'health-checker'
+      - 'go-auth-service'
     volumes:
       - './secrets/default_providers.json:/usr/local/openresty/nginx/providers.json'
       - './secrets/.htpasswd:/etc/nginx/.htpasswd'
+
+  go-auth-service:
+    build:
+      context: './go-auth-service'
+      dockerfile: Dockerfile
+    container_name: 'go-auth-service'
+    restart: 'always'
+    environment:
+      PUZZLE_DIFFICULTY: '2'
+      TOKEN_EXPIRY_MINUTES: '10'
+      REQUESTS_PER_TOKEN: '100'
+      JWT_SECRET: 'supersecret'
+      PORT: '8081'
+    ports:
+      - '8081:8081'
+    networks:
+      - 'rpc-network'
 
   health-checker:
     build:
