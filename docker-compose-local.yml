@@ -9,6 +9,7 @@ services:
       CUSTOM_DNS: '127.0.0.11'
       RELOAD_INTERVAL: '10'
       REQUESTS_PER_TOKEN: '100'
+      TOKEN_EXPIRY_MINUTES: '10'
     ports:
       - '8080:8080'
     networks:

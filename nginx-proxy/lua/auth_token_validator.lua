@@ -1,11 +1,12 @@
 local json = require("cjson")
+local auth_config = require("auth_config")
+
+-- Get pre-initialized configuration (no getenv calls per request)
+local requests_per_token = auth_config.get_requests_per_token()
+local token_expiry_minutes = auth_config.get_token_expiry_minutes()
 
 -- Debug logging
 ngx.log(ngx.INFO, "auth_token_validator: Starting JWT validation")
-
--- Get environment variables
-local requests_per_token = tonumber(os.getenv("REQUESTS_PER_TOKEN")) or 100
-ngx.log(ngx.INFO, "auth_token_validator: REQUESTS_PER_TOKEN = ", requests_per_token)
 
 -- Extract Authorization header
 local auth_header = ngx.var.http_authorization
@@ -49,9 +50,10 @@ if cached_result then
         ngx.exit(429)
     end
     
-    -- Increment usage counter
+    -- Increment usage counter  
     local new_usage = current_usage + 1
-    local success = ngx.shared.jwt_tokens:set(usage_key, new_usage, 600)  -- 10 minute TTL
+    local usage_ttl = (token_expiry_minutes * 60) + 60  -- Token expiry + 1 minute buffer
+    local success = ngx.shared.jwt_tokens:set(usage_key, new_usage, usage_ttl)
     
     if not success then
         ngx.log(ngx.WARN, "Failed to update usage counter for token")
@@ -82,14 +84,17 @@ if res.status == 200 then
     -- Token is valid, cache it and initialize usage counter
     ngx.log(ngx.INFO, "JWT validated by Go service, caching token")
     
-    -- Cache the valid token for 5 minutes
-    local cache_success = ngx.shared.jwt_tokens:set(cache_key, "valid", 300)
+    -- Cache the valid token for the duration of token expiry
+    local cache_ttl = token_expiry_minutes * 60  -- Convert minutes to seconds
+    local cache_success = ngx.shared.jwt_tokens:set(cache_key, "valid", cache_ttl)
     if not cache_success then
         ngx.log(ngx.WARN, "Failed to cache valid JWT token")
     end
     
-    -- Initialize usage counter (this request counts as first usage)
-    local usage_success = ngx.shared.jwt_tokens:set(usage_key, 1, 600)
+    -- Initialize usage counter (this request counts as first usage) 
+    -- Usage counter TTL should be longer than cache TTL to prevent inconsistencies
+    local usage_ttl = cache_ttl + 60  -- Extra 1 minute buffer
+    local usage_success = ngx.shared.jwt_tokens:set(usage_key, 1, usage_ttl)
     if not usage_success then
         ngx.log(ngx.WARN, "Failed to initialize usage counter")
     end
