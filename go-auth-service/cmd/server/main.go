@@ -13,6 +13,7 @@ func main() {
 
 	mux.HandleFunc("/auth/puzzle", handlers.PuzzleHandler)
 	mux.HandleFunc("/auth/solve", handlers.SolveHandler)
+	mux.HandleFunc("/auth/verify", handlers.VerifyHandler)
 	mux.HandleFunc("/auth/status", handlers.StatusHandler)
 
 	port := os.Getenv("PORT")
