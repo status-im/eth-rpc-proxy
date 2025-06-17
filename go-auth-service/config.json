@@ -1,0 +1,13 @@
+{
+  "algorithm": "argon2id",
+  "jwt_secret": "supersecret",
+  "puzzle_difficulty": 2,
+  "requests_per_token": 100,
+  "token_expiry_minutes": 10,
+  "argon2_params": {
+    "memory_kb": 32768,
+    "time": 1,
+    "threads": 4,
+    "key_len": 32
+  }
+} 

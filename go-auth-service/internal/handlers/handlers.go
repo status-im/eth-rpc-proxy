@@ -13,18 +13,35 @@ import (
 	"go-auth-service/internal/puzzle"
 )
 
-var cfg = config.Load()
+// Handlers struct holds configuration and state
+type Handlers struct {
+	config     *config.Config
+	tokenUsage map[string]int
+	tokenMutex sync.RWMutex
+}
 
-// Rate limiting storage
-var (
-	tokenUsage = make(map[string]int)
-	tokenMutex = sync.RWMutex{}
-)
+// New creates a new Handlers instance with the given configuration
+func New(cfg *config.Config) *Handlers {
+	return &Handlers{
+		config:     cfg,
+		tokenUsage: make(map[string]int),
+	}
+}
 
-func PuzzleHandler(w http.ResponseWriter, r *http.Request) {
+// configToArgon2Config converts config.Argon2Params to puzzle.Argon2Config
+func (h *Handlers) configToArgon2Config() puzzle.Argon2Config {
+	return puzzle.Argon2Config{
+		MemoryKB: h.config.Argon2Params.MemoryKB,
+		Time:     h.config.Argon2Params.Time,
+		Threads:  h.config.Argon2Params.Threads,
+		KeyLen:   h.config.Argon2Params.KeyLen,
+	}
+}
+
+func (h *Handlers) PuzzleHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	p, err := puzzle.Generate(cfg.PuzzleDifficulty, cfg.TokenExpiryMinutes)
+	p, err := puzzle.Generate(h.config.PuzzleDifficulty, h.config.TokenExpiryMinutes)
 	if err != nil {
 		http.Error(w, "failed to generate puzzle", 500)
 		return
@@ -37,7 +54,13 @@ func PuzzleHandler(w http.ResponseWriter, r *http.Request) {
 		"difficulty":          p.Difficulty,
 		"expires_at":          p.ExpiresAt.Format(time.RFC3339),
 		"expected_iterations": puzzle.GetExpectedIterations(p.Difficulty),
-		"algorithm":           "argon2id",
+		"algorithm":           h.config.Algorithm,
+		"argon2_params": map[string]interface{}{
+			"memory_kb": h.config.Argon2Params.MemoryKB,
+			"time":      h.config.Argon2Params.Time,
+			"threads":   h.config.Argon2Params.Threads,
+			"key_len":   h.config.Argon2Params.KeyLen,
+		},
 	}
 
 	json.NewEncoder(w).Encode(response)
@@ -51,7 +74,7 @@ type SolveRequest struct {
 	ExpiresAt string `json:"expires_at"`
 }
 
-func SolveHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var req SolveRequest
@@ -71,7 +94,7 @@ func SolveHandler(w http.ResponseWriter, r *http.Request) {
 	puzzleObj := &puzzle.Puzzle{
 		Challenge:  req.Challenge,
 		Salt:       req.Salt,
-		Difficulty: cfg.PuzzleDifficulty,
+		Difficulty: h.config.PuzzleDifficulty,
 		ExpiresAt:  exp,
 	}
 
@@ -80,14 +103,15 @@ func SolveHandler(w http.ResponseWriter, r *http.Request) {
 		Hash:  req.Hash,
 	}
 
-	// Validate the solution
-	if !puzzle.Validate(puzzleObj, solution) {
+	// Validate the solution using config parameters
+	argon2Config := h.configToArgon2Config()
+	if !puzzle.ValidateWithConfig(puzzleObj, solution, argon2Config) {
 		http.Error(w, "invalid solution", 400)
 		return
 	}
 
 	// Generate JWT token
-	token, expiresAt, err := jwt.Generate(cfg.JWTSecret, req.Challenge, cfg.TokenExpiryMinutes, cfg.RequestsPerToken)
+	token, expiresAt, err := jwt.Generate(h.config.JWTSecret, req.Challenge, h.config.TokenExpiryMinutes, h.config.RequestsPerToken)
 	if err != nil {
 		http.Error(w, "failed to generate token", 500)
 		return
@@ -96,15 +120,15 @@ func SolveHandler(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
 		"token":         token,
 		"expires_at":    expiresAt.Format(time.RFC3339),
-		"request_limit": cfg.RequestsPerToken,
-		"algorithm":     "argon2id",
+		"request_limit": h.config.RequestsPerToken,
+		"algorithm":     h.config.Algorithm,
 	}
 
 	json.NewEncoder(w).Encode(response)
 }
 
 // VerifyHandler handles JWT token verification for nginx auth_request
-func VerifyHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract Authorization header
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -122,7 +146,7 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	tokenString := parts[1]
 
 	// Verify JWT token
-	claims, err := jwt.Verify(tokenString, cfg.JWTSecret)
+	claims, err := jwt.Verify(tokenString, h.config.JWTSecret)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -131,43 +155,43 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	// Check rate limiting
 	tokenID := claims.ID
 	if tokenID != "" {
-		tokenMutex.Lock()
-		currentUsage := tokenUsage[tokenID]
-		if currentUsage >= cfg.RequestsPerToken {
-			tokenMutex.Unlock()
-			w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", cfg.RequestsPerToken))
+		h.tokenMutex.Lock()
+		currentUsage := h.tokenUsage[tokenID]
+		if currentUsage >= h.config.RequestsPerToken {
+			h.tokenMutex.Unlock()
+			w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", h.config.RequestsPerToken))
 			w.Header().Set("X-RateLimit-Remaining", "0")
 			w.WriteHeader(http.StatusTooManyRequests)
 			return
 		}
-		tokenUsage[tokenID] = currentUsage + 1
-		newUsage := tokenUsage[tokenID]
-		tokenMutex.Unlock()
+		h.tokenUsage[tokenID] = currentUsage + 1
+		newUsage := h.tokenUsage[tokenID]
+		h.tokenMutex.Unlock()
 
 		// Set rate limit headers
-		w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", cfg.RequestsPerToken))
-		w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", cfg.RequestsPerToken-newUsage))
+		w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", h.config.RequestsPerToken))
+		w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", h.config.RequestsPerToken-newUsage))
 	}
 
 	// Token is valid
 	w.WriteHeader(http.StatusOK)
 }
 
-func StatusHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	response := map[string]interface{}{
-		"puzzle_difficulty":   cfg.PuzzleDifficulty,
-		"token_expiry_min":    cfg.TokenExpiryMinutes,
-		"requests_per_token":  cfg.RequestsPerToken,
-		"jwt_secret_present":  cfg.JWTSecret != "",
-		"algorithm":           "argon2id",
-		"expected_iterations": puzzle.GetExpectedIterations(cfg.PuzzleDifficulty),
+		"puzzle_difficulty":   h.config.PuzzleDifficulty,
+		"token_expiry_min":    h.config.TokenExpiryMinutes,
+		"requests_per_token":  h.config.RequestsPerToken,
+		"jwt_secret_present":  h.config.JWTSecret != "",
+		"algorithm":           h.config.Algorithm,
+		"expected_iterations": puzzle.GetExpectedIterations(h.config.PuzzleDifficulty),
 		"argon2_params": map[string]interface{}{
-			"memory_kb": 32 * 1024,
-			"time":      1,
-			"threads":   4,
-			"key_len":   32,
+			"memory_kb": h.config.Argon2Params.MemoryKB,
+			"time":      h.config.Argon2Params.Time,
+			"threads":   h.config.Argon2Params.Threads,
+			"key_len":   h.config.Argon2Params.KeyLen,
 		},
 	}
 

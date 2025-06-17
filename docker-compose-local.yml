@@ -28,15 +28,14 @@ services:
     container_name: 'go-auth-service'
     restart: 'always'
     environment:
-      PUZZLE_DIFFICULTY: '2'
-      TOKEN_EXPIRY_MINUTES: '10'
-      REQUESTS_PER_TOKEN: '100'
-      JWT_SECRET: 'supersecret'
+      CONFIG_FILE: '/app/config.json'
       PORT: '8081'
     ports:
       - '8081:8081'
     networks:
       - 'rpc-network'
+    volumes:
+      - './go-auth-service/config.json:/app/config.json:ro'
 
   health-checker:
     build:

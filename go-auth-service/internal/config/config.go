@@ -1,38 +1,41 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
-	"strconv"
 )
 
+type Argon2Params struct {
+	MemoryKB int `json:"memory_kb"`
+	Time     int `json:"time"`
+	Threads  int `json:"threads"`
+	KeyLen   int `json:"key_len"`
+}
+
 type Config struct {
-	PuzzleDifficulty   int
-	TokenExpiryMinutes int
-	RequestsPerToken   int
-	JWTSecret          string
+	Algorithm          string       `json:"algorithm"`
+	JWTSecret          string       `json:"jwt_secret"`
+	PuzzleDifficulty   int          `json:"puzzle_difficulty"`
+	RequestsPerToken   int          `json:"requests_per_token"`
+	TokenExpiryMinutes int          `json:"token_expiry_minutes"`
+	Argon2Params       Argon2Params `json:"argon2_params"`
 }
 
-func Load() *Config {
-	return &Config{
-		PuzzleDifficulty:   getEnvInt("PUZZLE_DIFFICULTY", 2),
-		TokenExpiryMinutes: getEnvInt("TOKEN_EXPIRY_MINUTES", 10),
-		RequestsPerToken:   getEnvInt("REQUESTS_PER_TOKEN", 100),
-		JWTSecret:          getEnv("JWT_SECRET", "supersecret"),
+func Load() (*Config, error) {
+	configFile := os.Getenv("CONFIG_FILE")
+	if configFile == "" {
+		configFile = "config.json" // default path
 	}
-}
 
-func getEnv(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return nil, err
 	}
-	return def
-}
 
-func getEnvInt(key string, def int) int {
-	if v := os.Getenv(key); v != "" {
-		if i, err := strconv.Atoi(v); err == nil {
-			return i
-		}
+	var config Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, err
 	}
-	return def
+
+	return &config, nil
 }

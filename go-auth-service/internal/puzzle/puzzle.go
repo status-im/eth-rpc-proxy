@@ -9,17 +9,12 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
-// Argon2 parameters for puzzle system
-const (
-	// Memory usage in KB (32MB for difficulty balance)
-	ArgonMemory = 32 * 1024
-	// Number of iterations (time parameter)
-	ArgonTime = 1
-	// Number of threads
-	ArgonThreads = 4
-	// Key length in bytes
-	ArgonKeyLen = 32
-)
+type Argon2Config struct {
+	MemoryKB int
+	Time     int
+	Threads  int
+	KeyLen   int
+}
 
 type Puzzle struct {
 	Challenge  string    `json:"challenge"`
@@ -55,15 +50,15 @@ func Generate(difficulty int, ttlMinutes int) (*Puzzle, error) {
 	}, nil
 }
 
-// Validate checks if the provided solution is correct for the puzzle
-func Validate(puzzle *Puzzle, solution *Solution) bool {
+// ValidateWithConfig checks if the provided solution is correct for the puzzle
+func ValidateWithConfig(puzzle *Puzzle, solution *Solution, argon2Config Argon2Config) bool {
 	// Check if puzzle has expired
 	if time.Now().After(puzzle.ExpiresAt) {
 		return false
 	}
 
 	// Recreate the hash with provided nonce
-	computedHash := computeArgon2Hash(puzzle.Challenge, puzzle.Salt, solution.Nonce, puzzle.Difficulty)
+	computedHash := computeArgon2HashWithConfig(puzzle.Challenge, puzzle.Salt, solution.Nonce, puzzle.Difficulty, argon2Config)
 
 	// Verify the hash matches
 	if computedHash != solution.Hash {
@@ -74,15 +69,15 @@ func Validate(puzzle *Puzzle, solution *Solution) bool {
 	return checkDifficulty(computedHash, puzzle.Difficulty)
 }
 
-// Solve attempts to find a valid nonce for the puzzle (for testing purposes)
-func Solve(puzzle *Puzzle) (*Solution, error) {
+// SolveWithConfig attempts to find a valid nonce for the puzzle (for testing purposes)
+func SolveWithConfig(puzzle *Puzzle, argon2Config Argon2Config) (*Solution, error) {
 	if time.Now().After(puzzle.ExpiresAt) {
 		return nil, fmt.Errorf("puzzle has expired")
 	}
 
 	// Try different nonces until we find one that meets difficulty
 	for nonce := uint64(0); nonce < 1000000; nonce++ { // Limit attempts for safety
-		hash := computeArgon2Hash(puzzle.Challenge, puzzle.Salt, nonce, puzzle.Difficulty)
+		hash := computeArgon2HashWithConfig(puzzle.Challenge, puzzle.Salt, nonce, puzzle.Difficulty, argon2Config)
 
 		if checkDifficulty(hash, puzzle.Difficulty) {
 			return &Solution{
@@ -95,8 +90,8 @@ func Solve(puzzle *Puzzle) (*Solution, error) {
 	return nil, fmt.Errorf("failed to solve puzzle within attempt limit")
 }
 
-// computeArgon2Hash computes Argon2id hash for given parameters
-func computeArgon2Hash(challenge, salt string, nonce uint64, difficulty int) string {
+// computeArgon2HashWithConfig computes Argon2id hash for given parameters and config
+func computeArgon2HashWithConfig(challenge, salt string, nonce uint64, difficulty int, argon2Config Argon2Config) string {
 	// Create input: challenge + salt + nonce
 	input := fmt.Sprintf("%s%s%d", challenge, salt, nonce)
 
@@ -107,12 +102,14 @@ func computeArgon2Hash(challenge, salt string, nonce uint64, difficulty int) str
 		saltBytes = []byte(salt)
 	}
 
-	// Adjust Argon2 parameters based on difficulty
-	memory := uint32(ArgonMemory)
-	time := ArgonTime + uint32(difficulty-1) // Increase time with difficulty
+	// Use config parameters
+	memory := uint32(argon2Config.MemoryKB)
+	time := uint32(argon2Config.Time) + uint32(difficulty-1) // Increase time with difficulty
+	threads := uint8(argon2Config.Threads)
+	keyLen := uint32(argon2Config.KeyLen)
 
 	// Compute Argon2id hash
-	hash := argon2.IDKey([]byte(input), saltBytes, time, memory, ArgonThreads, ArgonKeyLen)
+	hash := argon2.IDKey([]byte(input), saltBytes, time, memory, threads, keyLen)
 
 	return hex.EncodeToString(hash)
 }
