@@ -7,6 +7,9 @@ function _M.init()
     -- Get config file path from environment variable
     local config_file_path = os.getenv("AUTH_CONFIG_FILE") or "/app/config.json"
     
+    -- Get Go Auth Service URL from environment variable
+    _M.go_auth_service_url = os.getenv("GO_AUTH_SERVICE_URL") or "http://go-auth-service:8081"
+    
     -- Read and parse JSON config file
     local config_data = _M.read_json_config(config_file_path)
     
@@ -19,6 +22,7 @@ function _M.init()
         
         -- Log the initialized values
         ngx.log(ngx.NOTICE, "auth_config: Loaded from ", config_file_path)
+        ngx.log(ngx.NOTICE, "auth_config: go_auth_service_url = ", _M.go_auth_service_url)
         ngx.log(ngx.NOTICE, "auth_config: requests_per_token = ", _M.requests_per_token)
         ngx.log(ngx.NOTICE, "auth_config: token_expiry_minutes = ", _M.token_expiry_minutes)
     else
@@ -27,6 +31,7 @@ function _M.init()
         _M.token_expiry_minutes = tonumber(os.getenv("TOKEN_EXPIRY_MINUTES")) or 10
         
         ngx.log(ngx.WARN, "auth_config: Failed to load JSON config, using environment variables")
+        ngx.log(ngx.NOTICE, "auth_config: go_auth_service_url = ", _M.go_auth_service_url)
         ngx.log(ngx.NOTICE, "auth_config: requests_per_token = ", _M.requests_per_token)
         ngx.log(ngx.NOTICE, "auth_config: token_expiry_minutes = ", _M.token_expiry_minutes)
     end
@@ -64,6 +69,10 @@ end
 
 function _M.get_token_expiry_minutes()
     return _M.token_expiry_minutes
+end
+
+function _M.get_go_auth_service_url()
+    return _M.go_auth_service_url
 end
 
 return _M 
