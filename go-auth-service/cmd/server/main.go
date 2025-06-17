@@ -6,25 +6,28 @@ import (
 	"os"
 
 	"go-auth-service/internal/config"
-	handlers "go-auth-service/internal/handlers"
+	"go-auth-service/internal/handlers"
 )
 
 func main() {
-	// Load configuration from JSON file
+	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		log.Fatal("Failed to load config:", err)
 	}
 
-	// Create handlers instance with configuration
+	// Create handlers
 	h := handlers.New(cfg)
 
+	// Create mux
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/auth/puzzle", h.PuzzleHandler)
-	mux.HandleFunc("/auth/solve", h.SolveHandler)
-	mux.HandleFunc("/auth/verify", h.VerifyHandler)
-	mux.HandleFunc("/auth/status", h.StatusHandler)
+	// Setup routes - HMAC protected endpoints only
+	mux.HandleFunc("/auth/puzzle", h.PuzzleHandler)       // Get puzzle challenge with HMAC requirements
+	mux.HandleFunc("/auth/solve", h.SolveHandler)         // Submit HMAC protected solution
+	mux.HandleFunc("/dev/test-solve", h.TestSolveHandler) // Generate test solution with HMAC (dev only)
+	mux.HandleFunc("/auth/verify", h.VerifyHandler)       // Verify JWT token
+	mux.HandleFunc("/auth/status", h.StatusHandler)       // Service status
 
 	// Get port from environment variable
 	port := os.Getenv("PORT")
@@ -33,8 +36,8 @@ func main() {
 	}
 
 	log.Printf("[go-auth-service] starting on :%s", port)
-	log.Printf("[go-auth-service] algorithm: %s, difficulty: %d, token expiry: %d minutes",
-		cfg.Algorithm, cfg.PuzzleDifficulty, cfg.TokenExpiryMinutes)
+	log.Printf("[go-auth-service] algorithm: %s, memory: %dKB, time: %d, token expiry: %d minutes",
+		cfg.Algorithm, cfg.Argon2Params.MemoryKB, cfg.Argon2Params.Time, cfg.TokenExpiryMinutes)
 
 	if err := http.ListenAndServe(":"+port, mux); err != nil {
 		log.Fatalf("server error: %v", err)

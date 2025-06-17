@@ -28,16 +28,6 @@ func New(cfg *config.Config) *Handlers {
 	}
 }
 
-// configToArgon2Config converts config.Argon2Params to puzzle.Argon2Config
-func (h *Handlers) configToArgon2Config() puzzle.Argon2Config {
-	return puzzle.Argon2Config{
-		MemoryKB: h.config.Argon2Params.MemoryKB,
-		Time:     h.config.Argon2Params.Time,
-		Threads:  h.config.Argon2Params.Threads,
-		KeyLen:   h.config.Argon2Params.KeyLen,
-	}
-}
-
 func (h *Handlers) PuzzleHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -47,39 +37,52 @@ func (h *Handlers) PuzzleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Add expected iterations info for client
 	response := map[string]interface{}{
-		"challenge":           p.Challenge,
-		"salt":                p.Salt,
-		"difficulty":          p.Difficulty,
-		"expires_at":          p.ExpiresAt.Format(time.RFC3339),
-		"expected_iterations": puzzle.GetExpectedIterations(p.Difficulty),
-		"algorithm":           h.config.Algorithm,
-		"argon2_params": map[string]interface{}{
-			"memory_kb": h.config.Argon2Params.MemoryKB,
-			"time":      h.config.Argon2Params.Time,
-			"threads":   h.config.Argon2Params.Threads,
-			"key_len":   h.config.Argon2Params.KeyLen,
+		"challenge":     p.Challenge,
+		"salt":          p.Salt,
+		"difficulty":    p.Difficulty,
+		"expires_at":    p.ExpiresAt.Format(time.RFC3339),
+		"algorithm":     h.config.Algorithm,
+		"argon2_params": h.config.Argon2Params,
+		"solve_request_format": map[string]interface{}{
+			"required_fields": []string{"challenge", "salt", "nonce", "argon_hash", "hmac", "expires_at"},
+			"example": map[string]interface{}{
+				"challenge":  "hex_string",
+				"salt":       "hex_string",
+				"nonce":      123,
+				"argon_hash": "computed_argon2_hash",
+				"hmac":       "hmac_sha256_signature",
+				"expires_at": "RFC3339_timestamp",
+			},
 		},
 	}
 
 	json.NewEncoder(w).Encode(response)
 }
 
-type SolveRequest struct {
+// HMACProtectedSolveRequest for HMAC protected format
+type HMACProtectedSolveRequest struct {
 	Challenge string `json:"challenge"`
 	Salt      string `json:"salt"`
 	Nonce     uint64 `json:"nonce"`
-	Hash      string `json:"hash"`
+	ArgonHash string `json:"argon_hash"`
+	HMAC      string `json:"hmac"`
 	ExpiresAt string `json:"expires_at"`
 }
 
+// SolveHandler handles HMAC protected solutions only
 func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var req SolveRequest
+	var req HMACProtectedSolveRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "bad request", 400)
+		return
+	}
+
+	// Validate required fields
+	if req.Challenge == "" || req.Salt == "" || req.ArgonHash == "" || req.HMAC == "" {
+		http.Error(w, "missing required fields: challenge, salt, argon_hash, hmac", 400)
 		return
 	}
 
@@ -98,15 +101,15 @@ func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 		ExpiresAt:  exp,
 	}
 
-	solution := &puzzle.Solution{
-		Nonce: req.Nonce,
-		Hash:  req.Hash,
+	solution := &puzzle.HMACProtectedSolution{
+		Nonce:     req.Nonce,
+		ArgonHash: req.ArgonHash,
+		HMAC:      req.HMAC,
 	}
 
-	// Validate the solution using config parameters
-	argon2Config := h.configToArgon2Config()
-	if !puzzle.ValidateWithConfig(puzzleObj, solution, argon2Config) {
-		http.Error(w, "invalid solution", 400)
+	// Validate with HMAC protection
+	if !puzzle.ValidateHMACProtectedSolution(puzzleObj, solution, h.config.Argon2Params, h.config.JWTSecret) {
+		http.Error(w, "invalid solution or HMAC verification failed", 400)
 		return
 	}
 
@@ -121,7 +124,44 @@ func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 		"token":         token,
 		"expires_at":    expiresAt.Format(time.RFC3339),
 		"request_limit": h.config.RequestsPerToken,
-		"algorithm":     h.config.Algorithm,
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
+// TestSolveHandler provides a test endpoint that generates a valid solution with HMAC
+func (h *Handlers) TestSolveHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Generate a test puzzle
+	p, err := puzzle.Generate(h.config.PuzzleDifficulty, h.config.TokenExpiryMinutes)
+	if err != nil {
+		http.Error(w, "failed to generate test puzzle", 500)
+		return
+	}
+
+	// Solve it with HMAC protection
+	solution, err := puzzle.SolveWithHMACProtection(p, h.config.Argon2Params, h.config.JWTSecret)
+	if err != nil {
+		http.Error(w, "failed to solve test puzzle", 500)
+		return
+	}
+
+	response := map[string]interface{}{
+		"test_puzzle": map[string]interface{}{
+			"challenge":  p.Challenge,
+			"salt":       p.Salt,
+			"difficulty": p.Difficulty,
+			"expires_at": p.ExpiresAt.Format(time.RFC3339),
+		},
+		"example_request": map[string]interface{}{
+			"challenge":  p.Challenge,
+			"salt":       p.Salt,
+			"nonce":      solution.Nonce,
+			"argon_hash": solution.ArgonHash,
+			"hmac":       solution.HMAC,
+			"expires_at": p.ExpiresAt.Format(time.RFC3339),
+		},
 	}
 
 	json.NewEncoder(w).Encode(response)
@@ -181,17 +221,17 @@ func (h *Handlers) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	response := map[string]interface{}{
-		"puzzle_difficulty":   h.config.PuzzleDifficulty,
-		"token_expiry_min":    h.config.TokenExpiryMinutes,
-		"requests_per_token":  h.config.RequestsPerToken,
-		"jwt_secret_present":  h.config.JWTSecret != "",
-		"algorithm":           h.config.Algorithm,
-		"expected_iterations": puzzle.GetExpectedIterations(h.config.PuzzleDifficulty),
-		"argon2_params": map[string]interface{}{
-			"memory_kb": h.config.Argon2Params.MemoryKB,
-			"time":      h.config.Argon2Params.Time,
-			"threads":   h.config.Argon2Params.Threads,
-			"key_len":   h.config.Argon2Params.KeyLen,
+		"puzzle_difficulty":  h.config.PuzzleDifficulty,
+		"token_expiry_min":   h.config.TokenExpiryMinutes,
+		"requests_per_token": h.config.RequestsPerToken,
+		"jwt_secret_present": h.config.JWTSecret != "",
+		"algorithm":          h.config.Algorithm,
+		"argon2_params":      h.config.Argon2Params,
+		"endpoints": map[string]interface{}{
+			"puzzle": "/auth/puzzle",
+			"solve":  "/auth/solve",
+			"verify": "/auth/verify",
+			"status": "/auth/status",
 		},
 	}
 
