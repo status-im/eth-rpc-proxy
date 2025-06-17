@@ -1,10 +1,6 @@
 local json = require("cjson")
 local auth_config = require("auth_config")
 
--- Get pre-initialized configuration (no getenv calls per request)
-local requests_per_token = auth_config.get_requests_per_token()
-local token_expiry_minutes = auth_config.get_token_expiry_minutes()
-
 -- Debug logging
 ngx.log(ngx.INFO, "auth_token_validator: Starting JWT validation")
 
@@ -25,6 +21,10 @@ if auth_type ~= "Bearer" then
     ngx.status = 401
     ngx.exit(401)
 end
+
+-- Get configuration values dynamically
+local requests_per_token = auth_config.get_requests_per_token()
+local token_expiry_minutes = auth_config.get_token_expiry_minutes()
 
 -- Use token as cache key
 local cache_key = "jwt_valid:" .. token
