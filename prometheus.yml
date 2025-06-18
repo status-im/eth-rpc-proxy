@@ -9,3 +9,9 @@ scrape_configs:
   - job_name: 'rpc-proxy-metrics'
     static_configs:
       - targets: ['rpc-proxy-metrics:8090']
+
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['auth-service:8081']
+    scrape_interval: 5s
+    metrics_path: '/metrics'

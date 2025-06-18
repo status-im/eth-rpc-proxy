@@ -6,7 +6,7 @@ services:
     restart: 'always'
     environment:
       CONFIG_HEALTH_CHECKER_URL: 'http://health-checker:8082/providers'
-      GO_AUTH_SERVICE_URL: 'http://go-auth-service:8081'
+      GO_AUTH_SERVICE_URL: 'http://auth-service:8081'
       CUSTOM_DNS: '127.0.0.11'
       RELOAD_INTERVAL: '10'
       AUTH_CONFIG_FILE: '/app/config.json'
@@ -16,17 +16,17 @@ services:
       - 'rpc-network'
     depends_on:
       - 'health-checker'
-      - 'go-auth-service'
+      - 'auth-service'
     volumes:
       - './secrets/default_providers.json:/usr/local/openresty/nginx/providers.json'
       - './secrets/.htpasswd:/etc/nginx/.htpasswd'
       - './go-auth-service/config.json:/app/config.json:ro'
 
-  go-auth-service:
+  auth-service:
     build:
       context: './go-auth-service'
       dockerfile: Dockerfile
-    container_name: 'go-auth-service'
+    container_name: 'auth-service'
     restart: 'always'
     environment:
       CONFIG_FILE: '/app/config.json'
@@ -80,6 +80,7 @@ services:
       - './prometheus.yml:/etc/prometheus/prometheus.yml'
     depends_on:
       - 'health-checker'
+      - 'auth-service'
 
   grafana:
     image: 'grafana/grafana:latest'

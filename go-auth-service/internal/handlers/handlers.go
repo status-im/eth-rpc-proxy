@@ -10,6 +10,7 @@ import (
 
 	"go-auth-service/internal/config"
 	"go-auth-service/internal/jwt"
+	"go-auth-service/internal/metrics"
 	"go-auth-service/internal/puzzle"
 )
 
@@ -76,12 +77,14 @@ func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req HMACProtectedSolveRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		metrics.RecordPuzzleAttempt("invalid_request")
 		http.Error(w, "bad request", 400)
 		return
 	}
 
 	// Validate required fields
 	if req.Challenge == "" || req.Salt == "" || req.ArgonHash == "" || req.HMAC == "" {
+		metrics.RecordPuzzleAttempt("missing_fields")
 		http.Error(w, "missing required fields: challenge, salt, argon_hash, hmac", 400)
 		return
 	}
@@ -89,7 +92,15 @@ func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse expiration time
 	exp, err := time.Parse(time.RFC3339, req.ExpiresAt)
 	if err != nil {
+		metrics.RecordPuzzleAttempt("invalid_expiry")
 		http.Error(w, "bad expires_at format", 400)
+		return
+	}
+
+	// Check if puzzle has expired
+	if time.Now().After(exp) {
+		metrics.RecordPuzzleAttempt("expired")
+		http.Error(w, "puzzle has expired", 400)
 		return
 	}
 
@@ -109,9 +120,14 @@ func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate with HMAC protection
 	if !puzzle.ValidateHMACProtectedSolution(puzzleObj, solution, h.config.Argon2Params, h.config.JWTSecret) {
+		metrics.RecordPuzzleAttempt("invalid_solution")
 		http.Error(w, "invalid solution or HMAC verification failed", 400)
 		return
 	}
+
+	// Record successful puzzle solve
+	metrics.RecordPuzzleAttempt("success")
+	metrics.IncrementPuzzlesSolved()
 
 	// Generate JWT token
 	token, expiresAt, err := jwt.Generate(h.config.JWTSecret, req.Challenge, h.config.TokenExpiryMinutes, h.config.RequestsPerToken)
@@ -119,6 +135,9 @@ func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to generate token", 500)
 		return
 	}
+
+	// Record token issuance
+	metrics.IncrementTokensIssued()
 
 	response := map[string]interface{}{
 		"token":         token,
@@ -172,6 +191,7 @@ func (h *Handlers) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract Authorization header
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
+		metrics.RecordTokenVerification("missing_token")
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -179,6 +199,7 @@ func (h *Handlers) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if it's a Bearer token
 	parts := strings.SplitN(authHeader, " ", 2)
 	if len(parts) != 2 || parts[0] != "Bearer" {
+		metrics.RecordTokenVerification("invalid_format")
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -188,6 +209,7 @@ func (h *Handlers) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	// Verify JWT token
 	claims, err := jwt.Verify(tokenString, h.config.JWTSecret)
 	if err != nil {
+		metrics.RecordTokenVerification("invalid_token")
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -199,6 +221,7 @@ func (h *Handlers) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		currentUsage := h.tokenUsage[tokenID]
 		if currentUsage >= h.config.RequestsPerToken {
 			h.tokenMutex.Unlock()
+			metrics.RecordTokenVerification("rate_limited")
 			w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", h.config.RequestsPerToken))
 			w.Header().Set("X-RateLimit-Remaining", "0")
 			w.WriteHeader(http.StatusTooManyRequests)
@@ -212,6 +235,9 @@ func (h *Handlers) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", h.config.RequestsPerToken))
 		w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", h.config.RequestsPerToken-newUsage))
 	}
+
+	// Record successful verification
+	metrics.RecordTokenVerification("success")
 
 	// Token is valid
 	w.WriteHeader(http.StatusOK)
