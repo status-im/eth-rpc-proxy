@@ -2,11 +2,11 @@ local json = require("cjson")
 local auth_config = require("auth_config")
 
 -- Debug logging
-ngx.log(ngx.INFO, "auth_token_validator: Starting JWT validation")
+ngx.log(ngx.DEBUG, "auth_token_validator: Starting JWT validation")
 
 -- Extract Authorization header
 local auth_header = ngx.var.http_authorization
-ngx.log(ngx.INFO, "auth_token_validator: Authorization header = ", auth_header or "nil")
+ngx.log(ngx.DEBUG, "auth_token_validator: Authorization header = ", auth_header or "nil")
 
 if not auth_header then
     ngx.log(ngx.INFO, "No Authorization header found")
@@ -35,7 +35,7 @@ local cached_result = ngx.shared.jwt_tokens:get(cache_key)
 
 if cached_result then
     -- Token is cached as valid, now check and increment usage
-    ngx.log(ngx.INFO, "JWT token found in cache")
+    ngx.log(ngx.DEBUG, "JWT token found in cache")
     
     -- Get current usage count
     local current_usage = ngx.shared.jwt_tokens:get(usage_key) or 0
@@ -64,13 +64,13 @@ if cached_result then
     ngx.header["X-RateLimit-Remaining"] = tostring(requests_per_token - new_usage)
     ngx.header["X-Cache-Status"] = "HIT"
     
-    ngx.log(ngx.INFO, "JWT cache hit, usage: ", new_usage, "/", requests_per_token)
+    ngx.log(ngx.DEBUG, "JWT cache hit, usage: ", new_usage, "/", requests_per_token)
     ngx.status = 200
     ngx.exit(200)
 end
 
 -- Cache miss - validate with Go service
-ngx.log(ngx.INFO, "JWT token not in cache, validating with Go service")
+ngx.log(ngx.DEBUG, "JWT token not in cache, validating with Go service")
 
 -- Create subrequest to Go auth service
 local res = ngx.location.capture("/_auth_go_verify", {
@@ -82,7 +82,7 @@ local res = ngx.location.capture("/_auth_go_verify", {
 
 if res.status == 200 then
     -- Token is valid, cache it and initialize usage counter
-    ngx.log(ngx.INFO, "JWT validated by Go service, caching token")
+    ngx.log(ngx.DEBUG, "JWT validated by Go service, caching token")
     
     -- Cache the valid token for the duration of token expiry
     local cache_ttl = token_expiry_minutes * 60  -- Convert minutes to seconds
@@ -104,7 +104,7 @@ if res.status == 200 then
     ngx.header["X-RateLimit-Remaining"] = tostring(requests_per_token - 1)
     ngx.header["X-Cache-Status"] = "MISS"
     
-    ngx.log(ngx.INFO, "JWT validation successful, usage: 1/", requests_per_token)
+    ngx.log(ngx.DEBUG, "JWT validation successful, usage: 1/", requests_per_token)
     ngx.status = 200
     ngx.exit(200)
     

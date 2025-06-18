@@ -1,6 +1,7 @@
 -- auth_config.lua - Configuration module for authentication settings
 local _M = {}
 local cjson = require "cjson"
+local resolver_utils = require "resolver_utils"
 
 -- Initialize configuration values once at worker startup
 function _M.init()
@@ -8,7 +9,19 @@ function _M.init()
     local config_file_path = os.getenv("AUTH_CONFIG_FILE") or "/app/config.json"
     
     -- Get Go Auth Service URL from environment variable
-    _M.go_auth_service_url = os.getenv("GO_AUTH_SERVICE_URL") or "http://go-auth-service:8081"
+    local base_auth_url = os.getenv("GO_AUTH_SERVICE_URL") or "http://auth-service:8081"
+    
+    -- Try to resolve auth-service URL using custom DNS if available
+    local custom_dns = os.getenv("CUSTOM_DNS") or "127.0.0.11"  -- Docker DNS
+    local resolved_url, err = resolver_utils.resolve_url_with_custom_dns(base_auth_url, custom_dns)
+    
+    if resolved_url then
+        _M.go_auth_service_url = resolved_url
+        ngx.log(ngx.NOTICE, "auth_config: Resolved auth service URL: ", resolved_url)
+    else
+        _M.go_auth_service_url = base_auth_url
+        ngx.log(ngx.WARN, "auth_config: Failed to resolve auth service URL, using original: ", base_auth_url, " Error: ", err or "unknown")
+    end
     
     -- Read and parse JSON config file
     local config_data = _M.read_json_config(config_file_path)
@@ -23,6 +36,7 @@ function _M.init()
         -- Log the initialized values
         ngx.log(ngx.NOTICE, "auth_config: Loaded from ", config_file_path)
         ngx.log(ngx.NOTICE, "auth_config: go_auth_service_url = ", _M.go_auth_service_url)
+        ngx.log(ngx.NOTICE, "auth_config: base_auth_url = ", base_auth_url)
         ngx.log(ngx.NOTICE, "auth_config: requests_per_token = ", _M.requests_per_token)
         ngx.log(ngx.NOTICE, "auth_config: token_expiry_minutes = ", _M.token_expiry_minutes)
     else
@@ -32,6 +46,7 @@ function _M.init()
         
         ngx.log(ngx.WARN, "auth_config: Failed to load JSON config, using environment variables")
         ngx.log(ngx.NOTICE, "auth_config: go_auth_service_url = ", _M.go_auth_service_url)
+        ngx.log(ngx.NOTICE, "auth_config: base_auth_url = ", base_auth_url)
         ngx.log(ngx.NOTICE, "auth_config: requests_per_token = ", _M.requests_per_token)
         ngx.log(ngx.NOTICE, "auth_config: token_expiry_minutes = ", _M.token_expiry_minutes)
     end
