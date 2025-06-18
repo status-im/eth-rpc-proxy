@@ -14,10 +14,12 @@ local function read_config_from_url(url)
     
     -- Resolve URL using custom DNS if available
     if custom_dns and custom_dns ~= "" then
-        request_url, err = resolver_utils.resolve_url_with_custom_dns(url, custom_dns)
-        if not request_url then
-            ngx.log(ngx.ERR, "Failed to resolve URL with custom DNS: ", err)
+        local resolved_url, resolve_err = resolver_utils.resolve_url_with_custom_dns(url, custom_dns)
+        if not resolved_url then
+            ngx.log(ngx.ERR, "Failed to resolve URL with custom DNS: ", resolve_err)
             request_url = url  -- Fall back to original URL
+        else
+            request_url = resolved_url
         end
     end
 
@@ -76,17 +78,18 @@ function M.reload_providers(premature, url, fallbackLocalConfig)
         ngx.log(ngx.ERR, "Failed to load configuration from URL: ", err)
 
         -- Attempt to load configuration from file
-        config, err = read_config_from_file(fallbackLocalConfig)
-        if not config then
-            ngx.log(ngx.ERR, "Failed to load configuration from fallback file: ", err)
+        local file_config, file_err = read_config_from_file(fallbackLocalConfig)
+        if not file_config then
+            ngx.log(ngx.ERR, "Failed to load configuration from fallback file: ", file_err)
             return
         end
+        config = file_config
     end
 
     -- Parse and transform provider configuration
-    local parsed_config, err = json.decode(config)
+    local parsed_config, parse_err = json.decode(config)
     if not parsed_config then
-        ngx.log(ngx.ERR, "Failed to parse provider config: ", err)
+        ngx.log(ngx.ERR, "Failed to parse provider config: ", parse_err)
         return
     end
 

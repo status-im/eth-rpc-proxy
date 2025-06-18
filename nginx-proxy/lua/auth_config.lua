@@ -3,10 +3,14 @@ local _M = {}
 local cjson = require "cjson"
 local resolver_utils = require "resolver_utils"
 
--- Initialize configuration values once at worker startup
-function _M.init()
-    -- Get config file path from environment variable
-    local config_file_path = os.getenv("AUTH_CONFIG_FILE") or "/app/config.json"
+-- Configuration loading function that will be called by timer
+function _M.load_config(premature)
+    if premature then
+        return
+    end
+    
+    -- Use provided config file path or fallback
+    local config_path = os.getenv("AUTH_CONFIG_FILE") or "/app/config.json"
     
     -- Get Go Auth Service URL from environment variable
     local base_auth_url = os.getenv("GO_AUTH_SERVICE_URL") or "http://auth-service:8081"
@@ -15,16 +19,18 @@ function _M.init()
     local custom_dns = os.getenv("CUSTOM_DNS") or "127.0.0.11"  -- Docker DNS
     local resolved_url, err = resolver_utils.resolve_url_with_custom_dns(base_auth_url, custom_dns)
     
-    if resolved_url then
-        _M.go_auth_service_url = resolved_url
-        ngx.log(ngx.NOTICE, "auth_config: Resolved auth service URL: ", resolved_url)
-    else
-        _M.go_auth_service_url = base_auth_url
-        ngx.log(ngx.WARN, "auth_config: Failed to resolve auth service URL, using original: ", base_auth_url, " Error: ", err or "unknown")
-    end
+    -- Remove trailing slash to fix proxy_pass behavior
+    local final_url = (resolved_url or base_auth_url):gsub("/$", "")
+    _M.go_auth_service_url = final_url
     
+    if resolved_url then
+        ngx.log(ngx.NOTICE, "auth_config: Resolved auth service URL: ", _M.go_auth_service_url)
+    else
+        ngx.log(ngx.WARN, "auth_config: Failed to resolve auth service URL, using original: ", _M.go_auth_service_url, " Error: ", err or "unknown")
+    end
+
     -- Read and parse JSON config file
-    local config_data = _M.read_json_config(config_file_path)
+    local config_data = _M.read_json_config(config_path)
     
     if config_data then
         -- JWT rate limiting configuration
@@ -34,21 +40,32 @@ function _M.init()
         _M.token_expiry_minutes = config_data.token_expiry_minutes or 10
         
         -- Log the initialized values
-        ngx.log(ngx.NOTICE, "auth_config: Loaded from ", config_file_path)
-        ngx.log(ngx.NOTICE, "auth_config: go_auth_service_url = ", _M.go_auth_service_url)
-        ngx.log(ngx.NOTICE, "auth_config: base_auth_url = ", base_auth_url)
-        ngx.log(ngx.NOTICE, "auth_config: requests_per_token = ", _M.requests_per_token)
-        ngx.log(ngx.NOTICE, "auth_config: token_expiry_minutes = ", _M.token_expiry_minutes)
+        ngx.log(ngx.NOTICE, "auth_config: Loaded from ", config_path)
     else
         -- Fallback to environment variables if JSON config fails
-        _M.requests_per_token = tonumber(os.getenv("REQUESTS_PER_TOKEN")) or 100
-        _M.token_expiry_minutes = tonumber(os.getenv("TOKEN_EXPIRY_MINUTES")) or 10
-        
-        ngx.log(ngx.WARN, "auth_config: Failed to load JSON config, using environment variables")
+        _M.requests_per_token = 100
+        _M.token_expiry_minutes = 10
+    end
         ngx.log(ngx.NOTICE, "auth_config: go_auth_service_url = ", _M.go_auth_service_url)
         ngx.log(ngx.NOTICE, "auth_config: base_auth_url = ", base_auth_url)
         ngx.log(ngx.NOTICE, "auth_config: requests_per_token = ", _M.requests_per_token)
         ngx.log(ngx.NOTICE, "auth_config: token_expiry_minutes = ", _M.token_expiry_minutes)
+
+end
+
+-- Initialize configuration using timer
+function _M.init()
+    -- Set default values immediately to prevent race conditions
+    -- Remove trailing slash to fix proxy_pass behavior
+    local default_url = os.getenv("GO_AUTH_SERVICE_URL") or "http://auth-service:8081"
+    _M.go_auth_service_url = default_url:gsub("/$", "")
+    _M.requests_per_token = 100
+    _M.token_expiry_minutes = 10
+    
+    -- Schedule config loading using timer
+    local ok, err = ngx.timer.at(0, _M.load_config)
+    if not ok then
+        ngx.log(ngx.ERR, "auth_config: Failed to create timer: ", err)
     end
 end
 

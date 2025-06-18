@@ -72,6 +72,11 @@ end
 -- Cache miss - validate with Go service
 ngx.log(ngx.DEBUG, "JWT token not in cache, validating with Go service")
 
+-- Get current auth service URL for logging
+local auth_config = require("auth_config")
+local current_url = auth_config.get_go_auth_service_url()
+ngx.log(ngx.NOTICE, "auth_token_validator: Using Go service URL: ", current_url or "nil")
+
 -- Create subrequest to Go auth service
 local res = ngx.location.capture("/_auth_go_verify", {
     method = ngx.HTTP_GET,
@@ -79,6 +84,8 @@ local res = ngx.location.capture("/_auth_go_verify", {
         ["Authorization"] = auth_header
     }
 })
+
+ngx.log(ngx.NOTICE, "auth_token_validator: Go service response - status: ", res.status, " body: ", res.body or "nil")
 
 if res.status == 200 then
     -- Token is valid, cache it and initialize usage counter
