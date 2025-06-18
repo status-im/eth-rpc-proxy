@@ -73,7 +73,6 @@ end
 ngx.log(ngx.DEBUG, "JWT token not in cache, validating with Go service")
 
 -- Get current auth service URL for logging
-local auth_config = require("auth_config")
 local current_url = auth_config.get_go_auth_service_url()
 ngx.log(ngx.NOTICE, "auth_token_validator: Using Go service URL: ", current_url or "nil")
 

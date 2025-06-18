@@ -23,17 +23,17 @@ type Puzzle struct {
 	Salt       string    `json:"salt"`
 	Difficulty int       `json:"difficulty"`
 	ExpiresAt  time.Time `json:"expires_at"`
+	HMAC       string    `json:"hmac"`
 }
 
-// HMACProtectedSolution contains both the Argon2 hash and its HMAC signature
-type HMACProtectedSolution struct {
+// Solution contains the Argon2 hash and nonce
+type Solution struct {
 	ArgonHash string `json:"argon_hash"`
-	HMAC      string `json:"hmac"`
 	Nonce     uint64 `json:"nonce"`
 }
 
-// Generate creates a new Argon2id-based puzzle
-func Generate(difficulty int, ttlMinutes int) (*Puzzle, error) {
+// Generate creates a new Argon2id-based puzzle with HMAC
+func Generate(difficulty int, ttlMinutes int, jwtSecret string) (*Puzzle, error) {
 	// Generate random challenge (16 bytes)
 	challengeBytes := make([]byte, 16)
 	if _, err := rand.Read(challengeBytes); err != nil {
@@ -46,19 +46,29 @@ func Generate(difficulty int, ttlMinutes int) (*Puzzle, error) {
 		return nil, fmt.Errorf("failed to generate salt: %w", err)
 	}
 
+	challenge := hex.EncodeToString(challengeBytes)
+	salt := hex.EncodeToString(saltBytes)
+	expiresAt := time.Now().Add(time.Duration(ttlMinutes) * time.Minute)
+
+	// Create HMAC for puzzle verification (challenge + salt + difficulty + expires_at)
+	puzzleData := fmt.Sprintf("%s%s%d%s", challenge, salt, difficulty, expiresAt.Format(time.RFC3339))
+	puzzleHMAC := computeHMAC(puzzleData, jwtSecret)
+
 	return &Puzzle{
-		Challenge:  hex.EncodeToString(challengeBytes),
-		Salt:       hex.EncodeToString(saltBytes),
+		Challenge:  challenge,
+		Salt:       salt,
 		Difficulty: difficulty,
-		ExpiresAt:  time.Now().Add(time.Duration(ttlMinutes) * time.Minute),
+		ExpiresAt:  expiresAt,
+		HMAC:       puzzleHMAC,
 	}, nil
 }
 
 // ValidateHMACProtectedSolution validates a solution with HMAC protection (only secure method)
-func ValidateHMACProtectedSolution(puzzle *Puzzle, solution *HMACProtectedSolution, argon2Config Argon2Config, jwtSecret string) bool {
-	// Step 1: Check HMAC signature FIRST (most important security check)
-	expectedHMAC := computeHMAC(solution.ArgonHash, jwtSecret)
-	if !hmac.Equal([]byte(expectedHMAC), []byte(solution.HMAC)) {
+func ValidateHMACProtectedSolution(puzzle *Puzzle, solution *Solution, argon2Config Argon2Config, jwtSecret string) bool {
+	// Step 1: Check HMAC signature of puzzle conditions FIRST (most important security check)
+	puzzleData := fmt.Sprintf("%s%s%d%s", puzzle.Challenge, puzzle.Salt, puzzle.Difficulty, puzzle.ExpiresAt.Format(time.RFC3339))
+	expectedHMAC := computeHMAC(puzzleData, jwtSecret)
+	if !hmac.Equal([]byte(expectedHMAC), []byte(puzzle.HMAC)) {
 		return false
 	}
 
@@ -79,8 +89,8 @@ func ValidateHMACProtectedSolution(puzzle *Puzzle, solution *HMACProtectedSoluti
 	return checkDifficulty(computedArgonHash, puzzle.Difficulty)
 }
 
-// SolveWithHMACProtection creates a fully protected solution (only secure method)
-func SolveWithHMACProtection(puzzle *Puzzle, argon2Config Argon2Config, jwtSecret string) (*HMACProtectedSolution, error) {
+// Solve creates a solution for the puzzle
+func Solve(puzzle *Puzzle, argon2Config Argon2Config) (*Solution, error) {
 	if time.Now().After(puzzle.ExpiresAt) {
 		return nil, fmt.Errorf("puzzle has expired")
 	}
@@ -90,12 +100,8 @@ func SolveWithHMACProtection(puzzle *Puzzle, argon2Config Argon2Config, jwtSecre
 		argonHash := computeArgon2HashWithConfig(puzzle.Challenge, puzzle.Salt, nonce, puzzle.Difficulty, argon2Config)
 
 		if checkDifficulty(argonHash, puzzle.Difficulty) {
-			// Generate HMAC signature
-			hmacSig := computeHMAC(argonHash, jwtSecret)
-
-			return &HMACProtectedSolution{
+			return &Solution{
 				ArgonHash: argonHash,
-				HMAC:      hmacSig,
 				Nonce:     nonce,
 			}, nil
 		}

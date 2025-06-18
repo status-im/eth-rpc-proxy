@@ -1,7 +1,24 @@
 services:
+  test-api:
+    build:
+      context: './test-api'
+      dockerfile: Dockerfile
+    container_name: 'test-api'
+    restart: 'always'
+    ports:
+      - '3001:3000'
+    networks:
+      - 'rpc-network'
+    environment:
+      - REACT_APP_RPC_PROXY_URL=http://localhost:8080
+    depends_on:
+      - 'rpc-proxy'
+      - 'auth-service'
+
   rpc-proxy:
     build:
       context: './nginx-proxy'
+      dockerfile: Dockerfile.local
     container_name: 'rpc-proxy'
     restart: 'always'
     environment:
@@ -10,6 +27,7 @@ services:
       CUSTOM_DNS: '127.0.0.11'
       RELOAD_INTERVAL: '10'
       AUTH_CONFIG_FILE: '/app/config.json'
+      CORS_ORIGIN: 'http://localhost:3001'
     ports:
       - '8080:8080'
     networks:

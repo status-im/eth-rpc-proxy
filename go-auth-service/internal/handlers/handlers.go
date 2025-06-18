@@ -32,7 +32,7 @@ func New(cfg *config.Config) *Handlers {
 func (h *Handlers) PuzzleHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	p, err := puzzle.Generate(h.config.PuzzleDifficulty, h.config.TokenExpiryMinutes)
+	p, err := puzzle.Generate(h.config.PuzzleDifficulty, h.config.TokenExpiryMinutes, h.config.JWTSecret)
 	if err != nil {
 		http.Error(w, "failed to generate puzzle", 500)
 		return
@@ -43,26 +43,19 @@ func (h *Handlers) PuzzleHandler(w http.ResponseWriter, r *http.Request) {
 		"salt":          p.Salt,
 		"difficulty":    p.Difficulty,
 		"expires_at":    p.ExpiresAt.Format(time.RFC3339),
+		"hmac":          p.HMAC,
 		"algorithm":     h.config.Algorithm,
 		"argon2_params": h.config.Argon2Params,
 		"solve_request_format": map[string]interface{}{
 			"required_fields": []string{"challenge", "salt", "nonce", "argon_hash", "hmac", "expires_at"},
-			"example": map[string]interface{}{
-				"challenge":  "hex_string",
-				"salt":       "hex_string",
-				"nonce":      123,
-				"argon_hash": "computed_argon2_hash",
-				"hmac":       "hmac_sha256_signature",
-				"expires_at": "RFC3339_timestamp",
-			},
 		},
 	}
 
 	json.NewEncoder(w).Encode(response)
 }
 
-// HMACProtectedSolveRequest for HMAC protected format
-type HMACProtectedSolveRequest struct {
+// SolveRequest for puzzle solving
+type SolveRequest struct {
 	Challenge string `json:"challenge"`
 	Salt      string `json:"salt"`
 	Nonce     uint64 `json:"nonce"`
@@ -75,7 +68,7 @@ type HMACProtectedSolveRequest struct {
 func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var req HMACProtectedSolveRequest
+	var req SolveRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		metrics.RecordPuzzleAttempt("invalid_request")
 		http.Error(w, "bad request", 400)
@@ -104,18 +97,18 @@ func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create puzzle and solution structs
+	// Create puzzle struct with HMAC from request
 	puzzleObj := &puzzle.Puzzle{
 		Challenge:  req.Challenge,
 		Salt:       req.Salt,
 		Difficulty: h.config.PuzzleDifficulty,
 		ExpiresAt:  exp,
+		HMAC:       req.HMAC,
 	}
 
-	solution := &puzzle.HMACProtectedSolution{
+	solution := &puzzle.Solution{
 		Nonce:     req.Nonce,
 		ArgonHash: req.ArgonHash,
-		HMAC:      req.HMAC,
 	}
 
 	// Validate with HMAC protection
@@ -153,14 +146,14 @@ func (h *Handlers) TestSolveHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	// Generate a test puzzle
-	p, err := puzzle.Generate(h.config.PuzzleDifficulty, h.config.TokenExpiryMinutes)
+	p, err := puzzle.Generate(h.config.PuzzleDifficulty, h.config.TokenExpiryMinutes, h.config.JWTSecret)
 	if err != nil {
 		http.Error(w, "failed to generate test puzzle", 500)
 		return
 	}
 
-	// Solve it with HMAC protection
-	solution, err := puzzle.SolveWithHMACProtection(p, h.config.Argon2Params, h.config.JWTSecret)
+	// Solve the puzzle
+	solution, err := puzzle.Solve(p, h.config.Argon2Params)
 	if err != nil {
 		http.Error(w, "failed to solve test puzzle", 500)
 		return
@@ -178,7 +171,7 @@ func (h *Handlers) TestSolveHandler(w http.ResponseWriter, r *http.Request) {
 			"salt":       p.Salt,
 			"nonce":      solution.Nonce,
 			"argon_hash": solution.ArgonHash,
-			"hmac":       solution.HMAC,
+			"hmac":       p.HMAC,
 			"expires_at": p.ExpiresAt.Format(time.RFC3339),
 		},
 	}
