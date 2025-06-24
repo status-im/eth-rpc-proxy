@@ -195,19 +195,3 @@ This will:
 ### Environment Variables:
 - `PORT` - Service port (default: 8081)
 - `CONFIG_FILE` - Config file path (default: config.json)
-
-### Docker:
-```dockerfile
-FROM golang:1.21-alpine AS builder
-WORKDIR /app
-COPY . .
-RUN go build -o server ./cmd/server
-
-FROM alpine:latest
-RUN apk add --no-cache ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/server .
-COPY --from=builder /app/config.json .
-EXPOSE 8081
-CMD ["./server"]
-``` 
