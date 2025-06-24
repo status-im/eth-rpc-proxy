@@ -1,22 +1,60 @@
 services:
+  test-api:
+    build:
+      context: './test-api'
+      dockerfile: Dockerfile
+    container_name: 'test-api'
+    restart: 'always'
+    ports:
+      - '3001:3000'
+    networks:
+      - 'rpc-network'
+    environment:
+      - REACT_APP_RPC_PROXY_URL=http://localhost:8080
+    depends_on:
+      - 'rpc-proxy'
+      - 'auth-service'
+
   rpc-proxy:
     build:
       context: './nginx-proxy'
+      dockerfile: Dockerfile.local
     container_name: 'rpc-proxy'
     restart: 'always'
     environment:
       CONFIG_HEALTH_CHECKER_URL: 'http://health-checker:8082/providers'
+      GO_AUTH_SERVICE_URL: 'http://auth-service:8081'
       CUSTOM_DNS: '127.0.0.11'
       RELOAD_INTERVAL: '10'
+      AUTH_CONFIG_FILE: '/app/config.json'
+      CORS_ORIGIN: 'http://localhost:3001'
     ports:
       - '8080:8080'
     networks:
       - 'rpc-network'
     depends_on:
       - 'health-checker'
+      - 'auth-service'
     volumes:
       - './secrets/default_providers.json:/usr/local/openresty/nginx/providers.json'
       - './secrets/.htpasswd:/etc/nginx/.htpasswd'
+      - './go-auth-service/config.json:/app/config.json:ro'
+
+  auth-service:
+    build:
+      context: './go-auth-service'
+      dockerfile: Dockerfile
+    container_name: 'auth-service'
+    restart: 'always'
+    environment:
+      CONFIG_FILE: '/app/config.json'
+      PORT: '8081'
+    ports:
+      - '8081:8081'
+    networks:
+      - 'rpc-network'
+    volumes:
+      - './go-auth-service/config.json:/app/config.json:ro'
 
   health-checker:
     build:
@@ -60,6 +98,7 @@ services:
       - './prometheus.yml:/etc/prometheus/prometheus.yml'
     depends_on:
       - 'health-checker'
+      - 'auth-service'
 
   grafana:
     image: 'grafana/grafana:latest'

@@ -1,6 +1,10 @@
 local provider_loader = require("provider_loader")
 local schedule_reload_providers = provider_loader.schedule_reload_providers
 
+-- Initialize auth configuration
+local auth_config = require("auth_config")
+auth_config.init()
+
 -- Read URL from environment variable
 local url = os.getenv("CONFIG_HEALTH_CHECKER_URL")
 local fallback = "/usr/local/openresty/nginx/providers.json"

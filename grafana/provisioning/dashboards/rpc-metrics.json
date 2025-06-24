@@ -459,6 +459,163 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 100},
+              {"color": "red", "value": 1000}
+            ]
+          }
+        }
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 32},
+      "id": 7,
+      "title": "Auth: Tokens Issued",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "auth_tokens_issued_total",
+          "legendFormat": "Total Tokens"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Tokens/sec",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1
+          }
+        }
+      },
+      "gridPos": {"h": 6, "w": 9, "x": 6, "y": 32},
+      "id": 8,
+      "title": "Auth: Token Issuance Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(auth_tokens_issued_total[5m])",
+          "legendFormat": "Tokens/sec"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 50},
+              {"color": "green", "value": 80}
+            ]
+          }
+        }
+      },
+      "gridPos": {"h": 6, "w": 9, "x": 15, "y": 32},
+      "id": 9,
+      "title": "Auth: Success Rate",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "rate(auth_puzzle_attempts_total{status=\"success\"}[5m]) / rate(auth_puzzle_attempts_total[5m]) * 100",
+          "legendFormat": "Success Rate %"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Attempts/sec",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1
+          }
+        }
+      },
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 38},
+      "id": 10,
+      "title": "Auth: Puzzle Attempts by Status",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(auth_puzzle_attempts_total[5m])",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Verifications/sec",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1
+          }
+        }
+      },
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 38},
+      "id": 11,
+      "title": "Auth: Token Verifications",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(auth_token_verifications_total[5m])",
+          "legendFormat": "{{status}}"
+        }
+      ]
     }
   ],
   "refresh": "10s",
