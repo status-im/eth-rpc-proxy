@@ -1,5 +1,6 @@
 local json = require("cjson")
 local http = require("resty.http")
+local cache = require("cache")
 
 -- Extract and validate path parameters
 local chain, network, provider_type = ngx.var.uri:match("^/([^/]+)/([^/]+)/?([^/]*)$")
@@ -25,6 +26,19 @@ end
 local providers = json.decode(providers_str)
 local body_data = ngx.req.get_body_data()
 ngx.log(ngx.INFO, "Request body: ", body_data)
+
+-- Check cache for permanent methods
+local cache_key = nil
+local is_permanent = cache.is_permanent_method(body_data)
+if is_permanent and body_data then
+    cache_key = cache.get_cache_key(chain, network, body_data)
+    local cached_response = cache.get_cached_response(cache_key)
+    if cached_response then
+        ngx.header["Content-Type"] = "application/json"
+        ngx.say(cached_response)
+        return
+    end
+end
 
 if #providers == 0 then
     ngx.log(ngx.ERR, "No providers found for ", chain_network_key)
@@ -105,6 +119,11 @@ for _, provider in ipairs(providers) do
         -- Set Vary header if present
         if res.headers["Vary"] then
             ngx.header["Vary"] = res.headers["Vary"]
+        end
+
+        -- Cache permanent method responses for 24 hours (86400 seconds)
+        if is_permanent and cache_key then
+            cache.save_to_cache(cache_key, res.body)
         end
 
         ngx.say(res.body)
