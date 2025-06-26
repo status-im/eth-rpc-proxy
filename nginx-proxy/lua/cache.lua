@@ -2,6 +2,12 @@ local json = require("cjson")
 
 local _M = {}
 
+-- Cache type configurations
+local cache_configs = {
+    permanent = { dict = ngx.shared.rpc_cache, ttl = 86400 },      -- 24 hours
+    short = { dict = ngx.shared.rpc_cache_short, ttl = 5 }         -- 5 seconds
+}
+
 -- Permanent methods that can be cached for 24 hours
 local permanent_methods = {
     ["eth_getBlockByHash"] = true,
@@ -27,77 +33,89 @@ local short_methods = {
     ["eth_blockNumber"] = true
 }
 
-function _M.is_permanent_method(body_data)
-    if not body_data then return false end
+-- Helper function to decode JSON once and cache result
+local function get_decoded_body(body_data)
+    if not body_data then return nil end
     
-    local ok, body_json = pcall(json.decode, body_data)
-    if not ok or not body_json or not body_json.method then
-        return false
+    -- If already decoded (table), return as is
+    if type(body_data) == "table" then
+        return body_data
     end
     
-    return permanent_methods[body_json.method] == true
-end
-
-function _M.is_short_method(body_data)
-    if not body_data then return false end
-    
+    -- If string, decode it
     local ok, body_json = pcall(json.decode, body_data)
     if not ok or not body_json or not body_json.method then
-        return false
-    end
-    
-    return short_methods[body_json.method] == true
-end
-
-function _M.is_cacheable_method(body_data)
-    return _M.is_permanent_method(body_data) or _M.is_short_method(body_data)
-end
-
-function _M.get_cache_key(chain, network, body_data)
-    -- Simple hash-like key: chain:network:body_hash
-    return chain .. ":" .. network .. ":" .. ngx.crc32_short(body_data)
-end
-
-function _M.get_cached_response(cache_key, body_data)
-    local shared_dict
-    local cache_type
-    
-    if _M.is_permanent_method(body_data) then
-        shared_dict = ngx.shared.rpc_cache
-        cache_type = "permanent"
-    elseif _M.is_short_method(body_data) then
-        shared_dict = ngx.shared.rpc_cache_short
-        cache_type = "short"
-    else
         return nil
     end
     
+    return body_json
+end
+
+-- Unified cache function that handles all cache operations
+function _M.check_cache(chain, network, body_data)
+    -- Decode body once
+    local decoded_body = get_decoded_body(body_data)
+    if not decoded_body then
+        return {
+            cache_type = nil,
+            cache_key = nil,
+            ttl = nil,
+            cached_response = nil
+        }
+    end
+    
+    local method = decoded_body.method
+    local cache_type = nil
+    
+    if permanent_methods[method] then
+        cache_type = "permanent"
+    elseif short_methods[method] then
+        cache_type = "short"
+    end
+    
+    if not cache_type then
+        return {
+            cache_type = nil,
+            cache_key = nil,
+            ttl = nil,
+            cached_response = nil
+        }
+    end
+    
+    -- Generate cache key
+    local cache_key = chain .. ":" .. network .. ":" .. ngx.crc32_short(body_data)
+    
+    -- Get cache configuration
+    local config = cache_configs[cache_type]
+    local shared_dict = config.dict
+    local ttl = config.ttl
+    
+    -- Check for cached response
     local cached_response = shared_dict:get(cache_key)
     if cached_response then
         ngx.log(ngx.INFO, "Cache hit (", cache_type, ") for key: ", cache_key)
-        return cached_response
+    else
+        ngx.log(ngx.INFO, "Cache miss (", cache_type, ") for key: ", cache_key)
     end
-    ngx.log(ngx.INFO, "Cache miss (", cache_type, ") for key: ", cache_key)
-    return nil
+    
+    return {
+        cache_type = cache_type,
+        cache_key = cache_key,
+        ttl = ttl,
+        cached_response = cached_response
+    }
 end
 
-function _M.save_to_cache(cache_key, response_body, body_data)
-    local shared_dict
-    local ttl
-    local cache_type
-    
-    if _M.is_permanent_method(body_data) then
-        shared_dict = ngx.shared.rpc_cache
-        ttl = 86400  -- 24 hours
-        cache_type = "permanent"
-    elseif _M.is_short_method(body_data) then
-        shared_dict = ngx.shared.rpc_cache_short
-        ttl = 5      -- 5 seconds
-        cache_type = "short"
-    else
-        ngx.log(ngx.INFO, "Method not cacheable, skipping cache")
+-- Save function that uses cache_type and mapping
+function _M.save_to_cache(cache_key, response_body, cache_type)
+    local config = cache_configs[cache_type]
+    if not config then
+        ngx.log(ngx.ERR, "Invalid cache_type: ", cache_type, ". Expected 'permanent' or 'short'")
         return false
     end
+    
+    local shared_dict = config.dict
+    local ttl = config.ttl
     
     local success, err = shared_dict:set(cache_key, response_body, ttl)
     if success then
@@ -106,16 +124,6 @@ function _M.save_to_cache(cache_key, response_body, body_data)
         ngx.log(ngx.ERR, "Failed to cache response (", cache_type, "): ", err)
     end
     return success
-end
-
-function _M.get_cache_ttl(body_data)
-    if _M.is_permanent_method(body_data) then
-        return 86400  -- 24 hours
-    elseif _M.is_short_method(body_data) then
-        return 5      -- 5 seconds
-    else
-        return nil    -- Not cacheable
-    end
 end
 
 return _M 

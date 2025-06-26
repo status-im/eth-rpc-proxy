@@ -27,17 +27,12 @@ local providers = json.decode(providers_str)
 local body_data = ngx.req.get_body_data()
 ngx.log(ngx.INFO, "Request body: ", body_data)
 
--- Check cache for permanent methods
-local cache_key = nil
-local is_permanent = cache.is_permanent_method(body_data)
-if is_permanent and body_data then
-    cache_key = cache.get_cache_key(chain, network, body_data)
-    local cached_response = cache.get_cached_response(cache_key)
-    if cached_response then
-        ngx.header["Content-Type"] = "application/json"
-        ngx.say(cached_response)
-        return
-    end
+-- Check cache with unified function (handles all cache operations)
+local cache_info = cache.check_cache(chain, network, body_data)
+if cache_info.cached_response then
+    ngx.header["Content-Type"] = "application/json"
+    ngx.say(cache_info.cached_response)
+    return
 end
 
 if #providers == 0 then
@@ -95,13 +90,13 @@ for _, provider in ipairs(providers) do
             goto continue
         end
 
-        local ok, decoded_body = pcall(json.decode, res.body)
-        if ok and decoded_body.error and decoded_body.error.code then
-            if decoded_body.error.code == 32005 or
-               decoded_body.error.code == 33000 or
-               decoded_body.error.code == 33300 or
-               decoded_body.error.code == 33400 then
-                ngx.log(ngx.ERR, "JSON error code ", decoded_body.error.code, ", trying next provider")
+        local ok, decoded_response = pcall(json.decode, res.body)
+        if ok and decoded_response.error and decoded_response.error.code then
+            if decoded_response.error.code == 32005 or
+               decoded_response.error.code == 33000 or
+               decoded_response.error.code == 33300 or
+               decoded_response.error.code == 33400 then
+                ngx.log(ngx.ERR, "JSON error code ", decoded_response.error.code, ", trying next provider")
                 goto continue
             end
         end
@@ -121,9 +116,9 @@ for _, provider in ipairs(providers) do
             ngx.header["Vary"] = res.headers["Vary"]
         end
 
-        -- Cache permanent method responses for 24 hours (86400 seconds)
-        if is_permanent and cache_key then
-            cache.save_to_cache(cache_key, res.body)
+        -- Cache response if cacheable
+        if cache_info.cache_type then
+            cache.save_to_cache(cache_info.cache_key, res.body, cache_info.cache_type)
         end
 
         ngx.say(res.body)
