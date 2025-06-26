@@ -787,9 +787,14 @@
           "refId": "B"
         },
         {
+          "expr": "nginx_cache_hit_rate{cache_type=\"minimal\"}",
+          "legendFormat": "Minimal Cache",
+          "refId": "C"
+        },
+        {
           "expr": "nginx_cache_hit_rate{cache_type=\"all\"}",
           "legendFormat": "Overall Hit Rate",
-          "refId": "C"
+          "refId": "D"
         }
       ]
     },
@@ -1043,14 +1048,24 @@
           "refId": "B"
         },
         {
+          "expr": "nginx_cache_usage_percent{cache_type=\"minimal\"}",
+          "legendFormat": "Minimal Cache Usage (%)",
+          "refId": "C"
+        },
+        {
           "expr": "nginx_cache_used_bytes{cache_type=\"permanent\"}",
           "legendFormat": "Permanent Cache Size",
-          "refId": "C"
+          "refId": "D"
         },
         {
           "expr": "nginx_cache_used_bytes{cache_type=\"short\"}",
           "legendFormat": "Short Cache Size",
-          "refId": "D"
+          "refId": "E"
+        },
+        {
+          "expr": "nginx_cache_used_bytes{cache_type=\"minimal\"}",
+          "legendFormat": "Minimal Cache Size",
+          "refId": "F"
         }
       ]
     }

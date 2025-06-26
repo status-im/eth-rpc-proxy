@@ -2,10 +2,20 @@ local json = require("cjson")
 
 local _M = {}
 
--- Cache type configurations
-local cache_configs = {
-    permanent = { dict = ngx.shared.rpc_cache, ttl = 86400 },      -- 24 hours
-    short = { dict = ngx.shared.rpc_cache_short, ttl = 5 }         -- 5 seconds
+-- Default TTLs (in seconds)
+local ttl_defaults = {
+    default = { permanent = 86400, short = 5, minimal = 0 },
+    ["ethereum:mainnet"] = { short = 15, minimal = 5 },
+    ["arbitrum:mainnet"] = { short = 1},
+    ["optimism:mainnet"] = { short = 1},
+    ["polygon:mainnet"] = { short = 2}
+}
+
+-- Shared dicts per cache type
+local cache_dicts = {
+    permanent = ngx.shared.rpc_cache,
+    short = ngx.shared.rpc_cache_short,
+    minimal = ngx.shared.rpc_cache_minimal
 }
 
 -- Permanent methods that can be cached for 24 hours
@@ -31,6 +41,13 @@ local short_methods = {
     ["eth_getCode"] = true,
     ["eth_getStorageAt"] = true,
     ["eth_blockNumber"] = true
+}
+
+-- Minimal cache methods
+local minimal_methods = {
+    ["eth_gasPrice"] = true,
+    ["eth_maxPriorityFeePerGas"] = true,
+    ["eth_feeHistory"] = true
 }
 
 -- Helper function to decode JSON once and cache result
@@ -71,6 +88,8 @@ function _M.check_cache(chain, network, body_data)
         cache_type = "permanent"
     elseif short_methods[method] then
         cache_type = "short"
+    elseif minimal_methods[method] then
+        cache_type = "minimal"
     end
     
     if not cache_type then
@@ -83,12 +102,24 @@ function _M.check_cache(chain, network, body_data)
     end
     
     -- Generate cache key
-    local cache_key = chain .. ":" .. network .. ":" .. ngx.crc32_short(body_data)
+    local cache_key = chain .. ":" .. network .. ":" .. ngx.md5(body_data)
     
-    -- Get cache configuration
-    local config = cache_configs[cache_type]
-    local shared_dict = config.dict
-    local ttl = config.ttl
+    -- Fetch TTL config for this chain/network (fallback to default)
+    local key = chain .. ":" .. network
+    local cfg = ttl_defaults[key] or ttl_defaults.default
+    local ttl = cfg[cache_type] or ttl_defaults.default[cache_type]
+    
+    -- If TTL is 0 or nil, treat as non-cacheable
+    if not ttl or ttl == 0 then
+        return {
+            cache_type = nil,
+            cache_key = nil,
+            ttl = nil,
+            cached_response = nil
+        }
+    end
+    
+    local shared_dict = cache_dicts[cache_type]
     
     -- Check for cached response
     local cached_response = shared_dict:get(cache_key)
@@ -118,22 +149,23 @@ function _M.check_cache(chain, network, body_data)
     }
 end
 
--- Save function that uses cache_type and mapping
-function _M.save_to_cache(cache_key, response_body, cache_type)
-    local config = cache_configs[cache_type]
-    if not config then
-        ngx.log(ngx.ERR, "Invalid cache_type: ", cache_type, ". Expected 'permanent' or 'short'")
+-- Save function that uses cache_info
+function _M.save_to_cache(cache_info, response_body)
+    if not cache_info.cache_type or not cache_info.cache_key or not cache_info.ttl then
         return false
     end
     
-    local shared_dict = config.dict
-    local ttl = config.ttl
+    local shared_dict = cache_dicts[cache_info.cache_type]
+    if not shared_dict then
+        ngx.log(ngx.ERR, "Invalid cache_type: ", cache_info.cache_type)
+        return false
+    end
     
-    local success, err = shared_dict:set(cache_key, response_body, ttl)
+    local success, err = shared_dict:set(cache_info.cache_key, response_body, cache_info.ttl)
     if success then
-        ngx.log(ngx.INFO, "Cached response (", cache_type, ") for key: ", cache_key, " with TTL: ", ttl, " seconds")
+        ngx.log(ngx.INFO, "Cached response (", cache_info.cache_type, ") for key: ", cache_info.cache_key, " with TTL: ", cache_info.ttl, " seconds")
     else
-        ngx.log(ngx.ERR, "Failed to cache response (", cache_type, "): ", err)
+        ngx.log(ngx.ERR, "Failed to cache response (", cache_info.cache_type, "): ", err)
     end
     return success
 end

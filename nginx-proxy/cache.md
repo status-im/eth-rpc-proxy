@@ -1,10 +1,7 @@
 # RPC Cache System
 
 ## Overview
-
-The current caching system uses **Lua shared memory** to cache RPC responses with two TTL levels:
-- **Permanent cache (24h)** - for immutable blockchain data
-- **Short cache (5s)** - for frequently changing data
+The RPC caching system uses **Lua shared memory** with **network-specific TTL strategies** and three cache types optimized for different blockchain networks and data types.
 
 ## Architecture
 
@@ -28,7 +25,8 @@ graph TD
 | Type | Methods | TTL | Shared Dict |
 |------|---------|-----|-------------|
 | **permanent** | `eth_getBlockByHash`, `eth_getTransactionReceipt`, `net_version` | 24h | `rpc_cache` (100MB) |
-| **short** | `eth_getBlockByNumber`, `eth_getBalance`, `eth_blockNumber` | 5s | `rpc_cache_short` (50MB) |
+| **short** | `eth_getBalance`, `eth_blockNumber` | 5s | `rpc_cache_short` (50MB) |
+| **minimal** | `eth_gasPrice`, `eth_maxPriorityFeePerGas`, `eth_feeHistory` | 0s* | `rpc_cache_minimal` (50MB) |
 
 ## API
 
