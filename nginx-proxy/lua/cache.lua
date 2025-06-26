@@ -92,11 +92,23 @@ function _M.check_cache(chain, network, body_data)
     
     -- Check for cached response
     local cached_response = shared_dict:get(cache_key)
+    local stats_dict = ngx.shared.cache_stats
+    
     if cached_response then
         ngx.log(ngx.INFO, "Cache hit (", cache_type, ") for key: ", cache_key)
+        -- Increment cache hit counter
+        stats_dict:incr("cache_hits_" .. cache_type, 1, 0)
+        stats_dict:incr("cache_hits_total", 1, 0)
     else
         ngx.log(ngx.INFO, "Cache miss (", cache_type, ") for key: ", cache_key)
+        -- Increment cache miss counter
+        stats_dict:incr("cache_misses_" .. cache_type, 1, 0)
+        stats_dict:incr("cache_misses_total", 1, 0)
     end
+    
+    -- Increment total requests counter
+    stats_dict:incr("total_requests_" .. cache_type, 1, 0)
+    stats_dict:incr("total_requests_all", 1, 0)
     
     return {
         cache_type = cache_type,
