@@ -77,95 +77,100 @@ if #providers == 0 then
 end
 
 local tried_specific_provider = false
+local success = false
 
 for _, provider in ipairs(providers) do
+    local skip_provider = false
+    
     -- Skip providers that don't match requested provider_type
     if provider_type and provider_type ~= "" then
         if provider.type ~= provider_type then
-            goto continue
-        end
-        tried_specific_provider = true
-    end
-
-    ngx.log(ngx.INFO, "provider: ", provider.url)
-    local httpc = http.new()
-
-    -- Handle authentication based on provider config
-    local request_url = provider.url
-    local request_headers = {
-        ["Content-Type"] = "application/json"
-    }
-
-    if provider.authType == "token-auth" and provider.authToken then
-        if request_url:sub(-1) == "/" then
-            request_url = request_url .. provider.authToken
+            skip_provider = true
         else
-            request_url = request_url .. "/" .. provider.authToken
+            tried_specific_provider = true
         end
-    elseif provider.authType == "basic-auth" and provider.authLogin and provider.authPassword then
-        local auth_str = ngx.encode_base64(provider.authLogin .. ":" .. provider.authPassword)
-        request_headers["Authorization"] = "Basic " .. auth_str
     end
 
-    local res, err = httpc:request_uri(request_url, {
-        method = ngx.req.get_method(),
-        body = body_data,
-        headers = request_headers,
-        ssl_verify = false,
-        options = { family = ngx.AF_INET }
-    })
+    if not skip_provider then
+        ngx.log(ngx.INFO, "provider: ", provider.url)
+        local httpc = http.new()
 
-    if not res then
-        ngx.log(ngx.ERR, "HTTP request failed: ", err)
-        goto continue
-    end
+        -- Handle authentication based on provider config
+        local request_url = provider.url
+        local request_headers = {
+            ["Content-Type"] = "application/json"
+        }
 
-    ngx.log(ngx.DEBUG, "Response body: ", res.body)
-    
-    local ok, decoded_response = pcall(json.decode, res.body)
-    local decoded = ok and decoded_response or nil
-    
-    -- Check if we should retry with next provider
-    if should_retry(res, decoded) then
-        if res.status then
-            ngx.log(ngx.ERR, "Error status ", res.status, ", trying next provider")
-        elseif decoded and decoded.error then
-            ngx.log(ngx.ERR, "JSON-RPC error code ", decoded.error.code, ", trying next provider")
+        if provider.authType == "token-auth" and provider.authToken then
+            if request_url:sub(-1) == "/" then
+                request_url = request_url .. provider.authToken
+            else
+                request_url = request_url .. "/" .. provider.authToken
+            end
+        elseif provider.authType == "basic-auth" and provider.authLogin and provider.authPassword then
+            local auth_str = ngx.encode_base64(provider.authLogin .. ":" .. provider.authPassword)
+            request_headers["Authorization"] = "Basic " .. auth_str
         end
-        goto continue
+
+        local res, err = httpc:request_uri(request_url, {
+            method = ngx.req.get_method(),
+            body = body_data,
+            headers = request_headers,
+            ssl_verify = false,
+            options = { family = ngx.AF_INET }
+        })
+
+        if res then
+            ngx.log(ngx.DEBUG, "Response body: ", res.body)
+            
+            local ok, decoded_response = pcall(json.decode, res.body)
+            local decoded = ok and decoded_response or nil
+            
+            -- Check if we should retry with next provider
+            if not should_retry(res, decoded) then
+                -- Set Content-Type header
+                if res.headers["Content-Type"] then
+                    ngx.header["Content-Type"] = res.headers["Content-Type"]
+                end
+
+                -- Set Content-Length header if present
+                if res.headers["Content-Length"] then
+                    ngx.header["Content-Length"] = res.headers["Content-Length"]
+                end
+
+                -- Set Vary header if present
+                if res.headers["Vary"] then
+                    ngx.header["Vary"] = res.headers["Vary"]
+                end
+
+                -- Cache response if cacheable
+                if cache_info.cache_type then
+                    cache.save_to_cache(cache_info, res.body)
+                end
+
+                -- Success! Return response and exit
+                ngx.say(res.body)
+                success = true
+                break
+            else
+                if res.status then
+                    ngx.log(ngx.ERR, "Error status ", res.status, ", trying next provider")
+                elseif decoded and decoded.error then
+                    ngx.log(ngx.ERR, "JSON-RPC error code ", decoded.error.code, ", trying next provider")
+                end
+            end
+        else
+            ngx.log(ngx.ERR, "HTTP request failed: ", err)
+        end
     end
-
-    -- Set Content-Type header
-    if res.headers["Content-Type"] then
-        ngx.header["Content-Type"] = res.headers["Content-Type"]
-    end
-
-    -- Set Content-Length header if present
-    if res.headers["Content-Length"] then
-        ngx.header["Content-Length"] = res.headers["Content-Length"]
-    end
-
-    -- Set Vary header if present
-    if res.headers["Vary"] then
-        ngx.header["Vary"] = res.headers["Vary"]
-    end
-
-    -- Cache response if cacheable
-    if cache_info.cache_type then
-        cache.save_to_cache(cache_info, res.body)
-    end
-
-    -- Keep connection alive for subsequent requests
-    ngx.say(res.body)
-    return
-
-    ::continue::
 end
 
-if provider_type and provider_type ~= "" and not tried_specific_provider then
-    ngx.status = 404
-    ngx.say("Provider not found: " .. provider_type)
-else
-ngx.status = 502
-ngx.say("All providers failed")
+if not success then
+    if provider_type and provider_type ~= "" and not tried_specific_provider then
+        ngx.status = 404
+        ngx.say("Provider not found: " .. provider_type)
+    else
+        ngx.status = 502
+        ngx.say("All providers failed")
+    end
 end
