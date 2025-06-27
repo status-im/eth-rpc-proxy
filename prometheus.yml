@@ -15,3 +15,10 @@ scrape_configs:
       - targets: ['auth-service:8081']
     scrape_interval: 5s
     metrics_path: '/metrics'
+
+  - job_name: 'nginx-cache-metrics'
+    static_configs:
+      - targets: ['rpc-proxy:8080']
+    scrape_interval: 30s
+    metrics_path: '/metrics/cache'
+    scheme: http
