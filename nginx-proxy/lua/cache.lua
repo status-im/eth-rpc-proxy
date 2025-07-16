@@ -5,10 +5,12 @@ local _M = {}
 -- Default TTLs (in seconds)
 local ttl_defaults = {
     default = { permanent = 86400, short = 5, minimal = 0 },
-    ["ethereum:mainnet"] = { short = 12, minimal = 5 },
     ["arbitrum:mainnet"] = { short = 1 },
+    ["ethereum:mainnet"] = { short = 12, minimal = 5 },
+    ["linea:mainnet"]    = { short = 2 },
+    ["linea:sepolia"]    = { short = 2 },
     ["optimism:mainnet"] = { short = 2 },
-    ["polygon:mainnet"] = { short = 2 },
+    ["polygon:mainnet"]  = { short = 2 },
 }
 
 -- Shared dicts per cache type
