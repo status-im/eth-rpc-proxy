@@ -1,7 +1,6 @@
--- auth_config.lua - Configuration module for authentication settings
 local _M = {}
 local cjson = require "cjson"
-local resolver_utils = require "resolver_utils"
+local resolver_utils = require "utils.resolver_utils"
 
 -- Configuration loading function that will be called by timer
 function _M.load_config(premature)

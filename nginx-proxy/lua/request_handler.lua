@@ -1,6 +1,6 @@
 local json = require("cjson")
 local http = require("resty.http")
-local cache = require("cache")
+local cache = require("cache.cache")
 
 -- HTTP status codes that should trigger retry
 local retry_status = {

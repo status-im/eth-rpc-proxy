@@ -1,5 +1,5 @@
 local json = require("cjson")
-local auth_config = require("auth_config")
+local auth_config = require("auth.auth_config")
 
 -- Debug logging
 ngx.log(ngx.DEBUG, "auth_token_validator: Starting JWT validation")
