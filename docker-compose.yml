@@ -10,6 +10,7 @@ services:
       CUSTOM_DNS: '127.0.0.11'
       RELOAD_INTERVAL: '10'
       AUTH_CONFIG_FILE: '/app/config.json'
+      CACHE_RULES_FILE: '/app/cache_rules.yaml'
     ports:
       - '8080:8080'
     networks:
@@ -21,6 +22,7 @@ services:
       - './secrets/default_providers.json:/usr/local/openresty/nginx/providers.json'
       - './secrets/.htpasswd:/etc/nginx/.htpasswd'
       - './go-auth-service/config.json:/app/config.json:ro'
+      - './nginx-proxy/cache_rules.yaml:/app/cache_rules.yaml:ro'
     healthcheck:
       test: ['CMD-SHELL', 'nc -z 0.0.0.0 8080']
       interval: '30s'
