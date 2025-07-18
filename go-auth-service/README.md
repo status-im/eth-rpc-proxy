@@ -83,7 +83,7 @@ When nginx forwards requests to `/auth/verify`:
 
 ## ⚙️ **Configuration**
 
-Edit `config.json` to adjust difficulty:
+Edit `auth_config.json` to adjust difficulty:
 
 ```json
 {
@@ -194,4 +194,4 @@ This will:
 
 ### Environment Variables:
 - `PORT` - Service port (default: 8081)
-- `CONFIG_FILE` - Config file path (default: config.json)
+- `CONFIG_FILE` - Config file path (default: auth_config.json)

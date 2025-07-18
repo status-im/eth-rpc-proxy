@@ -9,7 +9,7 @@ services:
       GO_AUTH_SERVICE_URL: 'http://auth-service:8081'
       CUSTOM_DNS: '127.0.0.11'
       RELOAD_INTERVAL: '10'
-      AUTH_CONFIG_FILE: '/app/config.json'
+      AUTH_CONFIG_FILE: '/app/auth_config.json'
       CACHE_RULES_FILE: '/app/cache_rules.yaml'
     ports:
       - '8080:8080'
@@ -19,9 +19,9 @@ services:
       - 'health-checker'
       - 'auth-service'
     volumes:
-      - './secrets/default_providers.json:/usr/local/openresty/nginx/providers.json'
+      - './secrets/default_providers.json:/app/providers.json'
       - './secrets/.htpasswd:/etc/nginx/.htpasswd'
-      - './go-auth-service/config.json:/app/config.json:ro'
+      - './go-auth-service/auth_config.json:/app/auth_config.json:ro'
       - './nginx-proxy/cache_rules.yaml:/app/cache_rules.yaml:ro'
     healthcheck:
       test: ['CMD-SHELL', 'nc -z 0.0.0.0 8080']
@@ -44,7 +44,7 @@ services:
     networks:
       - 'rpc-network'
     volumes:
-      - './go-auth-service/config.json:/app/config.json:ro'
+      - './go-auth-service/auth_config.json:/app/config.json:ro'
     healthcheck:
       test: ['CMD-SHELL', 'wget -q -O - http://0.0.0.0:8081/auth/status || exit 1']
       interval: '30s'

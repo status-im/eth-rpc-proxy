@@ -9,7 +9,7 @@ function _M.load_config(premature)
     end
     
     -- Use provided config file path or fallback
-    local config_path = os.getenv("AUTH_CONFIG_FILE") or "/app/config.json"
+    local config_path = os.getenv("AUTH_CONFIG_FILE") or "/app/auth_config.json"
     
     -- Get Go Auth Service URL from environment variable
     local base_auth_url = os.getenv("GO_AUTH_SERVICE_URL") or "http://auth-service:8081"

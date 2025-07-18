@@ -26,7 +26,7 @@ services:
       GO_AUTH_SERVICE_URL: 'http://auth-service:8081'
       CUSTOM_DNS: '127.0.0.11'
       RELOAD_INTERVAL: '10'
-      AUTH_CONFIG_FILE: '/app/config.json'
+      AUTH_CONFIG_FILE: '/app/auth_config.json'
       CACHE_RULES_FILE: '/app/cache_rules.yaml'
       CORS_ORIGIN: 'http://localhost:3001'
     ports:
@@ -37,9 +37,9 @@ services:
       - 'health-checker'
       - 'auth-service'
     volumes:
-      - './secrets/default_providers.json:/usr/local/openresty/nginx/providers.json'
+      - './secrets/default_providers.json:/app/providers.json'
       - './secrets/.htpasswd:/etc/nginx/.htpasswd'
-      - './go-auth-service/config.json:/app/config.json:ro'
+      - './go-auth-service/auth_config.json:/app/auth_config.json:ro'
       - './nginx-proxy/cache_rules.yaml:/app/cache_rules.yaml:ro'
 
   auth-service:
@@ -56,7 +56,7 @@ services:
     networks:
       - 'rpc-network'
     volumes:
-      - './go-auth-service/config.json:/app/config.json:ro'
+      - './go-auth-service/auth_config.json:/app/config.json:ro'
 
   health-checker:
     build:

@@ -11,7 +11,7 @@ cache_rules_reader.init()
 
 -- Read URL from environment variable
 local url = os.getenv("CONFIG_HEALTH_CHECKER_URL")
-local fallback = "/usr/local/openresty/nginx/providers.json"
+local fallback = "/app/providers.json"
 
 -- Check worker ID to ensure timers only run in one process
 if ngx.worker.id() == 0 then  -- Only in first worker
