@@ -1,53 +1,12 @@
 local json = require("cjson")
+local cache_rules = require("cache.cache_rules")
 
 local _M = {}
 
--- Default TTLs (in seconds)
-local ttl_defaults = {
-    default = { permanent = 86400, short = 5, minimal = 0 },
-    ["ethereum:mainnet"] = { short = 15, minimal = 5 },
-    ["arbitrum:mainnet"] = { short = 1},
-    ["optimism:mainnet"] = { short = 1},
-    ["polygon:mainnet"] = { short = 2}
-}
-
--- Shared dicts per cache type
 local cache_dicts = {
     permanent = ngx.shared.rpc_cache,
     short = ngx.shared.rpc_cache_short,
     minimal = ngx.shared.rpc_cache_minimal
-}
-
--- Permanent methods that can be cached for 24 hours
-local permanent_methods = {
-    ["eth_getBlockByHash"] = true,
-    ["eth_getTransactionByHash"] = true,
-    ["eth_getTransactionReceipt"] = true,
-    ["eth_getTransactionByBlockHashAndIndex"] = true,
-    ["eth_getUncleByBlockHashAndIndex"] = true,
-    ["net_version"] = true,
-    ["eth_chainId"] = true,
-    ["web3_clientVersion"] = true,
-    ["net_listening"] = true,
-    ["eth_protocolVersion"] = true
-}
-
--- Short-term methods that can be cached for 5 seconds
-local short_methods = {
-    ["eth_getBlockByNumber"] = true,
-    ["eth_getTransactionByBlockNumberAndIndex"] = true,
-    ["eth_getUncleByBlockNumberAndIndex"] = true,
-    ["eth_getBalance"] = true,
-    ["eth_getCode"] = true,
-    ["eth_getStorageAt"] = true,
-    ["eth_blockNumber"] = true
-}
-
--- Minimal cache methods
-local minimal_methods = {
-    ["eth_gasPrice"] = true,
-    ["eth_maxPriorityFeePerGas"] = true,
-    ["eth_feeHistory"] = true
 }
 
 -- Helper function to decode JSON once and cache result
@@ -59,7 +18,6 @@ local function get_decoded_body(body_data)
         return body_data
     end
     
-    -- If string, decode it
     local ok, body_json = pcall(json.decode, body_data)
     if not ok or not body_json or not body_json.method then
         return nil
@@ -70,7 +28,6 @@ end
 
 -- Unified cache function that handles all cache operations
 function _M.check_cache(chain, network, body_data)
-    -- Decode body once
     local decoded_body = get_decoded_body(body_data)
     if not decoded_body then
         return {
@@ -81,18 +38,8 @@ function _M.check_cache(chain, network, body_data)
         }
     end
     
-    local method = decoded_body.method
-    local cache_type = nil
-    
-    if permanent_methods[method] then
-        cache_type = "permanent"
-    elseif short_methods[method] then
-        cache_type = "short"
-    elseif minimal_methods[method] then
-        cache_type = "minimal"
-    end
-    
-    if not cache_type then
+    local cache_info = cache_rules.get_cache_info(chain, network, decoded_body)
+    if not cache_info or cache_info.cache_type == "none" or cache_info.ttl == 0 then
         return {
             cache_type = nil,
             cache_key = nil,
@@ -101,27 +48,12 @@ function _M.check_cache(chain, network, body_data)
         }
     end
     
-    -- Generate cache key
+    local cache_type = cache_info.cache_type
+    local ttl = cache_info.ttl
+    
     local cache_key = chain .. ":" .. network .. ":" .. ngx.md5(body_data)
-    
-    -- Fetch TTL config for this chain/network (fallback to default)
-    local key = chain .. ":" .. network
-    local cfg = ttl_defaults[key] or ttl_defaults.default
-    local ttl = cfg[cache_type] or ttl_defaults.default[cache_type]
-    
-    -- If TTL is 0 or nil, treat as non-cacheable
-    if not ttl or ttl == 0 then
-        return {
-            cache_type = nil,
-            cache_key = nil,
-            ttl = nil,
-            cached_response = nil
-        }
-    end
-    
     local shared_dict = cache_dicts[cache_type]
     
-    -- Check for cached response
     local cached_response = shared_dict:get(cache_key)
     local stats_dict = ngx.shared.cache_stats
     

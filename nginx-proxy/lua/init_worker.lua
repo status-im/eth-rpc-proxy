@@ -6,8 +6,9 @@ local auth_config = require("auth.auth_config")
 auth_config.init()
 
 -- Initialize cache rules configuration
-local cache_rules_reader = require("cache.cache_rules_reader")
-cache_rules_reader.init()
+local cache_rules = require("cache.cache_rules")
+local cache_rules_file = os.getenv("CACHE_RULES_FILE") or "/app/cache_rules.yaml"
+cache_rules.init(cache_rules_file)
 
 -- Read URL from environment variable
 local url = os.getenv("CONFIG_HEALTH_CHECKER_URL")
