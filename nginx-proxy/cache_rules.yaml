@@ -40,10 +40,7 @@ cache_rules:
   eth_blockNumber: short
 
   # Logs
-  eth_getLogs:
-    - match: { filter: only_block_numbers }
-      ttl: permanent
-    - default: short
+  eth_getLogs: short
 
   # Gas data
   eth_gasPrice: minimal

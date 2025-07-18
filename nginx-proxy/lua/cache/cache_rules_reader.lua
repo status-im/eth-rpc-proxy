@@ -1,49 +1,6 @@
 local _M = {}
 local yaml = require("lyaml")
 
-local config = nil
-local config_loaded = false
-local config_file_path = nil
-
-function _M.load_config(premature, file_path)
-    if premature then
-        return
-    end
-    
-    config_file_path = file_path
-    ngx.log(ngx.INFO, "cache_rules_reader: Loading config from: ", config_path)
-    
-    local config_data = _M.read_yaml_config(config_path)
-    
-    if config_data then
-        if _M.validate_config(config_data) then
-            config = config_data
-            config_loaded = true
-            ngx.log(ngx.NOTICE, "cache_rules_reader: Config loaded successfully from: ", config_path)
-        else
-            ngx.log(ngx.ERR, "cache_rules_reader: Config validation failed for: ", config_path)
-            config_loaded = false
-        end
-    else
-        ngx.log(ngx.ERR, "cache_rules_reader: Failed to read config from: ", config_path)
-        config_loaded = false
-    end
-end
-
-function _M.init(file_path)
-    config_file_path = file_path or os.getenv("CACHE_RULES_FILE") or "/app/cache_rules.yaml"
-    ngx.log(ngx.INFO, "cache_rules_reader: Initializing with config file: ", config_file_path)
-    
-    local ok, err = ngx.timer.at(0, _M.load_config, config_file_path)
-    if not ok then
-        ngx.log(ngx.ERR, "cache_rules_reader: Failed to create initial timer: ", err)
-        return false
-    end
-    
-    return true
-end
-
-
 function _M.read_yaml_config(file_path)
     local file = io.open(file_path, "r")
     if not file then
@@ -99,14 +56,6 @@ function _M.validate_config(cfg)
     
     ngx.log(ngx.INFO, "cache_rules_reader: Configuration validation passed")
     return true
-end
-
-function _M.get_config()
-    if not config_loaded then
-        ngx.log(ngx.WARN, "cache_rules_reader: Config not loaded yet, attempting to load")
-        _M.load_config(false, config_file_path)
-    end
-    return config
 end
 
 return _M 
