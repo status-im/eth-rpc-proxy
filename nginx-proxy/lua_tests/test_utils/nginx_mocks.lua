@@ -19,6 +19,7 @@ function _M.setup()
             return "mock_hash_" .. string.len(str)
         end,
         shared = {
+            -- These will be populated by cache_mocks.setup_cache_shared_dicts()
         }
     }
 end

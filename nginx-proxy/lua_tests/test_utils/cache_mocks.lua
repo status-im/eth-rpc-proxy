@@ -63,14 +63,17 @@ function _M.setup_cache_rules_reader_mock()
                         ttl_defaults = {
                             default = { permanent = 86400, short = 5, minimal = 3 },
                             ["ethereum:mainnet"] = { short = 15, minimal = 5 },
-                            ["polygon:mainnet"] = { permanent = 7200, short = 2, minimal = 1 }
+                            ["polygon:mainnet"] = { permanent = 7200, short = 2 },
+                            ["arbitrum:mainnet"] = { short = 1 },
+                            ["bsc:mainnet"] = { permanent = 3600, short = 1, minimal = 0 }
                         },
                         cache_rules = {
                             eth_getBlockByHash = "permanent",
                             eth_getTransactionReceipt = "permanent",
                             eth_blockNumber = "short",
                             eth_getBalance = "short",
-                            eth_gasPrice = "minimal"
+                            eth_gasPrice = "minimal",
+                            unknown_method = "unknown_type"
                         }
                     }
                 elseif string.match(file_path, "invalid") then
@@ -88,6 +91,11 @@ end
 function _M.setup_all()
     _M.setup_cache_shared_dicts()
     _M.setup_cache_rules_reader_mock()
+end
+
+function _M.reset_all()
+    _M.clear_cache_storage()
+    -- Don't call setup_all() here - it will be called by spec_helper
 end
 
 return _M 

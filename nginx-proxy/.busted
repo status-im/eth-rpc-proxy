@@ -1,0 +1,16 @@
+return {
+  default = {
+    ROOT = { 'lua_tests' },
+    pattern = '_test%.lua$',  -- Now only Busted tests remain
+    recursive = true,
+    verbose = true,
+    output = 'utfTerminal',
+    shuffle = false,
+    sort = true,
+    lua = 'lua',
+    loaders = 'lua',
+    coverage = false,
+    pattern_exclude = {},
+    helper = 'lua_tests/spec_helper.lua',
+  }
+} 
