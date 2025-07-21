@@ -45,11 +45,6 @@ function _M.load_config(premature)
         _M.requests_per_token = 100
         _M.token_expiry_minutes = 10
     end
-        ngx.log(ngx.NOTICE, "auth_config: go_auth_service_url = ", _M.go_auth_service_url)
-        ngx.log(ngx.NOTICE, "auth_config: base_auth_url = ", base_auth_url)
-        ngx.log(ngx.NOTICE, "auth_config: requests_per_token = ", _M.requests_per_token)
-        ngx.log(ngx.NOTICE, "auth_config: token_expiry_minutes = ", _M.token_expiry_minutes)
-
 end
 
 -- Initialize configuration using timer

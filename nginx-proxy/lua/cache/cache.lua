@@ -61,12 +61,10 @@ function _M.check_cache(chain, network, body_data)
     local stats_dict = ngx.shared.cache_stats
     
     if cached_response then
-        ngx.log(ngx.INFO, "Cache hit (", cache_type, ") for key: ", cache_key)
         -- Increment cache hit counter
         stats_dict:incr("cache_hits_" .. cache_type, 1, 0)
         stats_dict:incr("cache_hits_total", 1, 0)
     else
-        ngx.log(ngx.INFO, "Cache miss (", cache_type, ") for key: ", cache_key)
         -- Increment cache miss counter
         stats_dict:incr("cache_misses_" .. cache_type, 1, 0)
         stats_dict:incr("cache_misses_total", 1, 0)
@@ -98,9 +96,7 @@ function _M.save_to_cache(cache_info, response_body)
     end
     
     local success, err = shared_dict:set(cache_info.cache_key, response_body, cache_info.ttl)
-    if success then
-        ngx.log(ngx.INFO, "Cached response (", cache_info.cache_type, ") for key: ", cache_info.cache_key, " with TTL: ", cache_info.ttl, " seconds")
-    else
+    if not success then
         ngx.log(ngx.ERR, "Failed to cache response (", cache_info.cache_type, "): ", err)
     end
     return success

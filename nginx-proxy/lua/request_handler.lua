@@ -38,7 +38,7 @@ local function filter_providers(providers, provider_type)
         tried_specific_provider = true
     else
         providers_to_try = providers
-    end`
+    end
 
     return providers_to_try, tried_specific_provider
 end
@@ -55,10 +55,6 @@ if not chain or not network then
     ngx.say("Invalid URL format - must be /chain/network or /chain/network/provider_type")
     return
 end
-
-ngx.log(ngx.INFO, "Chain: ", chain, " Network: ", network, provider_type and (" Provider: " .. provider_type) or "")
-local sanitized_body_data = body_data:sub(1, 100)
-ngx.log(ngx.INFO, "Request body (truncated): ", sanitized_body_data, body_data:len() > 100 and "..." or "")
 
 -- Get providers for the requested chain/network
 local chain_network_key = chain .. ":" .. network
@@ -108,7 +104,6 @@ end
 local success = false
 
 for _, provider in ipairs(providers_to_try) do
-    ngx.log(ngx.INFO, "provider: ", provider.url)
     local httpc = http.new()
 
     -- Handle authentication based on provider config
@@ -137,8 +132,6 @@ for _, provider in ipairs(providers_to_try) do
     })
 
     if res then
-        ngx.log(ngx.DEBUG, "Response body: ", res.body)
-
         local ok, decoded_response = pcall(json.decode, res.body)
         local decoded = ok and decoded_response or nil
 
