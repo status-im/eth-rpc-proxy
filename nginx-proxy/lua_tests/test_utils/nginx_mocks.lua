@@ -14,6 +14,11 @@ function _M.setup()
                 callback(false, arg)
                 return true, nil
             end
+        },
+        md5 = function(str)
+            return "mock_hash_" .. string.len(str)
+        end,
+        shared = {
         }
     }
 end

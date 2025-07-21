@@ -224,5 +224,6 @@ The nginx proxy uses Lua modules to manage configuration:
 - `auth_token_validator.lua` - Validates JWT tokens with caching and rate limiting
 - `provider_loader.lua` - Manages provider list reloading
 - `request_handler.lua` - Handles main request routing logic
+- `cache.lua` - Handles RPC response caching with TTL-based storage
 
 Configuration is loaded once at worker startup and cached for performance.
