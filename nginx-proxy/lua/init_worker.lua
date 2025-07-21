@@ -25,10 +25,15 @@ if ngx.worker.id() == 0 then  -- Only in first worker
     local delay = tonumber(os.getenv("RELOAD_INTERVAL")) or 30
     local handler
     handler = function()
-        schedule_reload_providers(url, fallback)
-        local ok, err = ngx.timer.at(delay, handler)
+        local ok, err = pcall(schedule_reload_providers, url, fallback)
         if not ok then
-            ngx.log(ngx.ERR, "Failed to create timer: ", err)
+            ngx.log(ngx.ERR, "Failed to execute schedule_reload_providers: ", err)
+        end
+
+        -- Reschedule timer regardless of the result
+        local ok_timer, err_timer = ngx.timer.at(delay, handler)
+        if not ok_timer then
+            ngx.log(ngx.ERR, "Failed to reschedule timer: ", err_timer)
         end
     end
 

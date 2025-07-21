@@ -27,6 +27,7 @@ local function get_decoded_body(body_data)
 end
 
 -- Unified cache function that handles all cache operations
+-- Returns cache information along with decoded request body to avoid duplicate JSON parsing
 function _M.check_cache(chain, network, body_data)
     local decoded_body = get_decoded_body(body_data)
     if not decoded_body then
@@ -34,7 +35,8 @@ function _M.check_cache(chain, network, body_data)
             cache_type = nil,
             cache_key = nil,
             ttl = nil,
-            cached_response = nil
+            cached_response = nil,
+            decoded_body = nil
         }
     end
     
@@ -44,7 +46,8 @@ function _M.check_cache(chain, network, body_data)
             cache_type = nil,
             cache_key = nil,
             ttl = nil,
-            cached_response = nil
+            cached_response = nil,
+            decoded_body = decoded_body
         }
     end
     
@@ -77,7 +80,8 @@ function _M.check_cache(chain, network, body_data)
         cache_type = cache_type,
         cache_key = cache_key,
         ttl = ttl,
-        cached_response = cached_response
+        cached_response = cached_response,
+        decoded_body = decoded_body
     }
 end
 
