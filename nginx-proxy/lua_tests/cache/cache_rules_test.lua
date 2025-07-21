@@ -20,11 +20,13 @@ describe("cache_rules.lua", function()
             if string.match(file_path, "valid") then
               return {
                 ttl_defaults = {
-                  default = { permanent = 86400, short = 5, minimal = 3 },
-                  ["ethereum:mainnet"] = { short = 15, minimal = 5 },
-                  ["arbitrum:mainnet"] = { short = 1 },
-                  ["polygon:mainnet"] = { permanent = 7200, short = 2 },
-                  ["bsc:mainnet"] = { permanent = 3600, short = 1, minimal = 0 }
+                  default = { permanent = 86400, short = 5, minimal = 0 },  -- minimal=0 for testing
+                  ethereum = { short = 15, minimal = 5 },
+                  arbitrum = { short = 1, minimal = 0.25 },
+                  optimism = { short = 2, minimal = 0.25 },
+                  base = { short = 2, minimal = 0.25 },
+                  polygon = { permanent = 7200, short = 2, minimal = 0.25 },
+                  bsc = { permanent = 3600, short = 3, minimal = 0.5 }
                 },
                 cache_rules = {
                   eth_getBlockByHash = "permanent",
@@ -105,62 +107,120 @@ describe("cache_rules.lua", function()
 
     describe("with default values", function()
       it("should return correct default TTL values", function()
-        local ttl_permanent = cache_rules.get_ttl_for_cache_type("permanent", "ethereum", "testnet")
+        -- Use unknown chain to test default fallback
+        local ttl_permanent = cache_rules.get_ttl_for_cache_type("permanent", "unknown_chain", "testnet")
         assert.are.equal(86400, ttl_permanent)
 
-        local ttl_short = cache_rules.get_ttl_for_cache_type("short", "ethereum", "testnet")
+        local ttl_short = cache_rules.get_ttl_for_cache_type("short", "unknown_chain", "testnet")
         assert.are.equal(5, ttl_short)
 
-        local ttl_minimal = cache_rules.get_ttl_for_cache_type("minimal", "ethereum", "testnet")
-        assert.are.equal(3, ttl_minimal)
+        local ttl_minimal = cache_rules.get_ttl_for_cache_type("minimal", "unknown_chain", "testnet")
+        assert.are.equal(0, ttl_minimal)
       end)
     end)
 
-    describe("with network-specific overrides", function()
-      it("should return network-specific TTL for ethereum:mainnet", function()
+    describe("with fractional seconds support", function()
+      it("should handle fractional TTL values for arbitrum networks", function()
+        local ttl_minimal = cache_rules.get_ttl_for_cache_type("minimal", "arbitrum", "mainnet")
+        assert.are.equal(0.25, ttl_minimal)
+        
+        local ttl_short = cache_rules.get_ttl_for_cache_type("short", "arbitrum", "mainnet")
+        assert.are.equal(1, ttl_short)
+        
+        -- Works for any arbitrum network
+        local ttl_minimal_sepolia = cache_rules.get_ttl_for_cache_type("minimal", "arbitrum", "sepolia")
+        assert.are.equal(0.25, ttl_minimal_sepolia)
+      end)
+
+      it("should handle fractional TTL values for base networks", function()
+        local ttl_short = cache_rules.get_ttl_for_cache_type("short", "base", "mainnet")
+        assert.are.equal(2, ttl_short)
+        
+        local ttl_minimal = cache_rules.get_ttl_for_cache_type("minimal", "base", "mainnet")
+        assert.are.equal(0.25, ttl_minimal)
+        
+        -- Works for any base network
+        local ttl_short_sepolia = cache_rules.get_ttl_for_cache_type("short", "base", "sepolia")
+        assert.are.equal(2, ttl_short_sepolia)
+      end)
+
+      it("should handle fractional TTL values for polygon networks", function()
+        local ttl_minimal = cache_rules.get_ttl_for_cache_type("minimal", "polygon", "mainnet")
+        assert.are.equal(0.25, ttl_minimal)
+        
+        local ttl_short = cache_rules.get_ttl_for_cache_type("short", "polygon", "mainnet")
+        assert.are.equal(2, ttl_short)
+        
+        -- Works for any polygon network
+        local ttl_minimal_amoy = cache_rules.get_ttl_for_cache_type("minimal", "polygon", "amoy")
+        assert.are.equal(0.25, ttl_minimal_amoy)
+      end)
+    end)
+
+    describe("with chain-specific overrides", function()
+      it("should return chain-specific TTL for ethereum networks", function()
         local ttl_short = cache_rules.get_ttl_for_cache_type("short", "ethereum", "mainnet")
         assert.are.equal(15, ttl_short)
 
         local ttl_minimal = cache_rules.get_ttl_for_cache_type("minimal", "ethereum", "mainnet")
         assert.are.equal(5, ttl_minimal)
+        
+        -- Should work for any ethereum network (e.g., sepolia)
+        local ttl_short_sepolia = cache_rules.get_ttl_for_cache_type("short", "ethereum", "sepolia")
+        assert.are.equal(15, ttl_short_sepolia)
       end)
 
-      it("should fall back to default for missing network-specific values", function()
-        -- For ethereum:mainnet, permanent is not specified, should fall back to default
+      it("should fall back to default for missing chain-specific values", function()
+        -- For ethereum, permanent is not specified, should fall back to default
         local ttl_permanent = cache_rules.get_ttl_for_cache_type("permanent", "ethereum", "mainnet")
         assert.are.equal(86400, ttl_permanent)
       end)
 
-      it("should handle partial network overrides correctly", function()
-        -- arbitrum:mainnet only has short=1, others should fall back
+      it("should handle partial chain overrides correctly", function()
+        -- arbitrum has short=1 and minimal=0.25, permanent should fall back
         local ttl_short = cache_rules.get_ttl_for_cache_type("short", "arbitrum", "mainnet")
         assert.are.equal(1, ttl_short)
+        
+        local ttl_minimal = cache_rules.get_ttl_for_cache_type("minimal", "arbitrum", "mainnet")
+        assert.are.equal(0.25, ttl_minimal)
         
         local ttl_permanent = cache_rules.get_ttl_for_cache_type("permanent", "arbitrum", "mainnet")
         assert.are.equal(86400, ttl_permanent) -- fallback to default
         
-        local ttl_minimal = cache_rules.get_ttl_for_cache_type("minimal", "arbitrum", "mainnet")
-        assert.are.equal(3, ttl_minimal) -- fallback to default
+        -- Should work for any arbitrum network (e.g., sepolia)
+        local ttl_short_sepolia = cache_rules.get_ttl_for_cache_type("short", "arbitrum", "sepolia")
+        assert.are.equal(1, ttl_short_sepolia)
       end)
 
-      it("should handle polygon:mainnet overrides correctly", function()
+      it("should handle polygon chain overrides correctly", function()
         local ttl_permanent = cache_rules.get_ttl_for_cache_type("permanent", "polygon", "mainnet")
         assert.are.equal(7200, ttl_permanent)
         
         local ttl_short = cache_rules.get_ttl_for_cache_type("short", "polygon", "mainnet")
         assert.are.equal(2, ttl_short)
         
-        -- minimal not specified, should fall back
         local ttl_minimal = cache_rules.get_ttl_for_cache_type("minimal", "polygon", "mainnet")
-        assert.are.equal(3, ttl_minimal)
+        assert.are.equal(0.25, ttl_minimal)
+        
+        -- Should work for any polygon network (e.g., amoy)
+        local ttl_short_amoy = cache_rules.get_ttl_for_cache_type("short", "polygon", "amoy")
+        assert.are.equal(2, ttl_short_amoy)
       end)
     end)
 
     describe("with zero and special values", function()
-             it("should handle explicitly set zero TTL", function()
-         -- bsc:mainnet has minimal=0 explicitly set
+             it("should handle BSC minimal cache settings", function()
+         -- bsc has minimal=0.5 set based on 3s block time
          local ttl_minimal = cache_rules.get_ttl_for_cache_type("minimal", "bsc", "mainnet")
-         assert.are.equal(0, ttl_minimal)
+         assert.are.equal(0.5, ttl_minimal)
+         
+         -- Should work for any bsc network
+         local ttl_minimal_testnet = cache_rules.get_ttl_for_cache_type("minimal", "bsc", "testnet")
+         assert.are.equal(0.5, ttl_minimal_testnet)
+         
+         -- BSC short cache should be 3s (current block time)
+         local ttl_short = cache_rules.get_ttl_for_cache_type("short", "bsc", "mainnet")
+         assert.are.equal(3, ttl_short)
        end)
 
       it("should return 0 for unknown cache types", function()
@@ -208,7 +268,7 @@ describe("cache_rules.lua", function()
         local cache_info = cache_rules.get_cache_info("ethereum", "mainnet", decoded_body)
         
         assert.are.equal("short", cache_info.cache_type)
-        assert.are.equal(15, cache_info.ttl) -- network-specific override
+        assert.are.equal(15, cache_info.ttl) -- chain-specific override
       end)
 
       it("should return correct cache info for eth_getBalance", function()
@@ -221,6 +281,22 @@ describe("cache_rules.lua", function()
         assert.are.equal("short", cache_info.cache_type)
         assert.are.equal(15, cache_info.ttl)
       end)
+
+      it("should return fractional TTL for base networks short methods", function()
+        local decoded_body = {
+          method = "eth_blockNumber",
+          params = {}
+        }
+        local cache_info = cache_rules.get_cache_info("base", "mainnet", decoded_body)
+        
+        assert.are.equal("short", cache_info.cache_type)
+        assert.are.equal(2, cache_info.ttl) -- fractional seconds
+        
+        -- Should work for any base network
+        local sepolia_cache_info = cache_rules.get_cache_info("base", "sepolia", decoded_body)
+        assert.are.equal("short", sepolia_cache_info.cache_type)
+        assert.are.equal(2, sepolia_cache_info.ttl)
+      end)
     end)
 
     describe("for minimal methods", function()
@@ -232,18 +308,47 @@ describe("cache_rules.lua", function()
         local cache_info = cache_rules.get_cache_info("ethereum", "mainnet", decoded_body)
         
         assert.are.equal("minimal", cache_info.cache_type)
-        assert.are.equal(5, cache_info.ttl) -- network-specific override
+        assert.are.equal(5, cache_info.ttl) -- chain-specific override
       end)
 
-      it("should return none cache type when TTL is zero", function()
+      it("should return fractional TTL for arbitrum networks minimal methods", function()
+        local decoded_body = {
+          method = "eth_gasPrice",
+          params = {}
+        }
+        local cache_info = cache_rules.get_cache_info("arbitrum", "mainnet", decoded_body)
+        
+        assert.are.equal("minimal", cache_info.cache_type)
+        assert.are.equal(0.25, cache_info.ttl) -- fractional seconds
+        
+        -- Should work for any arbitrum network
+        local sepolia_cache_info = cache_rules.get_cache_info("arbitrum", "sepolia", decoded_body)
+        assert.are.equal("minimal", sepolia_cache_info.cache_type)
+        assert.are.equal(0.25, sepolia_cache_info.ttl)
+      end)
+
+      it("should return minimal cache type for BSC with updated settings", function()
         local decoded_body = {
           method = "eth_gasPrice",
           params = {}
         }
         local cache_info = cache_rules.get_cache_info("bsc", "mainnet", decoded_body)
         
+        -- BSC now has minimal=0.5s based on 3s block time
+        assert.are.equal("minimal", cache_info.cache_type)
+        assert.are.equal(0.5, cache_info.ttl)
+      end)
+
+      it("should return none cache type when TTL is zero (default fallback)", function()
+        local decoded_body = {
+          method = "eth_gasPrice",
+          params = {}
+        }
+        -- Use unknown chain to test default fallback with minimal=0
+        local cache_info = cache_rules.get_cache_info("unknown_chain", "mainnet", decoded_body)
+        
         assert.are.equal("none", cache_info.cache_type)
-        assert.are.equal(0, cache_info.ttl) -- explicitly set to 0
+        assert.are.equal(0, cache_info.ttl) -- default minimal=0 causes none cache type
       end)
     end)
 
@@ -309,10 +414,10 @@ describe("cache_rules.lua", function()
       assert.are.equal(86400, fallback_ttl) -- Should use fallback default
     end)
 
-    it("should handle missing network configurations gracefully", function()
+    it("should handle missing chain configurations gracefully", function()
       cache_rules.init("/valid/config.yaml")
       
-      -- Test with completely unknown network
+      -- Test with completely unknown chain
       local ttl = cache_rules.get_ttl_for_cache_type("short", "unknown_chain", "unknown_network")
       assert.are.equal(5, ttl) -- Should fall back to default
     end)
@@ -323,36 +428,71 @@ describe("cache_rules.lua", function()
       cache_rules.init("/valid/config.yaml")
     end)
 
-    it("should handle complex ethereum:mainnet scenario", function()
+    it("should handle complex ethereum networks scenario", function()
       -- Test permanent method (fallback to default)
       local permanent_body = { method = "eth_getBlockByHash", params = {"0x123", true} }
       local permanent_info = cache_rules.get_cache_info("ethereum", "mainnet", permanent_body)
       assert.are.equal("permanent", permanent_info.cache_type)
       assert.are.equal(86400, permanent_info.ttl)
       
-      -- Test short method (network override)
+      -- Test short method (chain override)
       local short_body = { method = "eth_blockNumber", params = {} }
       local short_info = cache_rules.get_cache_info("ethereum", "mainnet", short_body)
       assert.are.equal("short", short_info.cache_type)
       assert.are.equal(15, short_info.ttl)
       
-      -- Test minimal method (network override)
+      -- Test minimal method (chain override)
       local minimal_body = { method = "eth_gasPrice", params = {} }
       local minimal_info = cache_rules.get_cache_info("ethereum", "mainnet", minimal_body)
       assert.are.equal("minimal", minimal_info.cache_type)
       assert.are.equal(5, minimal_info.ttl)
+      
+      -- Should work for any ethereum network (e.g., sepolia)
+      local sepolia_short_info = cache_rules.get_cache_info("ethereum", "sepolia", short_body)
+      assert.are.equal("short", sepolia_short_info.cache_type)
+      assert.are.equal(15, sepolia_short_info.ttl)
     end)
 
-    it("should handle bsc:mainnet zero TTL scenario", function()
+    it("should handle base networks fractional seconds scenario", function()
+      -- Test short method with fractional TTL
+      local short_body = { method = "eth_blockNumber", params = {} }
+      local short_info = cache_rules.get_cache_info("base", "mainnet", short_body)
+      assert.are.equal("short", short_info.cache_type)
+      assert.are.equal(2, short_info.ttl)
+      
+      -- Test minimal method with fractional TTL
+      local minimal_body = { method = "eth_gasPrice", params = {} }
+      local minimal_info = cache_rules.get_cache_info("base", "mainnet", minimal_body)
+      assert.are.equal("minimal", minimal_info.cache_type)
+      assert.are.equal(0.25, minimal_info.ttl)
+      
+      -- Should work for any base network (e.g., sepolia)
+      local sepolia_short_info = cache_rules.get_cache_info("base", "sepolia", short_body)
+      assert.are.equal("short", sepolia_short_info.cache_type)
+      assert.are.equal(2, sepolia_short_info.ttl)
+    end)
+
+    it("should handle bsc networks with 3s block time", function()
       local minimal_body = { method = "eth_gasPrice", params = {} }
       local cache_info = cache_rules.get_cache_info("bsc", "mainnet", minimal_body)
       
-      -- Should return none because TTL is explicitly 0
-      assert.are.equal("none", cache_info.cache_type)
-      assert.are.equal(0, cache_info.ttl)
+      -- BSC now has minimal=0.5s (based on 3s block time)
+      assert.are.equal("minimal", cache_info.cache_type)
+      assert.are.equal(0.5, cache_info.ttl)
+      
+      -- Should work for any bsc network
+      local testnet_cache_info = cache_rules.get_cache_info("bsc", "testnet", minimal_body)
+      assert.are.equal("minimal", testnet_cache_info.cache_type)
+      assert.are.equal(0.5, testnet_cache_info.ttl)
+      
+      -- Test short method for BSC (should be 3s)
+      local short_body = { method = "eth_blockNumber", params = {} }
+      local short_cache_info = cache_rules.get_cache_info("bsc", "mainnet", short_body)
+      assert.are.equal("short", short_cache_info.cache_type)
+      assert.are.equal(3, short_cache_info.ttl)
     end)
 
-    it("should handle polygon:mainnet partial overrides", function()
+    it("should handle polygon chain overrides with fractional values", function()
       -- Test permanent (has override)
       local permanent_body = { method = "eth_getBlockByHash", params = {"0x123", true} }
       local permanent_info = cache_rules.get_cache_info("polygon", "mainnet", permanent_body)
@@ -365,11 +505,16 @@ describe("cache_rules.lua", function()
       assert.are.equal("short", short_info.cache_type)
       assert.are.equal(2, short_info.ttl)
       
-      -- Test minimal (fallback to default)
+      -- Test minimal (has fractional override)
       local minimal_body = { method = "eth_gasPrice", params = {} }
       local minimal_info = cache_rules.get_cache_info("polygon", "mainnet", minimal_body)
       assert.are.equal("minimal", minimal_info.cache_type)
-      assert.are.equal(3, minimal_info.ttl) -- fallback to default
+      assert.are.equal(0.25, minimal_info.ttl) -- fractional override
+      
+      -- Should work for any polygon network (e.g., amoy)
+      local amoy_minimal_info = cache_rules.get_cache_info("polygon", "amoy", minimal_body)
+      assert.are.equal("minimal", amoy_minimal_info.cache_type)
+      assert.are.equal(0.25, amoy_minimal_info.ttl)
     end)
   end)
 end) 

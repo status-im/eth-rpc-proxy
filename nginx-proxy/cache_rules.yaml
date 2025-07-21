@@ -1,12 +1,12 @@
 # Caching rules configuration for Ethereum JSON-RPC methods
+# Chain-only keys apply to all networks of that chain
 
-# Per chain TTLs (in seconds)
+# Per-chain TTLs (seconds; fractional allowed)
 ttl_defaults:
-  default: { permanent: 86400, short: 5, minimal: 0 }
-  ethereum:mainnet: { short: 15, minimal: 5 }
-  arbitrum:mainnet: { short: 1 }
-  optimism:mainnet: { short: 1 }
-  polygon:mainnet: { short: 2 }
+  default:               { permanent: 86400, short: 2,  minimal: 0.25 }
+  ethereum:              { short: 12,   minimal: 5 }
+  arbitrum:              { short: 1 }
+  optimism:              { short: 1 }
 
 cache_rules:
 

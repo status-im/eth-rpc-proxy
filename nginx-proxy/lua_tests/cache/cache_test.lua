@@ -87,13 +87,13 @@ describe("cache.lua integration", function()
       {
         method = "eth_blockNumber",
         expected_type = "short",
-        expected_ttl = 15,  -- ethereum:mainnet overrides default 5 to 15
+        expected_ttl = 15,  -- ethereum chain overrides default 5 to 15
         description = "short cache type"
       },
       {
         method = "eth_gasPrice", 
         expected_type = "minimal",
-        expected_ttl = 5,   -- ethereum:mainnet overrides default 3 to 5
+        expected_ttl = 5,   -- ethereum chain overrides default 3 to 5
         description = "minimal cache type"
       }
     }

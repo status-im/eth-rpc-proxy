@@ -61,11 +61,13 @@ function _M.setup_cache_rules_reader_mock()
                 if string.match(file_path, "valid") then
                     return {
                         ttl_defaults = {
-                            default = { permanent = 86400, short = 5, minimal = 3 },
-                            ["ethereum:mainnet"] = { short = 15, minimal = 5 },
-                            ["polygon:mainnet"] = { permanent = 7200, short = 2 },
-                            ["arbitrum:mainnet"] = { short = 1 },
-                            ["bsc:mainnet"] = { permanent = 3600, short = 1, minimal = 0 }
+                            default = { permanent = 86400, short = 5, minimal = 0 },  -- minimal=0 for testing
+                            ethereum = { short = 15, minimal = 5 },
+                            arbitrum = { short = 1, minimal = 0.25 },
+                            optimism = { short = 2, minimal = 0.25 },
+                            base = { short = 2, minimal = 0.25 },
+                            polygon = { permanent = 7200, short = 2, minimal = 0.25 },
+                            bsc = { permanent = 3600, short = 3, minimal = 0.5 }
                         },
                         cache_rules = {
                             eth_getBlockByHash = "permanent",
