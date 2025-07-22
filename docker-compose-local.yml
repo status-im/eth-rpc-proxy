@@ -37,8 +37,8 @@ services:
       - 'health-checker'
       - 'auth-service'
     volumes:
-      - './secrets/default_providers.json:/app/providers.json'
-      - './secrets/.htpasswd:/etc/nginx/.htpasswd'
+      - './secrets/default_providers.json:/app/providers.json:ro'
+      - './secrets/.htpasswd:/etc/nginx/.htpasswd:ro'
       - './go-auth-service/auth_config.json:/app/auth_config.json:ro'
       - './nginx-proxy/cache_rules.yaml:/app/cache_rules.yaml:ro'
 
@@ -72,7 +72,7 @@ services:
     networks:
       - 'rpc-network'
     volumes:
-      - './secrets:/config'
+      - './secrets:/config:ro'
 
   rpc-proxy-metrics:
     image: 'nginx/nginx-prometheus-exporter:1.4'
