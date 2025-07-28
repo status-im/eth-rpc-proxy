@@ -1,7 +1,6 @@
--- auth_config.lua - Configuration module for authentication settings
 local _M = {}
 local cjson = require "cjson"
-local resolver_utils = require "resolver_utils"
+local resolver_utils = require "utils.resolver_utils"
 
 -- Configuration loading function that will be called by timer
 function _M.load_config(premature)
@@ -10,7 +9,7 @@ function _M.load_config(premature)
     end
     
     -- Use provided config file path or fallback
-    local config_path = os.getenv("AUTH_CONFIG_FILE") or "/app/config.json"
+    local config_path = os.getenv("AUTH_CONFIG_FILE") or "/app/auth_config.json"
     
     -- Get Go Auth Service URL from environment variable
     local base_auth_url = os.getenv("GO_AUTH_SERVICE_URL") or "http://auth-service:8081"
@@ -46,11 +45,6 @@ function _M.load_config(premature)
         _M.requests_per_token = 100
         _M.token_expiry_minutes = 10
     end
-        ngx.log(ngx.NOTICE, "auth_config: go_auth_service_url = ", _M.go_auth_service_url)
-        ngx.log(ngx.NOTICE, "auth_config: base_auth_url = ", base_auth_url)
-        ngx.log(ngx.NOTICE, "auth_config: requests_per_token = ", _M.requests_per_token)
-        ngx.log(ngx.NOTICE, "auth_config: token_expiry_minutes = ", _M.token_expiry_minutes)
-
 end
 
 -- Initialize configuration using timer

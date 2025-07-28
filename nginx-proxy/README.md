@@ -45,7 +45,7 @@ The proxy now supports JSON-based configuration for authentication settings, sha
 
 ### Environment Variables
 
-- `AUTH_CONFIG_FILE` - Path to JSON configuration file (default: `/app/config.json`)
+- `AUTH_CONFIG_FILE` - Path to JSON configuration file (default: `/app/auth_config.json`)
 - `GO_AUTH_SERVICE_URL` - URL for Go Auth Service (default: `http://go-auth-service:8081`)
 - `CONFIG_HEALTH_CHECKER_URL` - URL for provider health checker
 - `CUSTOM_DNS` - Custom DNS servers for provider resolution
@@ -106,8 +106,8 @@ docker run -d --name rpc-proxy \
   -p 8080:8080 \
   -e CONFIG_HEALTH_CHECKER_URL=http://rpc-health-checker:8080/providers \
   -e GO_AUTH_SERVICE_URL=http://go-auth-service:8081 \
-  -e AUTH_CONFIG_FILE=/app/config.json \
-  -v ./config.json:/app/config.json:ro \
+  -e AUTH_CONFIG_FILE=/app/auth_config.json \
+  -v ./auth_config.json:/app/auth_config.json:ro \
   rpc-proxy
 ```
 
@@ -224,5 +224,6 @@ The nginx proxy uses Lua modules to manage configuration:
 - `auth_token_validator.lua` - Validates JWT tokens with caching and rate limiting
 - `provider_loader.lua` - Manages provider list reloading
 - `request_handler.lua` - Handles main request routing logic
+- `cache.lua` - Handles RPC response caching with TTL-based storage
 
 Configuration is loaded once at worker startup and cached for performance.

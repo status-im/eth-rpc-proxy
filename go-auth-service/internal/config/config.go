@@ -19,7 +19,7 @@ type Config struct {
 func Load() (*Config, error) {
 	configFile := os.Getenv("CONFIG_FILE")
 	if configFile == "" {
-		configFile = "config.json" // default path
+		configFile = "auth_config.json" // default path
 	}
 
 	data, err := os.ReadFile(configFile)

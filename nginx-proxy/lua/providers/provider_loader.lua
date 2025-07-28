@@ -1,6 +1,6 @@
 local http = require("resty.http")
 local json = require("cjson")
-local resolver_utils = require("resolver_utils")
+local resolver_utils = require("utils.resolver_utils")
 
 local M = {}
 local function read_config_from_url(url)

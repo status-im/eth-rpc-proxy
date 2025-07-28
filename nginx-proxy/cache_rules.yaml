@@ -1,0 +1,55 @@
+# Caching rules configuration for Ethereum JSON-RPC methods
+# Chain-only keys apply to all networks of that chain
+
+# Per-chain TTLs (seconds; fractional allowed)
+ttl_defaults:
+  default:               { permanent: 86400, short: 2,  minimal: 0.25 }
+  ethereum:              { short: 12,   minimal: 5 }
+  arbitrum:              { short: 1 }
+  optimism:              { short: 1 }
+
+cache_rules:
+
+  # Blocks
+  eth_getBlockByNumber: short
+
+  eth_getBlockByHash: permanent
+
+  # Transactions
+  eth_getTransactionByHash: permanent
+  eth_getTransactionReceipt: permanent
+  eth_getTransactionByBlockHashAndIndex: permanent
+
+  eth_getTransactionByBlockNumberAndIndex: short
+
+  # Uncle blocks
+  eth_getUncleByBlockHashAndIndex: permanent
+
+  eth_getUncleByBlockNumberAndIndex: short
+
+  # Balance and state
+  eth_getBalance: short
+
+  eth_call: short
+
+  eth_getCode: short
+
+  eth_getStorageAt: short
+
+  # Current data
+  eth_blockNumber: short
+
+  # Logs
+  eth_getLogs: short
+
+  # Gas data
+  eth_gasPrice: minimal
+  eth_feeHistory: minimal
+  eth_maxPriorityFeePerGas: minimal
+
+  # Network methods
+  net_version: permanent
+  eth_chainId: permanent
+  web3_clientVersion: permanent
+  net_listening: permanent
+  eth_protocolVersion: permanent

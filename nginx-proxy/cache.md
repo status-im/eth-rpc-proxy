@@ -1,44 +1,115 @@
 # RPC Cache System
 
 ## Overview
-The RPC caching system uses **Lua shared memory** with **network-specific TTL strategies** and three cache types optimized for different blockchain networks and data types.
+The RPC caching system uses **YAML-based configuration** with **Lua shared memory**, providing **network-specific TTL strategies** and three cache types optimized for different blockchain networks and data types. The system is now fully configurable without code changes.
 
 ## Architecture
 
 ```mermaid
 graph TD
     A[RPC Request] --> B[cache.check_cache]
-    B --> C{Cacheable?}
-    C -->|No| D[Forward to Provider]
-    C -->|Yes| E{Cache Hit?}
-    E -->|Yes| F[Return Cached Response]
-    E -->|No| G[Forward to Provider]
-    G --> H[Provider Response]
-    H --> I[cache.save_to_cache]
-    I --> J[Return Response]
-    D --> K[Provider Response]
+    B --> C[cache_rules.get_cache_info]
+    C --> D[cache_rules_reader.read_yaml_config]
+    D --> E{Cacheable?}
+    E -->|No| F[Forward to Provider]
+    E -->|Yes| G{Cache Hit?}
+    G -->|Yes| H[Return Cached Response]
+    G -->|No| I[Forward to Provider]
+    I --> J[Provider Response]
+    J --> K[cache.save_to_cache]
     K --> L[Return Response]
+    F --> M[Provider Response]
+    M --> N[Return Response]
+    
+    style D fill:#e1f5fe
+    style C fill:#f3e5f5
 ```
 
-## Cache Types
+## YAML Configuration System
 
-| Type | Methods | TTL | Shared Dict |
-|------|---------|-----|-------------|
-| **permanent** | `eth_getBlockByHash`, `eth_getTransactionReceipt`, `net_version` | 24h | `rpc_cache` (100MB) |
-| **short** | `eth_getBalance`, `eth_blockNumber` | 5s | `rpc_cache_short` (50MB) |
-| **minimal** | `eth_gasPrice`, `eth_maxPriorityFeePerGas`, `eth_feeHistory` | 0s* | `rpc_cache_minimal` (50MB) |
+### Configuration File Structure
+The cache rules are defined in `cache_rules.yaml`:
 
-## API
+```yaml
+# Per-chain TTL defaults (in seconds)
+ttl_defaults:
+  default: { permanent: 86400, short: 5, minimal: 0 }
+  ethereum:mainnet: { short: 15, minimal: 5 }
+  arbitrum:mainnet: { short: 1 }
+  optimism:mainnet: { short: 1 }
+  polygon:mainnet: { short: 2 }
 
-### check_cache(chain, network, body_data)
+# Method classifications
+cache_rules:
+  # Permanent: Immutable blockchain data
+  eth_getBlockByHash: permanent
+  eth_getTransactionReceipt: permanent
+  net_version: permanent
+  
+  # Short: Semi-static data with network-specific TTL
+  eth_getBalance: short
+  eth_blockNumber: short
+  eth_call: short
+  
+  # Minimal: Highly dynamic data
+  eth_gasPrice: minimal
+  eth_feeHistory: minimal
+  eth_maxPriorityFeePerGas: minimal
+```
+
+### TTL Resolution Hierarchy
+The system resolves TTL values in this priority order:
+1. **Network-specific**: `chain:network` (e.g., `ethereum:mainnet`)
+2. **Chain-specific**: `chain` (e.g., `ethereum`)  
+3. **Default**: `default` fallback values
+
+## Cache Types & Memory
+
+| Type | TTL Range | Shared Dict | Size | Use Case |
+|------|-----------|-------------|------|----------|
+| **permanent** | 24h (default) | `rpc_cache` | 500MB | Immutable data (blocks, receipts) |
+| **short** | 1-15s (network-specific) | `rpc_cache_short` | 250MB | Semi-static data (balances, calls) |
+| **minimal** | 0-5s (network-specific) | `rpc_cache_minimal` | 50MB | Dynamic data (gas prices, fees) |
+
+## API Reference
+
+### cache.check_cache(chain, network, body_data)
 ```lua
 local cache_info = cache.check_cache("ethereum", "mainnet", body_data)
--- Returns: { cache_type, cache_key, ttl, cached_response }
+
+-- Returns: { cache_type, cache_key, ttl, cached_response, decoded_body}
 ```
 
-### save_to_cache(cache_key, response_body, cache_type)
+### cache.save_to_cache(cache_info, response_body)
+Unified cache saving with configuration-driven TTL:
+
 ```lua
 cache.save_to_cache(cache_info.cache_key, response, cache_info.cache_type)
+```
+### Adding New Networks
+Simply extend the YAML configuration:
+
+```yaml
+ttl_defaults:
+  # existing configs...
+  base:mainnet: { short: 2, minimal: 1 }
+  avalanche:mainnet: { short: 3, minimal: 1 }
+```
+
+## Configuration Management
+
+### Environment Variables
+- `CACHE_RULES_FILE`: Path to YAML configuration file (default: `/app/cache_rules.yaml`)
+
+## Monitoring & Metrics
+
+### Cache Statistics
+Available via `/metrics/cache` endpoint:
+
+```
+nginx_cache_hits_total{cache_type="permanent"} 150
+nginx_cache_misses_total{cache_type="short"} 45
+nginx_cache_usage_percent{cache_type="minimal"} 23.45
 ```
 
 ## Performance Optimization: Native Nginx Cache
@@ -48,11 +119,11 @@ cache.save_to_cache(cache_info.cache_key, response, cache_info.cache_type)
 - JSON decoding overhead
 - Lua execution for cache operations
 
-### Proposed Solution: Native Nginx + Proxy Cache
+### Proposed Future Enhancement: Native Nginx Cache
 
-**Architecture Benefits:**
-- 🚀 **Disk-based cache** - unlimited size
-- ⚡ **Zero Lua overhead** for cache hits  
+**Architecture Concept:**
+- 🚀 **Disk-based cache** - unlimited size beyond shared memory
+- ⚡ **Zero Lua overhead** for cache hits via native nginx  
 - 🔄 **Built-in failover** with `proxy_next_upstream`
 - 📊 **Native monitoring** via `$upstream_cache_status`
 
