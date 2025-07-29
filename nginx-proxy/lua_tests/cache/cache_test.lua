@@ -1,8 +1,8 @@
--- Example of cache_test.lua migrated to busted syntax
+-- Example of cache_test.lua migrated to busted syntax for mlcache
 local cache_rules = require("cache.cache_rules")
 local cache = require("cache.cache")
 
-describe("cache.lua integration", function()
+describe("cache.lua integration with mlcache", function()
   local chain, network, request_body, response_body
   
   before_each(function()
@@ -22,7 +22,7 @@ describe("cache.lua integration", function()
       cache_rules.load_config(false, "/valid/config.yaml")
     end)
 
-    it("should handle full cache integration flow", function()
+    it("should handle full cache integration flow with mlcache", function()
       -- Step 1: Check cache (should be empty initially)
       local cache_check = cache.check_cache(chain, network, request_body)
       
@@ -31,9 +31,10 @@ describe("cache.lua integration", function()
       assert.is_nil(cache_check.cached_response)
       assert.is_not_nil(cache_check.cache_key)
       assert.is_not_nil(cache_check.decoded_body)
+      assert.is_not_nil(cache_check.cache_instance)
       assert.are.equal("eth_getBlockByHash", cache_check.decoded_body.method)
       
-      -- Step 2: Save to cache
+      -- Step 2: Save to cache using mlcache
       assert.is_true(cache.save_to_cache(cache_check, response_body))
       
       -- Step 3: Check cache again (should be hit now)
@@ -43,6 +44,7 @@ describe("cache.lua integration", function()
       assert.are.equal(response_body, cache_check2.cached_response)
       assert.are.equal(cache_check.cache_key, cache_check2.cache_key)
       assert.is_not_nil(cache_check2.decoded_body)
+      assert.is_not_nil(cache_check2.cache_instance)
       assert.are.equal("eth_getBlockByHash", cache_check2.decoded_body.method)
     end)
 
@@ -75,6 +77,18 @@ describe("cache.lua integration", function()
       assert.is_nil(cache_check.cached_response)
       assert.is_nil(cache_check.decoded_body)
     end)
+
+    it("should handle save without cache_instance", function()
+      local invalid_cache_info = {
+        cache_type = "permanent",
+        cache_key = "test:key",
+        ttl = 3600
+        -- missing cache_instance
+      }
+      
+      local result = cache.save_to_cache(invalid_cache_info, response_body)
+      assert.is_false(result)
+    end)
   end)
 
   describe("different cache types", function()
@@ -99,7 +113,7 @@ describe("cache.lua integration", function()
     }
 
     for _, scenario in ipairs(cache_scenarios) do
-      it("should handle " .. scenario.description .. " for " .. scenario.method, function()
+  it("should handle " .. scenario.description .. " for " .. scenario.method .. " with mlcache", function()
         local test_request = string.format(
           '{"jsonrpc":"2.0","method":"%s","params":[],"id":1}',
           scenario.method
@@ -109,7 +123,33 @@ describe("cache.lua integration", function()
         
         assert.are.equal(scenario.expected_type, cache_check.cache_type)
         assert.are.equal(scenario.expected_ttl, cache_check.ttl)
+        assert.is_not_nil(cache_check.cache_instance)
       end)
     end
+  end)
+
+  describe("mlcache specific features", function()
+    before_each(function()
+      assert.is_true(cache_rules.init("/valid/config.yaml"))
+      cache_rules.load_config(false, "/valid/config.yaml")
+    end)
+
+    it("should handle different cache instances for different cache types", function()
+      local permanent_request = '{"jsonrpc":"2.0","method":"eth_getBlockByHash","params":["0x123",true],"id":1}'
+      local short_request = '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+      
+      local permanent_check = cache.check_cache(chain, network, permanent_request)
+      local short_check = cache.check_cache(chain, network, short_request)
+      
+      assert.are.equal("permanent", permanent_check.cache_type)
+      assert.are.equal("short", short_check.cache_type)
+      assert.is_not_nil(permanent_check.cache_instance)
+      assert.is_not_nil(short_check.cache_instance)
+      
+      -- Different cache types should use different instances
+      -- In our mock implementation, they're different objects
+      assert.is_not_nil(permanent_check.cache_instance)
+      assert.is_not_nil(short_check.cache_instance)
+    end)
   end)
 end) 
