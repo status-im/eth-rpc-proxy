@@ -34,6 +34,7 @@ describe("cache_rules.lua", function()
                   eth_blockNumber = "short",
                   eth_getBalance = "short",
                   eth_gasPrice = "minimal",
+                  eth_chainId = "permanent",  -- Add missing eth_chainId
                   unknown_method = "unknown_type"
                 }
               }

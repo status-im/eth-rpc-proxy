@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { 
+  makeRpcRequest, 
+  AVAILABLE_NETWORKS, 
+  PREDEFINED_RPC_METHODS,
+  formatRpcResult 
+} from '../utils';
 
 const RpcTester = ({ token }) => {
   const [loading, setLoading] = useState(false);
@@ -8,20 +13,6 @@ const RpcTester = ({ token }) => {
   const [selectedChain, setSelectedChain] = useState('ethereum/mainnet');
   const [basicAuthUsername, setBasicAuthUsername] = useState('');
   const [basicAuthPassword, setBasicAuthPassword] = useState('');
-
-  const predefinedMethods = [
-    { name: 'Get Block Number', method: 'eth_blockNumber', params: [] },
-    { name: 'Get Gas Price', method: 'eth_gasPrice', params: [] },
-    { name: 'Get Chain ID', method: 'eth_chainId', params: [] },
-    { name: 'Get Latest Block', method: 'eth_getBlockByNumber', params: ['latest', false] },
-  ];
-
-  const chains = [
-    'ethereum/mainnet',
-    'ethereum/sepolia', 
-    'optimism/mainnet',
-    'optimism/sepolia'
-  ];
 
   // Test with predefined method
   const testPredefinedMethod = async (method, params) => {
@@ -33,28 +24,19 @@ const RpcTester = ({ token }) => {
     setLoading(true);
     setStatus(`Testing ${method}...`);
     
-    const rpcRequest = {
-      jsonrpc: '2.0',
-      method: method,
-      params: params,
-      id: Date.now()
-    };
-
     try {
-      const proxyUrl = process.env.REACT_APP_RPC_PROXY_URL || 'http://localhost:8080';
-      const axiosResponse = await axios.post(`${proxyUrl}/${selectedChain}`, rpcRequest, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await makeRpcRequest(method, params, selectedChain, token);
       
-      setResponse(axiosResponse.data);
-      setStatus('✅ RPC request successful!');
+      if (result.success) {
+        setResponse(result.data);
+        setStatus('✅ RPC request successful!');
+      } else {
+        setResponse(result.error);
+        setStatus(`❌ RPC request failed: ${result.error.status}`);
+      }
     } catch (error) {
-      const errorData = error.response?.data || error.message;
-      setResponse(errorData);
-      setStatus(`❌ RPC request failed: ${error.response?.status || 'Network Error'}`);
+      setResponse(error.message);
+      setStatus(`❌ RPC request failed: ${error.message}`);
     }
     setLoading(false);
   };
@@ -64,31 +46,24 @@ const RpcTester = ({ token }) => {
     setLoading(true);
     setStatus('Testing basic auth fallback...');
     
-    const rpcRequest = {
-      jsonrpc: '2.0',
-      method: 'eth_blockNumber',
-      params: [],
-      id: Date.now()
-    };
-
     try {
-      const proxyUrl = process.env.REACT_APP_RPC_PROXY_URL || 'http://localhost:8080';
-      const axiosResponse = await axios.post(`${proxyUrl}/${selectedChain}`, rpcRequest, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        auth: {
-          username: basicAuthUsername,
-          password: basicAuthPassword
-        }
-      });
+      const basicAuth = {
+        username: basicAuthUsername,
+        password: basicAuthPassword
+      };
+
+      const result = await makeRpcRequest('eth_blockNumber', [], selectedChain, null, basicAuth);
       
-      setResponse(axiosResponse.data);
-      setStatus('✅ Basic auth request successful!');
+      if (result.success) {
+        setResponse(result.data);
+        setStatus('✅ Basic auth request successful!');
+      } else {
+        setResponse(result.error);
+        setStatus(`❌ Basic auth request failed: ${result.error.status}`);
+      }
     } catch (error) {
-      const errorData = error.response?.data || error.message;
-      setResponse(errorData);
-      setStatus(`❌ Basic auth request failed: ${error.response?.status || 'Network Error'}`);
+      setResponse(error.message);
+      setStatus(`❌ Basic auth request failed: ${error.message}`);
     }
     setLoading(false);
   };
@@ -111,8 +86,10 @@ const RpcTester = ({ token }) => {
             onChange={(e) => setSelectedChain(e.target.value)}
             className="input"
           >
-            {chains.map(chain => (
-              <option key={chain} value={chain}>{chain}</option>
+            {AVAILABLE_NETWORKS.map(network => (
+              <option key={network.value} value={network.value}>
+                {network.label}
+              </option>
             ))}
           </select>
         </label>
@@ -151,14 +128,18 @@ const RpcTester = ({ token }) => {
       <div className="card">
         <h3>📋 Predefined Methods</h3>
         <div style={{display: 'grid', gap: '0.5rem'}}>
-          {predefinedMethods.map((item, index) => (
+          {PREDEFINED_RPC_METHODS.map((item, index) => (
             <button
               key={index}
               className="button"
               onClick={() => testPredefinedMethod(item.method, item.params)}
               disabled={loading}
+              style={{
+                borderLeft: `4px solid ${item.cacheType === 'permanent' ? '#4CAF50' : 
+                                         item.cacheType === 'short' ? '#FF9800' : '#2196F3'}`
+              }}
             >
-              {item.name}
+              {item.name} ({item.cacheType})
             </button>
           ))}
         </div>

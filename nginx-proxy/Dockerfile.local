@@ -1,7 +1,7 @@
 FROM openresty/openresty:alpine
 
 # Install dependencies and configure
-RUN apk add --no-cache ca-certificates curl perl build-base wget tar yaml-dev && \
+RUN apk add --no-cache ca-certificates curl perl build-base wget tar yaml-dev git && \
     update-ca-certificates && \
     /usr/local/openresty/bin/opm install ledgetech/lua-resty-http && \
     cd /tmp && \
@@ -11,7 +11,9 @@ RUN apk add --no-cache ca-certificates curl perl build-base wget tar yaml-dev &&
     ./configure --prefix=/usr/local --with-lua=/usr/local/openresty/luajit && \
     make && make install && \
     cd / && rm -rf /tmp/luarocks-3.12.2* && \
-    luarocks install lyaml
+    luarocks install lyaml && \
+    luarocks install lua-resty-mlcache && \
+    luarocks install lua-resty-redis
 
 # Copy configuration files
 COPY nginx.conf /usr/local/openresty/nginx/conf/nginx.conf

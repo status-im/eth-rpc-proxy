@@ -1,0 +1,22 @@
+# KeyDB L3 Cache Configuration
+# Controls the persistent KeyDB cache layer (L3)
+
+# Enable/disable L3 cache functionality
+# When false, only L1 (LRU) and L2 (shared memory) caches are used
+enabled: true
+
+# Connection settings
+connection:
+  connect_timeout: 1000  # milliseconds
+  send_timeout: 1000     # milliseconds
+  read_timeout: 1000     # milliseconds
+
+# Connection pool settings
+keepalive:
+  pool_size: 10          # max connections in pool
+  max_idle_timeout: 10000 # milliseconds
+
+# Cache TTL settings
+cache:
+  default_ttl: 3600      # 1 hour (seconds)
+  max_ttl: 86400         # 24 hours (seconds)

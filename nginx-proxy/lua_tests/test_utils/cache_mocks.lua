@@ -4,7 +4,9 @@ local storage = {
     rpc_cache = {},
     rpc_cache_short = {},
     rpc_cache_minimal = {},
-    cache_stats = {}
+    cache_stats = {},
+    mlcache_locks = {},
+    mlcache_miss = {}
 }
 
 -- Mock shared dict interface
@@ -29,6 +31,57 @@ local function create_shared_dict_mock(storage_table)
     }
 end
 
+-- Mock mlcache instance
+local function create_mlcache_mock(shm_name)
+    local cache_storage = storage[shm_name] or {}
+    
+    return {
+        get = function(_, key, ttl, callback, ...)
+            local value = cache_storage[key]
+            if value ~= nil then
+                return value, nil -- cache hit
+            end
+            
+            -- Cache miss - if callback provided, call it
+            if callback then
+                local success, result = pcall(callback, ...)
+                if success and result ~= nil then
+                    cache_storage[key] = result
+                    return result, nil
+                end
+                return nil, "callback failed"
+            end
+            
+            return nil, nil -- cache miss, no callback
+        end,
+        
+        set = function(_, key, ttl, value)
+            cache_storage[key] = value
+            return true, nil
+        end,
+        
+        delete = function(_, key)
+            cache_storage[key] = nil
+            return true, nil
+        end,
+        
+        peek = function(_, key)
+            local value = cache_storage[key]
+            if value ~= nil then
+                return 3600, nil, value -- return ttl, err, value
+            end
+            return nil, nil, nil
+        end,
+        
+        purge = function(_)
+            for k in pairs(cache_storage) do
+                cache_storage[k] = nil
+            end
+            return true, nil
+        end
+    }
+end
+
 function _M.setup_cache_shared_dicts()
     if not _G.ngx then
         error("nginx mocks must be setup first")
@@ -39,6 +92,19 @@ function _M.setup_cache_shared_dicts()
     _G.ngx.shared.rpc_cache_short = create_shared_dict_mock(storage.rpc_cache_short)
     _G.ngx.shared.rpc_cache_minimal = create_shared_dict_mock(storage.rpc_cache_minimal)
     _G.ngx.shared.cache_stats = create_shared_dict_mock(storage.cache_stats)
+    _G.ngx.shared.mlcache_locks = create_shared_dict_mock(storage.mlcache_locks)
+    _G.ngx.shared.mlcache_miss = create_shared_dict_mock(storage.mlcache_miss)
+end
+
+-- Mock mlcache module
+function _M.setup_mlcache_mock()
+    package.preload["resty.mlcache"] = function()
+        return {
+            new = function(name, shm_name, opts)
+                return create_mlcache_mock(shm_name), nil
+            end
+        }
+    end
 end
 
 function _M.clear_cache_storage()
@@ -75,6 +141,7 @@ function _M.setup_cache_rules_reader_mock()
                             eth_blockNumber = "short",
                             eth_getBalance = "short",
                             eth_gasPrice = "minimal",
+                            eth_chainId = "permanent",  -- Add missing eth_chainId
                             unknown_method = "unknown_type"
                         }
                     }
@@ -92,6 +159,7 @@ end
 
 function _M.setup_all()
     _M.setup_cache_shared_dicts()
+    _M.setup_mlcache_mock()
     _M.setup_cache_rules_reader_mock()
 end
 
