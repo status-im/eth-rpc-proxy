@@ -86,6 +86,45 @@ services:
     networks:
       - 'rpc-network'
 
+  keydb:
+    image: 'eqalpha/keydb:latest' # FIXME alpine_x86_64_v6.3.4
+    container_name: 'keydb'
+    restart: 'always'
+    ports:
+      - '6379:6379'
+    networks:
+      - 'rpc-network'
+    command: 
+      - 'keydb-server'
+      - '--protected-mode'
+      - 'no'
+      - '--appendonly'
+      - 'yes'
+    healthcheck:
+      test: ['CMD', 'keydb-cli', 'ping']
+      interval: '30s'
+      timeout: '10s'
+      retries: 3
+      start_period: '10s'
+    volumes:
+      - 'keydb-data:/data'
+
+  keydb-exporter:
+    image: 'oliver006/redis_exporter:v1.74.0'
+    container_name: 'keydb-exporter'
+    restart: 'always'
+    ports:
+      - '9121:9121'
+    networks:
+      - 'rpc-network'
+    environment:
+      REDIS_ADDR: 'keydb:6379'
+    depends_on:
+      - 'keydb'
+
 networks:
   rpc-network:
     driver: bridge
+
+volumes:
+  keydb-data:
