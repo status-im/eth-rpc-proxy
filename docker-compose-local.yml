@@ -29,6 +29,7 @@ services:
       AUTH_CONFIG_FILE: '/app/auth_config.json'
       CACHE_RULES_FILE: '/app/cache_rules.yaml'
       CORS_ORIGIN: 'http://localhost:3001'
+      KEYDB_URL: 'keydb:6379'
     ports:
       - '8080:8080'
     networks:

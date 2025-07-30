@@ -11,6 +11,7 @@ services:
       RELOAD_INTERVAL: '10'
       AUTH_CONFIG_FILE: '/app/auth_config.json'
       CACHE_RULES_FILE: '/app/cache_rules.yaml'
+      KEYDB_URL: 'keydb:6379'
     ports:
       - '8080:8080'
     networks:
@@ -18,6 +19,7 @@ services:
     depends_on:
       - 'health-checker'
       - 'auth-service'
+      - 'keydb'
     volumes:
       - './secrets/default_providers.json:/app/providers.json:ro'
       - './secrets/.htpasswd:/etc/nginx/.htpasswd:ro'
