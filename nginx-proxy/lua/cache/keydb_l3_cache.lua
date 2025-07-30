@@ -129,8 +129,9 @@ function _M.get(key)
     return data, nil
 end
 
-
-
-
+-- Check if L3 cache is enabled
+function _M.enabled()
+    return keydb_config.enabled()
+end
 
 return _M 

@@ -11,6 +11,7 @@ local function set_default_values()
     _M.max_idle_timeout = 10000
     _M.default_ttl = 3600
     _M.max_ttl = 86400
+    _M._enabled = true  -- Default: KeyDB L3 cache is enabled (internal variable)
 end
 
 function _M.load_config(premature)
@@ -45,7 +46,13 @@ function _M.load_config(premature)
         _M.default_ttl = config_data.cache and config_data.cache.default_ttl or 3600
         _M.max_ttl = config_data.cache and config_data.cache.max_ttl or 86400
         
-        ngx.log(ngx.NOTICE, "keydb_config: Loaded from ", config_path)
+        -- Load enabled flag, default to true if not specified
+        _M._enabled = true
+        if config_data.enabled ~= nil then
+            _M._enabled = config_data.enabled
+        end
+        
+        ngx.log(ngx.NOTICE, "keydb_config: Loaded from ", config_path, " (L3 cache enabled: ", tostring(_M._enabled), ")")
     else
         -- Fallback to default values if YAML config fails
         set_default_values()
@@ -123,6 +130,10 @@ end
 
 function _M.get_max_ttl()
     return _M.max_ttl
+end
+
+function _M.enabled()
+    return _M._enabled
 end
 
 return _M 

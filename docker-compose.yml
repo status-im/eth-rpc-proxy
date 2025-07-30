@@ -11,6 +11,7 @@ services:
       RELOAD_INTERVAL: '10'
       AUTH_CONFIG_FILE: '/app/auth_config.json'
       CACHE_RULES_FILE: '/app/cache_rules.yaml'
+      KEYDB_CONFIG_FILE: '/app/keydb_config.yaml'
       KEYDB_URL: 'keydb:6379'
     ports:
       - '8080:8080'
@@ -25,6 +26,7 @@ services:
       - './secrets/.htpasswd:/etc/nginx/.htpasswd:ro'
       - './go-auth-service/auth_config.json:/app/auth_config.json:ro'
       - './nginx-proxy/cache_rules.yaml:/app/cache_rules.yaml:ro'
+      - './nginx-proxy/keydb_config.yaml:/app/keydb_config.yaml:ro'
     healthcheck:
       test: ['CMD-SHELL', 'nc -z 0.0.0.0 8080']
       interval: '30s'
