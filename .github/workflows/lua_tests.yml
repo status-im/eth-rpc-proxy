@@ -1,0 +1,48 @@
+name: Lua Tests
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'nginx-proxy/lua/**'
+      - 'nginx-proxy/lua_tests/**'
+      - 'nginx-proxy/.busted'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [ master ]
+    paths:
+      - 'nginx-proxy/lua/**'
+      - 'nginx-proxy/lua_tests/**'
+      - 'nginx-proxy/.busted'
+
+jobs:
+  lua-tests:
+    name: Run Lua Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Lua and LuaRocks
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lua5.4 lua5.4-dev luarocks libyaml-dev
+
+    - name: Install Lua dependencies
+      run: |
+        sudo luarocks install busted
+        sudo luarocks install lyaml
+        sudo luarocks install lua-cjson
+
+    - name: Run Lua tests
+      run: |
+        cd nginx-proxy
+        chmod +x lua_tests/run_busted_tests.sh
+        ./lua_tests/run_busted_tests.sh
+
+    - name: Upload test results
+      if: failure()
+      run: |
+        echo "Lua tests failed. Check the output above for details." 

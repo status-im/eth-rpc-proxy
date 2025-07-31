@@ -22,3 +22,10 @@ scrape_configs:
     scrape_interval: 30s
     metrics_path: '/metrics/cache'
     scheme: http
+
+  - job_name: 'keydb'
+    static_configs:
+      - targets: ['keydb-exporter:9121']
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    scheme: http
