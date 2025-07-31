@@ -8,7 +8,13 @@ function HomePage({ onNavigateToApp }) {
       description: 'Test JWT authentication and RPC requests to the proxy',
       status: 'Available'
     },
-    // Здесь можно будет добавить другие утилиты
+    {
+      id: 'cache-metrics',
+      title: '📊 Cache Metrics Dashboard',
+      description: 'Real-time cache performance and usage metrics monitoring',
+      status: 'Available'
+    },
+    // Other utilities can be added here
   ];
 
   return (
@@ -37,7 +43,7 @@ function HomePage({ onNavigateToApp }) {
               </div>
             ))}
             
-            {/* Placeholder для будущих утилит */}
+            {/* Placeholder for future utilities */}
             <div className="app-card placeholder">
               <h3>➕ More Tools Coming Soon</h3>
               <p>Additional utilities will be added here</p>
