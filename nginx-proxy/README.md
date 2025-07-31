@@ -52,7 +52,7 @@ The proxy now supports JSON-based configuration for authentication settings, sha
 - `RELOAD_INTERVAL` - Provider list reload interval in seconds
 - `CACHE_RULES_FILE` - Path to cache rules YAML configuration (default: `/app/cache_rules.yaml`)
 - `KEYDB_CONFIG_FILE` - Path to KeyDB L3 cache configuration (default: `/app/keydb_config.yaml`)
-- `KEYDB_URL` - KeyDB/Redis connection string for L3 cache (default: `keydb:6379`)
+- `KEYDB_URL` - KeyDB/Redis connection string for L3 cache (default: `redis://keydb:6379`)
 
 ### JSON Configuration
 

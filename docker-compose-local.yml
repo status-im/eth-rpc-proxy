@@ -30,7 +30,7 @@ services:
       CACHE_RULES_FILE: '/app/cache_rules.yaml'
       KEYDB_CONFIG_FILE: '/app/keydb_config.yaml'
       CORS_ORIGIN: 'http://localhost:3001'
-      KEYDB_URL: 'keydb:6379'
+      KEYDB_URL: 'redis://keydb:6379'
     ports:
       - '8080:8080'
     networks:
