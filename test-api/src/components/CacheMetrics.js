@@ -977,6 +977,137 @@ const CacheMetrics = ({ onBackToHome }) => {
                 </div>
               </div>
 
+              {/* Multi-Level Cache Statistics */}
+              <div style={{ marginBottom: '30px' }}>
+                <h2>🏗️ Multi-Level Cache Performance</h2>
+                <p style={{ color: '#ccc', marginBottom: '20px', fontSize: '14px' }}>
+                  L1: In-memory LRU cache • L2: Shared memory cache • L3: KeyDB persistent cache
+                </p>
+                
+                {/* L1 & L2 Cache by Type */}
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+                  gap: '20px',
+                  marginBottom: '20px'
+                }}>
+                  {['permanent', 'short', 'minimal'].map(cacheType => (
+                    <div key={cacheType} style={{ 
+                      background: '#2a2a2a', 
+                      padding: '20px', 
+                      borderRadius: '8px',
+                      border: '1px solid #444'
+                    }}>
+                      <h3 style={{ margin: '0 0 15px 0', textTransform: 'capitalize' }}>
+                        {cacheType} Cache Levels
+                      </h3>
+                      
+                      {/* L1 Cache */}
+                      <div style={{ 
+                        background: '#1a1a1a', 
+                        padding: '12px', 
+                        borderRadius: '6px',
+                        marginBottom: '10px',
+                        border: '1px solid #4CAF50'
+                      }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          marginBottom: '8px'
+                        }}>
+                          <span style={{ fontWeight: 'bold', color: '#4CAF50' }}>L1 (Memory)</span>
+                          <span style={{ 
+                            background: '#4CAF50', 
+                            color: 'white', 
+                            padding: '2px 8px', 
+                            borderRadius: '10px', 
+                            fontSize: '12px' 
+                          }}>
+                            {getMetricValue('nginx_l1_cache_hit_rate', cacheType).toFixed(1)}%
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#ccc' }}>
+                          Hits: {getMetricValue('nginx_l1_cache_hits_total', cacheType)}
+                        </div>
+                      </div>
+                      
+                      {/* L2 Cache */}
+                      <div style={{ 
+                        background: '#1a1a1a', 
+                        padding: '12px', 
+                        borderRadius: '6px',
+                        marginBottom: '10px',
+                        border: '1px solid #FF9800'
+                      }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          marginBottom: '8px'
+                        }}>
+                          <span style={{ fontWeight: 'bold', color: '#FF9800' }}>L2 (Shared)</span>
+                          <span style={{ 
+                            background: '#FF9800', 
+                            color: 'white', 
+                            padding: '2px 8px', 
+                            borderRadius: '10px', 
+                            fontSize: '12px' 
+                          }}>
+                            {getMetricValue('nginx_l2_cache_hit_rate', cacheType).toFixed(1)}%
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#ccc' }}>
+                          Hits: {getMetricValue('nginx_l2_cache_hits_total', cacheType)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* L3 Cache (Global) */}
+                <div style={{ 
+                  background: '#2a2a2a', 
+                  padding: '20px', 
+                  borderRadius: '8px',
+                  border: '1px solid #2196F3'
+                }}>
+                  <h3 style={{ margin: '0 0 15px 0', color: '#2196F3' }}>
+                    L3 Cache (KeyDB) - Global Statistics
+                  </h3>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                    gap: '15px' 
+                  }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2196F3' }}>
+                        {getTotalMetricValue('nginx_l3_cache_hit_rate').toFixed(1)}%
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#ccc' }}>Hit Rate</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#4CAF50' }}>
+                        {getTotalMetricValue('nginx_l3_cache_hits_total')}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#ccc' }}>Hits</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f44336' }}>
+                        {getTotalMetricValue('nginx_l3_cache_misses_total')}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#ccc' }}>Misses</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#666' }}>
+                        {getTotalMetricValue('nginx_l3_cache_hits_total') + getTotalMetricValue('nginx_l3_cache_misses_total')}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#ccc' }}>Total Requests</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Last update time */}
               <div style={{ 
                 textAlign: 'center', 

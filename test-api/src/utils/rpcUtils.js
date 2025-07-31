@@ -17,7 +17,7 @@ export const makeRpcRequest = async (method, params = [], network = 'ethereum/ma
       jsonrpc: '2.0',
       method: method,
       params: params,
-      id: Date.now()
+      id: 1  // Use constant ID for better caching since we handle requests synchronously
     };
 
     console.log(`Making ${method} request to ${network}:`, rpcPayload);
