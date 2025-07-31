@@ -155,6 +155,74 @@ describe("cache.lua integration with mlcache", function()
     end)
   end)
 
+  describe("normalized cache key generation", function()
+    before_each(function()
+      assert.is_true(cache_rules.init("/valid/config.yaml"))
+      cache_rules.load_config(false, "/valid/config.yaml")
+    end)
+
+    it("should generate same cache key for same method with different IDs", function()
+      -- Same method, same parameters, but different IDs
+      local request1 = '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}'
+      local request2 = '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":123456789}'
+      local request3 = '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":"different_id"}'
+      
+      local cache_check1 = cache.check_cache(chain, network, request1)
+      local cache_check2 = cache.check_cache(chain, network, request2)
+      local cache_check3 = cache.check_cache(chain, network, request3)
+      
+      -- All should have the same cache key despite different IDs
+      assert.are.equal(cache_check1.cache_key, cache_check2.cache_key)
+      assert.are.equal(cache_check1.cache_key, cache_check3.cache_key)
+      assert.are.equal("permanent", cache_check1.cache_type)
+      assert.are.equal("permanent", cache_check2.cache_type)
+      assert.are.equal("permanent", cache_check3.cache_type)
+    end)
+
+    it("should generate different cache keys for different methods", function()
+      -- Different methods should have different cache keys
+      local request1 = '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}'
+      local request2 = '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+      
+      local cache_check1 = cache.check_cache(chain, network, request1)
+      local cache_check2 = cache.check_cache(chain, network, request2)
+      
+      -- Should have different cache keys for different methods
+      assert.are_not.equal(cache_check1.cache_key, cache_check2.cache_key)
+    end)
+
+    it("should generate different cache keys for different parameters", function()
+      -- Same method, different parameters should have different cache keys
+      local request1 = '{"jsonrpc":"2.0","method":"eth_getBlockByHash","params":["0x123",true],"id":1}'
+      local request2 = '{"jsonrpc":"2.0","method":"eth_getBlockByHash","params":["0x456",true],"id":1}'
+      
+      local cache_check1 = cache.check_cache(chain, network, request1)
+      local cache_check2 = cache.check_cache(chain, network, request2)
+      
+      -- Should have different cache keys for different parameters
+      assert.are_not.equal(cache_check1.cache_key, cache_check2.cache_key)
+    end)
+
+    it("should cache responses consistently with normalized keys", function()
+      -- Test that caching works correctly with normalized keys
+      local request1 = '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}'
+      local request2 = '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":999}'
+      local response = '{"jsonrpc":"2.0","result":"0x1","id":1}'
+      
+      -- First request should miss cache
+      local cache_check1 = cache.check_cache(chain, network, request1)
+      assert.is_nil(cache_check1.cached_response)
+      
+      -- Save response to cache
+      assert.is_true(cache.save_to_cache(cache_check1, response))
+      
+      -- Second request with different ID should hit cache
+      local cache_check2 = cache.check_cache(chain, network, request2)
+      assert.are.equal(response, cache_check2.cached_response)
+      assert.are.equal(cache_check1.cache_key, cache_check2.cache_key)
+    end)
+  end)
+
   describe("L3 KeyDB cache integration", function()
     before_each(function()
       assert.is_true(cache_rules.init("/valid/config.yaml"))
