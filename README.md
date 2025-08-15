@@ -2,9 +2,11 @@
 
 [![Tests](https://github.com/status-im/eth-rpc-proxy/actions/workflows/test.yml/badge.svg)](https://github.com/status-im/eth-rpc-proxy/actions/workflows/test.yml)
 
-The Ethereum RPC Proxy System provides a robust solution for managing and monitoring Ethereum RPC providers. It consists of two main components:
+The Ethereum RPC Proxy System provides a robust solution for managing and monitoring Ethereum RPC providers. It consists of four main components:
 1. **RPC Health Checker**: Monitors and validates RPC provider health
-2. **nginx-proxy**: Acts as a reverse proxy with provider failover capabilities
+2. **nginx-proxy**: Acts as a reverse proxy with provider failover and three-level caching
+3. **KeyDB**: Persistent L3 cache service for distributed caching across instances
+4. **Auth Service**: Handles JWT-based authentication with puzzle solving
 
 ## Running on the local machine
 
@@ -82,10 +84,13 @@ The services will be accessible under:
   - The RPC endpoint is available in two formats:
     - `http://localhost:8080/{chain}/{network}` - uses any available provider with failover across all providers
     - `http://localhost:8080/{chain}/{network}/{provider_type}` - uses providers of the specified type with failover between instances of that type
+  - Features **three-level cache architecture** (L1/L2/L3) for optimized performance
   - Example paths: 
     - `/ethereum/mainnet` - tries all available providers until success
     - `/ethereum/mainnet/infura` - tries all available Infura providers until success
     - `/status/sepolia/status_network` - tries all available Status Network providers until success
+- KeyDB: Persistent L3 cache service (Redis-compatible)
+  - Provides distributed caching across proxy instances
 - Prometheus: http://localhost:9090
   - Metrics and monitoring interface
 - Grafana: http://localhost:3000 (default credentials: admin/admin)

@@ -50,6 +50,9 @@ The proxy now supports JSON-based configuration for authentication settings, sha
 - `CONFIG_HEALTH_CHECKER_URL` - URL for provider health checker
 - `CUSTOM_DNS` - Custom DNS servers for provider resolution
 - `RELOAD_INTERVAL` - Provider list reload interval in seconds
+- `CACHE_RULES_FILE` - Path to cache rules YAML configuration (default: `/app/cache_rules.yaml`)
+- `KEYDB_CONFIG_FILE` - Path to KeyDB L3 cache configuration (default: `/app/keydb_config.yaml`)
+- `KEYDB_URL` - KeyDB/Redis connection string for L3 cache (default: `redis://keydb:6379`)
 
 ### JSON Configuration
 
@@ -224,6 +227,18 @@ The nginx proxy uses Lua modules to manage configuration:
 - `auth_token_validator.lua` - Validates JWT tokens with caching and rate limiting
 - `provider_loader.lua` - Manages provider list reloading
 - `request_handler.lua` - Handles main request routing logic
-- `cache.lua` - Handles RPC response caching with TTL-based storage
+- `cache.lua` - Handles RPC response caching with three-level architecture (L1/L2/L3)
+- `keydb_config.lua` - Manages KeyDB L3 cache configuration and connection settings
+- `keydb_l3_cache.lua` - Provides KeyDB L3 cache operations with enabled/disabled support
 
 Configuration is loaded once at worker startup and cached for performance.
+
+### Cache Architecture
+
+The system uses a **three-level cache architecture**:
+
+1. **L1 Cache**: In-memory LRU cache per worker process
+2. **L2 Cache**: Nginx shared memory cache between workers  
+3. **L3 Cache**: KeyDB persistent cache across instances 
+
+L3 cache can be enabled/disabled via `keydb_config.yaml` configuration file. When disabled, the system operates with only L1 and L2 caches.

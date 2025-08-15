@@ -42,11 +42,23 @@ _G.test_helpers = {
   
   reset_mocks = function()
     cache_mocks.clear_cache_storage() -- Only clear data, don't recreate mocks
+    if package.loaded["cache.cache"] then
+      local cache = require("cache.cache")
+      if cache.reset_cache_instances then
+        cache.reset_cache_instances()
+      end
+    end
   end,
   
   -- Setup function to be called from tests
   setup_test_environment = function()
     cache_mocks.clear_cache_storage() -- Only clear data, don't recreate mocks
+    if package.loaded["cache.cache"] then
+      local cache = require("cache.cache")
+      if cache.reset_cache_instances then
+        cache.reset_cache_instances()
+      end
+    end
   end
 }
 

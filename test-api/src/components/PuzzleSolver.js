@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-import { argon2id } from 'hash-wasm';
-import CryptoJS from 'crypto-js';
+import { 
+  getPuzzle,
+  getAuthStatus,
+  verifyToken,
+  solvePuzzle,
+  submitSolution,
+  createDebugSolution,
+  generateJwtToken
+} from '../utils';
 
 const PuzzleSolver = ({ onTokenGenerated }) => {
   const [loading, setLoading] = useState(false);
@@ -13,22 +19,26 @@ const PuzzleSolver = ({ onTokenGenerated }) => {
   const [verifyResponse, setVerifyResponse] = useState(null);
   const [authStatus, setAuthStatus] = useState(null);
 
-  // Get puzzle from proxy
-  const getPuzzle = async () => {
+  // Get puzzle from proxy using utils
+  const handleGetPuzzle = async () => {
     setLoading(true);
     setStatus('Getting puzzle...');
+    
     try {
-      const proxyUrl = process.env.REACT_APP_RPC_PROXY_URL || 'http://localhost:8080';
-      const response = await axios.get(`${proxyUrl}/auth/puzzle`);
-      setPuzzle(response.data);
-      setStatus('✅ Puzzle received');
+      const result = await getPuzzle();
+      if (result.success) {
+        setPuzzle(result.data);
+        setStatus('✅ Puzzle received');
+      } else {
+        setStatus(`❌ Error getting puzzle: ${result.error.message}`);
+      }
     } catch (error) {
-      setStatus(`❌ Error getting puzzle: ${error.response?.data || error.message}`);
+      setStatus(`❌ Error getting puzzle: ${error.message}`);
     }
     setLoading(false);
   };
 
-  // Test token verification
+  // Test token verification using utils
   const testVerify = async () => {
     if (!token) {
       setStatus('❌ No JWT token available. Generate one first!');
@@ -37,76 +47,47 @@ const PuzzleSolver = ({ onTokenGenerated }) => {
 
     setLoading(true);
     setStatus('Testing token verification...');
+    
     try {
-      const proxyUrl = process.env.REACT_APP_RPC_PROXY_URL || 'http://localhost:8080';
-      const response = await axios.get(`${proxyUrl}/auth/verify`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      setVerifyResponse({
-        status: response.status,
-        headers: response.headers,
-        data: response.data || 'Token valid'
-      });
-      setStatus('✅ Token verification successful!');
+      const result = await verifyToken(token);
+      if (result.success) {
+        setVerifyResponse(result.data);
+        setStatus('✅ Token verification successful!');
+      } else {
+        setVerifyResponse(result.error);
+        setStatus(`❌ Token verification failed: ${result.error.status}`);
+      }
     } catch (error) {
-      setVerifyResponse({
-        status: error.response?.status || 'Network Error',
-        headers: error.response?.headers || {},
-        data: error.response?.data || error.message
-      });
-      setStatus(`❌ Token verification failed: ${error.response?.status || 'Network Error'}`);
+      setStatus(`❌ Token verification error: ${error.message}`);
     }
     setLoading(false);
   };
 
-  // Get auth service status
-  const getAuthStatus = async () => {
+  // Get auth service status using utils
+  const handleGetAuthStatus = async () => {
     setLoading(true);
     setStatus('Getting auth service status...');
+    
     try {
-      const proxyUrl = process.env.REACT_APP_RPC_PROXY_URL || 'http://localhost:8080';
-      const response = await axios.get(`${proxyUrl}/auth/status`);
-      setAuthStatus(response.data);
-      setStatus('✅ Auth status received');
+      const result = await getAuthStatus();
+      if (result.success) {
+        setAuthStatus(result.data);
+        setStatus('✅ Auth status received');
+      } else {
+        setAuthStatus({
+          error: result.error.message,
+          status: result.error.status
+        });
+        setStatus(`❌ Error getting auth status: ${result.error.message}`);
+      }
     } catch (error) {
-      setAuthStatus({
-        error: error.response?.data || error.message,
-        status: error.response?.status || 'Network Error'
-      });
-      setStatus(`❌ Error getting auth status: ${error.response?.data || error.message}`);
+      setStatus(`❌ Error getting auth status: ${error.message}`);
     }
     setLoading(false);
   };
 
-  // Check if hash meets difficulty requirement
-  const checkDifficulty = (hash, difficulty) => {
-    if (hash.length < difficulty) return false;
-    for (let i = 0; i < difficulty; i++) {
-      if (hash[i] !== '0') return false;
-    }
-    return true;
-  };
-
-  // Compute HMAC-SHA256
-  const computeHMAC = (data, secret) => {
-    const hmac = CryptoJS.HmacSHA256(data, secret);
-    return hmac.toString(CryptoJS.enc.Hex);
-  };
-
-  // Convert hex string to Uint8Array
-  const hexToUint8Array = (hex) => {
-    const bytes = new Uint8Array(hex.length / 2);
-    for (let i = 0; i < hex.length; i += 2) {
-      bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
-    }
-    return bytes;
-  };
-
-  // Solve puzzle using Argon2
-  const solvePuzzle = async () => {
+  // Solve puzzle using utils
+  const handleSolvePuzzle = async () => {
     if (!puzzle) {
       setStatus('❌ No puzzle to solve');
       return;
@@ -114,87 +95,36 @@ const PuzzleSolver = ({ onTokenGenerated }) => {
 
     setSolving(true);
     setStatus('🔍 Solving puzzle...');
-    const startTime = Date.now();
 
     try {
-      const { challenge, salt, difficulty, argon2_params, hmac } = puzzle;
-      const maxAttempts = 100000;
+      const onProgress = (attempts, maxAttempts) => {
+        setStatus(`🔍 Solving puzzle... Attempt ${attempts}/${maxAttempts}`);
+      };
+
+      const result = await solvePuzzle(puzzle, onProgress);
       
-      // Convert salt from hex to Uint8Array
-      const saltBytes = hexToUint8Array(salt);
-
-      for (let nonce = 0; nonce < maxAttempts; nonce++) {
-        // Create input: challenge + salt + nonce
-        const input = `${challenge}${salt}${nonce}`;
-        
-        try {
-          // Compute Argon2id hash using hash-wasm
-          const argonHash = await argon2id({
-            password: input,
-            salt: saltBytes,
-            parallelism: argon2_params.threads,
-            iterations: argon2_params.time,
-            memorySize: argon2_params.memory_kb,
-            hashLength: argon2_params.key_len,
-            outputType: 'hex'
-          });
-
-          // Check if this hash meets the difficulty requirement
-          if (checkDifficulty(argonHash, difficulty)) {
-            // We found a valid nonce! Use puzzle HMAC
-            const endTime = Date.now();
-            const solveTime = ((endTime - startTime) / 1000).toFixed(2);
-            
-            const solutionData = {
-              challenge,
-              salt,
-              nonce,
-              argon_hash: argonHash,
-              hmac: puzzle.hmac, // Always use puzzle HMAC
-              expires_at: puzzle.expires_at
-            };
-
-            // Compare with debug solution if available
-            let debugInfo = '';
-            if (puzzle.debug_solution) {
-              const debugMatches = argonHash === puzzle.debug_solution.argon_hash;
-              debugInfo = debugMatches ? 
-                ' (✅ Matches debug solution)' : 
-                ` (❌ Debug: nonce=${puzzle.debug_solution.nonce}, hash=${puzzle.debug_solution.argon_hash})`;
-            }
-
-            setSolution(solutionData);
-            setStatus(`✅ Puzzle solved in ${solveTime}s! Found valid nonce: ${nonce}${debugInfo}`);
-            console.log('Generated solution:', JSON.stringify(solutionData, null, 2));
-            setSolving(false);
-            return;
-          }
-        } catch (error) {
-          console.error('Argon2 computation error:', error);
-          continue;
+      if (result.success) {
+        setSolution(result.solution);
+        let debugInfo = '';
+        if (puzzle.debug_solution) {
+          const debugMatches = result.solution.argon_hash === puzzle.debug_solution.argon_hash;
+          debugInfo = debugMatches ? 
+            ' (✅ Matches debug solution)' : 
+            ` (❌ Debug: nonce=${puzzle.debug_solution.nonce}, hash=${puzzle.debug_solution.argon_hash})`;
         }
-
-        // Update status every 1000 attempts
-        if (nonce % 1000 === 0) {
-          setStatus(`🔍 Solving puzzle... Attempt ${nonce}/${maxAttempts}`);
-          // Allow UI to update
-          await new Promise(resolve => setTimeout(resolve, 1));
-        }
+        setStatus(`✅ Puzzle solved in ${result.solveTime}s! Found valid nonce: ${result.solution.nonce}${debugInfo}`);
+        console.log('Generated solution:', JSON.stringify(result.solution, null, 2));
+      } else {
+        setStatus(`❌ ${result.error.message} (${result.error.solveTime}s)`);
       }
-
-      const endTime = Date.now();
-      const solveTime = ((endTime - startTime) / 1000).toFixed(2);
-      setStatus(`❌ Failed to solve puzzle within attempt limit (${solveTime}s)`);
     } catch (error) {
-      const endTime = Date.now();
-      const solveTime = ((endTime - startTime) / 1000).toFixed(2);
-      setStatus(`❌ Error solving puzzle after ${solveTime}s: ${error.message}`);
+      setStatus(`❌ Error solving puzzle: ${error.message}`);
     }
     setSolving(false);
   };
 
-  // Submit solution
-  const submitSolution = async () => {
+  // Submit solution using utils
+  const handleSubmitSolution = async () => {
     if (!solution) {
       setStatus('❌ No solution to submit');
       return;
@@ -202,22 +132,33 @@ const PuzzleSolver = ({ onTokenGenerated }) => {
 
     setLoading(true);
     setStatus('Submitting solution...');
+    
     try {
-      const proxyUrl = process.env.REACT_APP_RPC_PROXY_URL || 'http://localhost:8080';
-      const response = await axios.post(`${proxyUrl}/auth/solve`, solution, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      const jwtToken = response.data.token;
-      setToken(jwtToken);
-      onTokenGenerated(jwtToken);
-      setStatus('✅ JWT token generated successfully!');
+      const result = await submitSolution(solution);
+      if (result.success) {
+        const jwtToken = result.token;
+        setToken(jwtToken);
+        onTokenGenerated(jwtToken);
+        setStatus('✅ JWT token generated successfully!');
+      } else {
+        setStatus(`❌ Error submitting solution: ${result.error.message}`);
+      }
     } catch (error) {
-      setStatus(`❌ Error submitting solution: ${error.response?.data || error.message}`);
+      setStatus(`❌ Error submitting solution: ${error.message}`);
     }
     setLoading(false);
+  };
+
+  // Use debug solution
+  const handleUseDebugSolution = () => {
+    try {
+      const debugSolution = createDebugSolution(puzzle);
+      setSolution(debugSolution);
+      setStatus('✅ Used debug solution with puzzle HMAC');
+      console.log('Debug solution:', JSON.stringify(debugSolution, null, 2));
+    } catch (error) {
+      setStatus(`❌ Error creating debug solution: ${error.message}`);
+    }
   };
 
   // Reset everything
@@ -241,7 +182,7 @@ const PuzzleSolver = ({ onTokenGenerated }) => {
         <div style={{display: 'grid', gap: '0.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))'}}>
           <button 
             className="button" 
-            onClick={getPuzzle} 
+            onClick={handleGetPuzzle} 
             disabled={loading || solving}
           >
             Get Puzzle
@@ -255,7 +196,7 @@ const PuzzleSolver = ({ onTokenGenerated }) => {
           </button>
           <button 
             className="button" 
-            onClick={getAuthStatus} 
+            onClick={handleGetAuthStatus} 
             disabled={loading || solving}
           >
             Get Auth Status
@@ -271,7 +212,7 @@ const PuzzleSolver = ({ onTokenGenerated }) => {
           </div>
           <button 
             className="button" 
-            onClick={solvePuzzle} 
+            onClick={handleSolvePuzzle} 
             disabled={loading || solving}
           >
             {solving ? '🔍 Solving...' : '🚀 Solve Puzzle'}
@@ -280,19 +221,7 @@ const PuzzleSolver = ({ onTokenGenerated }) => {
             <div style={{marginTop: '10px'}}>
               <button 
                 className="button" 
-                onClick={() => {
-                  const debugSolution = {
-                    challenge: puzzle.challenge,
-                    salt: puzzle.salt,
-                    nonce: puzzle.debug_solution.nonce,
-                    argon_hash: puzzle.debug_solution.argon_hash,
-                    hmac: puzzle.hmac, // Always use puzzle HMAC
-                    expires_at: puzzle.expires_at
-                  };
-                  setSolution(debugSolution);
-                  setStatus('✅ Used debug solution with puzzle HMAC');
-                  console.log('Debug solution:', JSON.stringify(debugSolution, null, 2));
-                }}
+                onClick={handleUseDebugSolution}
                 disabled={loading || solving}
                 style={{backgroundColor: '#e74c3c', marginLeft: '10px'}}
               >
@@ -312,7 +241,7 @@ const PuzzleSolver = ({ onTokenGenerated }) => {
           
           <button 
             className="button" 
-            onClick={submitSolution} 
+            onClick={handleSubmitSolution} 
             disabled={loading}
           >
             Submit Solution & Get Token

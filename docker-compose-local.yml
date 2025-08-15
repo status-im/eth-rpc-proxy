@@ -28,7 +28,9 @@ services:
       RELOAD_INTERVAL: '10'
       AUTH_CONFIG_FILE: '/app/auth_config.json'
       CACHE_RULES_FILE: '/app/cache_rules.yaml'
+      KEYDB_CONFIG_FILE: '/app/keydb_config.yaml'
       CORS_ORIGIN: 'http://localhost:3001'
+      KEYDB_URL: 'redis://keydb:6379'
     ports:
       - '8080:8080'
     networks:
@@ -41,6 +43,7 @@ services:
       - './secrets/.htpasswd:/etc/nginx/.htpasswd:ro'
       - './go-auth-service/auth_config.json:/app/auth_config.json:ro'
       - './nginx-proxy/cache_rules.yaml:/app/cache_rules.yaml:ro'
+      - './nginx-proxy/keydb_config.yaml:/app/keydb_config.yaml:ro'
 
   auth-service:
     build:
@@ -86,6 +89,42 @@ services:
     networks:
       - 'rpc-network'
 
+  keydb:
+    image: 'eqalpha/keydb:latest'
+    container_name: 'keydb'
+    restart: 'always'
+    ports:
+      - '6379:6379'
+    networks:
+      - 'rpc-network'
+    command: 
+      - 'keydb-server'
+      - '--protected-mode'
+      - 'no'
+      - '--appendonly'
+      - 'yes'
+    healthcheck:
+      test: ['CMD', 'keydb-cli', 'ping']
+      interval: '30s'
+      timeout: '10s'
+      retries: 3
+      start_period: '10s'
+    volumes:
+      - 'keydb-data:/data'
+
+  keydb-exporter:
+    image: 'oliver006/redis_exporter:v1.74.0'
+    container_name: 'keydb-exporter'
+    restart: 'always'
+    ports:
+      - '9121:9121'
+    networks:
+      - 'rpc-network'
+    environment:
+      REDIS_ADDR: 'keydb:6379'
+    depends_on:
+      - 'keydb'
+
   prometheus:
     image: 'prom/prometheus:latest'
     container_name: 'prometheus'
@@ -121,6 +160,7 @@ services:
 
 volumes:
   grafana-storage:
+  keydb-data:
 
 networks:
   rpc-network:
