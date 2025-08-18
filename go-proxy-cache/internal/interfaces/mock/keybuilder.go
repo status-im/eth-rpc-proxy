@@ -41,11 +41,11 @@ func (m *MockKeyBuilder) EXPECT() *MockKeyBuilderMockRecorder {
 }
 
 // Build mocks base method.
-func (m *MockKeyBuilder) Build(chain, network string, req *models.JSONRPCRequest) (string, uint32) {
+func (m *MockKeyBuilder) Build(chain, network string, req *models.JSONRPCRequest) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Build", chain, network, req)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(uint32)
+	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
@@ -56,11 +56,11 @@ func (mr *MockKeyBuilderMockRecorder) Build(chain, network, req any) *gomock.Cal
 }
 
 // BuildBatch mocks base method.
-func (m *MockKeyBuilder) BuildBatch(chain, network string, reqs []models.JSONRPCRequest) ([]string, []uint32) {
+func (m *MockKeyBuilder) BuildBatch(chain, network string, reqs []models.JSONRPCRequest) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildBatch", chain, network, reqs)
 	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].([]uint32)
+	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
