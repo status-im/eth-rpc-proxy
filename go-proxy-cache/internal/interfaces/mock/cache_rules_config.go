@@ -10,6 +10,7 @@
 package mock
 
 import (
+	models "go-proxy-cache/internal/models"
 	reflect "reflect"
 	time "time"
 
@@ -40,16 +41,30 @@ func (m *MockCacheRulesConfig) EXPECT() *MockCacheRulesConfigMockRecorder {
 	return m.recorder
 }
 
-// GetTtlForKey mocks base method.
-func (m *MockCacheRulesConfig) GetTtlForKey(chain, network, key string) time.Duration {
+// GetCacheTypeForMethod mocks base method.
+func (m *MockCacheRulesConfig) GetCacheTypeForMethod(method string) models.CacheType {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTtlForKey", chain, network, key)
+	ret := m.ctrl.Call(m, "GetCacheTypeForMethod", method)
+	ret0, _ := ret[0].(models.CacheType)
+	return ret0
+}
+
+// GetCacheTypeForMethod indicates an expected call of GetCacheTypeForMethod.
+func (mr *MockCacheRulesConfigMockRecorder) GetCacheTypeForMethod(method any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCacheTypeForMethod", reflect.TypeOf((*MockCacheRulesConfig)(nil).GetCacheTypeForMethod), method)
+}
+
+// GetTtlForCacheType mocks base method.
+func (m *MockCacheRulesConfig) GetTtlForCacheType(chain, network string, cacheType models.CacheType) time.Duration {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTtlForCacheType", chain, network, cacheType)
 	ret0, _ := ret[0].(time.Duration)
 	return ret0
 }
 
-// GetTtlForKey indicates an expected call of GetTtlForKey.
-func (mr *MockCacheRulesConfigMockRecorder) GetTtlForKey(chain, network, key any) *gomock.Call {
+// GetTtlForCacheType indicates an expected call of GetTtlForCacheType.
+func (mr *MockCacheRulesConfigMockRecorder) GetTtlForCacheType(chain, network, cacheType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTtlForKey", reflect.TypeOf((*MockCacheRulesConfig)(nil).GetTtlForKey), chain, network, key)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTtlForCacheType", reflect.TypeOf((*MockCacheRulesConfig)(nil).GetTtlForCacheType), chain, network, cacheType)
 }
