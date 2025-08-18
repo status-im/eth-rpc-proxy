@@ -10,7 +10,7 @@
 package mock
 
 import (
-	interfaces "go-proxy-cache/internal/interfaces"
+	models "go-proxy-cache/internal/models"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -41,7 +41,7 @@ func (m *MockKeyBuilder) EXPECT() *MockKeyBuilderMockRecorder {
 }
 
 // Build mocks base method.
-func (m *MockKeyBuilder) Build(chain, network string, req *interfaces.JSONRPCRequest) (string, uint32) {
+func (m *MockKeyBuilder) Build(chain, network string, req *models.JSONRPCRequest) (string, uint32) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Build", chain, network, req)
 	ret0, _ := ret[0].(string)
@@ -56,7 +56,7 @@ func (mr *MockKeyBuilderMockRecorder) Build(chain, network, req any) *gomock.Cal
 }
 
 // BuildBatch mocks base method.
-func (m *MockKeyBuilder) BuildBatch(chain, network string, reqs []interfaces.JSONRPCRequest) ([]string, []uint32) {
+func (m *MockKeyBuilder) BuildBatch(chain, network string, reqs []models.JSONRPCRequest) ([]string, []uint32) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildBatch", chain, network, reqs)
 	ret0, _ := ret[0].([]string)

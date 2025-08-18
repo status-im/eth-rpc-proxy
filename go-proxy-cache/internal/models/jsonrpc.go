@@ -1,6 +1,4 @@
-package interfaces
-
-//go:generate mockgen -package=mock -source=jsonrpc.go -destination=mock/jsonrpc.go
+package models
 
 // JSONRPCRequest represents a JSON-RPC request
 type JSONRPCRequest struct {

@@ -10,8 +10,8 @@
 package mock
 
 import (
+	models "go-proxy-cache/internal/models"
 	reflect "reflect"
-	time "time"
 
 	gomock "go.uber.org/mock/gomock"
 )
@@ -84,13 +84,13 @@ func (mr *MockCacheMockRecorder) GetStale(key any) *gomock.Call {
 }
 
 // Set mocks base method.
-func (m *MockCache) Set(key string, val []byte, ttl, staleTTL time.Duration) {
+func (m *MockCache) Set(key string, val []byte, ttl models.TTL) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Set", key, val, ttl, staleTTL)
+	m.ctrl.Call(m, "Set", key, val, ttl)
 }
 
 // Set indicates an expected call of Set.
-func (mr *MockCacheMockRecorder) Set(key, val, ttl, staleTTL any) *gomock.Call {
+func (mr *MockCacheMockRecorder) Set(key, val, ttl any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockCache)(nil).Set), key, val, ttl, staleTTL)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockCache)(nil).Set), key, val, ttl)
 }

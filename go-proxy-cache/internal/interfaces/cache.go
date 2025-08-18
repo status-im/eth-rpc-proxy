@@ -1,7 +1,7 @@
 package interfaces
 
 import (
-	"time"
+	"go-proxy-cache/internal/models"
 )
 
 //go:generate mockgen -package=mock -source=cache.go -destination=mock/cache.go
@@ -10,6 +10,6 @@ import (
 type Cache interface {
 	Get(key string) (val []byte, fresh bool, found bool)
 	GetStale(key string) (val []byte, found bool) // stale-if-error
-	Set(key string, val []byte, ttl time.Duration, staleTTL time.Duration)
+	Set(key string, val []byte, ttl models.TTL)
 	Delete(key string)
 }

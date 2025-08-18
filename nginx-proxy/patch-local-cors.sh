@@ -72,52 +72,12 @@ add_cors_config() {
     rm "$temp_file"
 }
 
-# Function to patch cache_metrics.conf - comment out allow lines and add CORS for local development
-patch_cache_metrics_config() {
-    local nginx_conf_path="$1"
-    local cors_origin="$2"
-    
-    # Get the directory where nginx.conf is located
-    local nginx_dir=$(dirname "$nginx_conf_path")
-    local cache_metrics_conf="${nginx_dir}/cache_metrics.conf"
-    
-    # Check if cache_metrics.conf exists
-    if [ ! -f "$cache_metrics_conf" ]; then
-        echo "Warning: cache_metrics.conf not found in $nginx_dir"
-        return 0
-    fi
-    
-    # Create a backup of the original file
-    cp "$cache_metrics_conf" "${cache_metrics_conf}.bak"
-    
-    # Comment out the allow line for local development
-    sed -i.tmp 's/^[[:space:]]*allow[[:space:]]/    # allow /' "$cache_metrics_conf"
-    
-    # Generate CORS configuration
-    local cors_config=$(generate_cors_config "$cors_origin" "    ")
-    
-    # Add CORS headers after access_log off; line
-    awk -v cors_config="$cors_config" '
-        /access_log off;/ {
-            print
-            print ""
-            print cors_config
-            next
-        }
-        { print }
-    ' "$cache_metrics_conf" > "${cache_metrics_conf}.tmp"
-    
-    # Replace the original file with the modified one
-    mv "${cache_metrics_conf}.tmp" "$cache_metrics_conf"
-    
-    echo "Patched $cache_metrics_conf - commented out allow restrictions and added CORS headers for local development"
-}
+# Note: cache_metrics.conf function removed - metrics now served by go-proxy-cache service
 
 # Add CORS configuration for all endpoints
 add_cors_config "$NGINX_CONF" "\/auth\/"
 add_cors_config "$NGINX_CONF" "\/"
 
-# Patch cache_metrics.conf
-patch_cache_metrics_config "$NGINX_CONF" "$CORS_ORIGIN"
+# Note: cache_metrics.conf patching removed - metrics now served by go-proxy-cache service
 
 echo "Added CORS configuration to $NGINX_CONF for RPC proxy with origin $CORS_ORIGIN"
