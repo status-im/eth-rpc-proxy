@@ -140,3 +140,5 @@ func (s *httpServer) healthHandler(w http.ResponseWriter, r *http.Request) {
 		s.logger.Error("failed to write health response", "error", err)
 	}
 }
+
+var _ Server = (*httpServer)(nil)
