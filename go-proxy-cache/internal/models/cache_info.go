@@ -44,3 +44,45 @@ type TTL struct {
 	Fresh time.Duration // How long the data is considered fresh
 	Stale time.Duration // How long stale data can be served (stale-if-error)
 }
+
+// CacheEntry represents an entry in the cache with TTL information
+type CacheEntry struct {
+	Data      []byte `json:"data"`
+	ExpiresAt int64  `json:"expires_at"`
+	StaleAt   int64  `json:"stale_at"`
+	CreatedAt int64  `json:"created_at"`
+}
+
+// IsExpired checks if the cache entry is completely expired
+func (ce *CacheEntry) IsExpired() bool {
+	now := time.Now().Unix()
+	return now > ce.ExpiresAt
+}
+
+// IsFresh checks if the cache entry is still fresh
+func (ce *CacheEntry) IsFresh() bool {
+	now := time.Now().Unix()
+	return now <= ce.StaleAt
+}
+
+// RemainingTTL calculates the remaining TTL for this cache entry
+func (ce *CacheEntry) RemainingTTL() TTL {
+	now := time.Now().Unix()
+
+	// Calculate remaining fresh time
+	freshRemaining := ce.StaleAt - now
+	if freshRemaining < 0 {
+		freshRemaining = 0
+	}
+
+	// Calculate remaining stale time
+	staleRemaining := ce.ExpiresAt - ce.StaleAt
+	if staleRemaining < 0 {
+		staleRemaining = 0
+	}
+
+	return TTL{
+		Fresh: time.Duration(freshRemaining) * time.Second,
+		Stale: time.Duration(staleRemaining) * time.Second,
+	}
+}

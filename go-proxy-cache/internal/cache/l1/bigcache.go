@@ -15,14 +15,6 @@ import (
 // Ensure BigCache implements interfaces.Cache
 var _ interfaces.Cache = (*BigCache)(nil)
 
-// CacheEntry represents an entry in the L1 cache with TTL information
-type CacheEntry struct {
-	Data      []byte `json:"data"`
-	ExpiresAt int64  `json:"expires_at"`
-	StaleAt   int64  `json:"stale_at"`
-	CreatedAt int64  `json:"created_at"`
-}
-
 // BigCache implements L1 cache using BigCache
 type BigCache struct {
 	cache  *bigcache.BigCache
@@ -48,60 +40,54 @@ func NewBigCache(sizeMB int, logger *zap.Logger) (interfaces.Cache, error) {
 }
 
 // Get retrieves value from cache with freshness information
-func (bc *BigCache) Get(key string) (val []byte, fresh bool, found bool) {
+func (bc *BigCache) Get(key string) (*models.CacheEntry, bool) {
 	data, err := bc.cache.Get(key)
 	if err != nil {
-		return nil, false, false
+		return nil, false
 	}
 
-	var entry CacheEntry
+	var entry models.CacheEntry
 	if err := json.Unmarshal(data, &entry); err != nil {
 		bc.cache.Delete(key) // Remove corrupted entry
-		return nil, false, false
+		return nil, false
 	}
-
-	now := time.Now().Unix()
 
 	// Check if entry is expired
-	if now > entry.ExpiresAt {
+	if entry.IsExpired() {
 		bc.cache.Delete(key)
-		return nil, false, false
+		return nil, false
 	}
 
-	// Check if entry is stale but still valid
-	fresh = now <= entry.StaleAt
-	return entry.Data, fresh, true
+	return &entry, true
 }
 
 // GetStale retrieves value from cache regardless of freshness (for stale-if-error)
-func (bc *BigCache) GetStale(key string) (val []byte, found bool) {
+func (bc *BigCache) GetStale(key string) (*models.CacheEntry, bool) {
 	data, err := bc.cache.Get(key)
 	if err != nil {
 		return nil, false
 	}
 
-	var entry CacheEntry
+	var entry models.CacheEntry
 	if err := json.Unmarshal(data, &entry); err != nil {
 		bc.cache.Delete(key) // Remove corrupted entry
 		return nil, false
 	}
 
-	now := time.Now().Unix()
-
 	// Check if entry is completely expired (beyond stale time)
-	if now > entry.ExpiresAt {
+	if entry.IsExpired() {
 		bc.cache.Delete(key)
 		return nil, false
 	}
 
-	return entry.Data, true
+	return &entry, true
 }
 
 // Set stores value in cache with TTL
 func (bc *BigCache) Set(key string, val []byte, ttl models.TTL) {
 	now := time.Now().Unix()
 
-	entry := CacheEntry{
+	entry := models.CacheEntry{
 		Data:      val,
 		CreatedAt: now,
 		StaleAt:   now + int64(ttl.Fresh.Seconds()),

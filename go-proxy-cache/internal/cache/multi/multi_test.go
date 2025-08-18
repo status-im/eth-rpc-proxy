@@ -42,15 +42,19 @@ func TestMultiCache_Get_FirstCacheHit(t *testing.T) {
 
 	multiCache := NewMultiCache(caches, logger)
 
-	expectedVal := []byte("test-value")
-	cache1.EXPECT().Get("test-key").Return(expectedVal, true, true).Times(1)
+	expectedEntry := &models.CacheEntry{
+		Data:      []byte("test-value"),
+		CreatedAt: time.Now().Unix(),
+		StaleAt:   time.Now().Unix() + 60,
+		ExpiresAt: time.Now().Unix() + 120,
+	}
+	cache1.EXPECT().Get("test-key").Return(expectedEntry, true).Times(1)
 	// cache2.Get should not be called since cache1 has the value
 
-	val, fresh, found := multiCache.Get("test-key")
+	entry, found := multiCache.Get("test-key")
 
 	assert.True(t, found)
-	assert.True(t, fresh)
-	assert.Equal(t, expectedVal, val)
+	assert.Equal(t, expectedEntry, entry)
 }
 
 func TestMultiCache_Get_SecondCacheHit(t *testing.T) {
@@ -64,16 +68,22 @@ func TestMultiCache_Get_SecondCacheHit(t *testing.T) {
 
 	multiCache := NewMultiCache(caches, logger)
 
-	expectedVal := []byte("test-value")
+	expectedEntry := &models.CacheEntry{
+		Data:      []byte("test-value"),
+		CreatedAt: time.Now().Unix(),
+		StaleAt:   time.Now().Unix() + 60,
+		ExpiresAt: time.Now().Unix() + 120,
+	}
 
-	cache1.EXPECT().Get("test-key").Return(nil, false, false).Times(1)
-	cache2.EXPECT().Get("test-key").Return(expectedVal, true, true).Times(1)
+	cache1.EXPECT().Get("test-key").Return(nil, false).Times(1)
+	cache2.EXPECT().Get("test-key").Return(expectedEntry, true).Times(1)
+	// Expect propagation to cache1
+	cache1.EXPECT().Set("test-key", expectedEntry.Data, gomock.Any()).Times(1)
 
-	val, fresh, found := multiCache.Get("test-key")
+	entry, found := multiCache.Get("test-key")
 
 	assert.True(t, found)
-	assert.True(t, fresh)
-	assert.Equal(t, expectedVal, val)
+	assert.Equal(t, expectedEntry, entry)
 }
 
 func TestMultiCache_Get_AllCachesMiss(t *testing.T) {
@@ -87,14 +97,13 @@ func TestMultiCache_Get_AllCachesMiss(t *testing.T) {
 
 	multiCache := NewMultiCache(caches, logger)
 
-	cache1.EXPECT().Get("test-key").Return(nil, false, false).Times(1)
-	cache2.EXPECT().Get("test-key").Return(nil, false, false).Times(1)
+	cache1.EXPECT().Get("test-key").Return(nil, false).Times(1)
+	cache2.EXPECT().Get("test-key").Return(nil, false).Times(1)
 
-	val, fresh, found := multiCache.Get("test-key")
+	entry, found := multiCache.Get("test-key")
 
 	assert.False(t, found)
-	assert.False(t, fresh)
-	assert.Nil(t, val)
+	assert.Nil(t, entry)
 }
 
 func TestMultiCache_Get_NoCaches(t *testing.T) {
@@ -102,11 +111,10 @@ func TestMultiCache_Get_NoCaches(t *testing.T) {
 
 	multiCache := NewMultiCache([]interfaces.Cache{}, logger)
 
-	val, fresh, found := multiCache.Get("test-key")
+	entry, found := multiCache.Get("test-key")
 
 	assert.False(t, found)
-	assert.False(t, fresh)
-	assert.Nil(t, val)
+	assert.Nil(t, entry)
 }
 
 func TestMultiCache_GetStale_FirstCacheHit(t *testing.T) {
@@ -120,13 +128,18 @@ func TestMultiCache_GetStale_FirstCacheHit(t *testing.T) {
 
 	multiCache := NewMultiCache(caches, logger)
 
-	expectedVal := []byte("test-value")
-	cache1.EXPECT().GetStale("test-key").Return(expectedVal, true).Times(1)
+	expectedEntry := &models.CacheEntry{
+		Data:      []byte("test-value"),
+		CreatedAt: time.Now().Unix(),
+		StaleAt:   time.Now().Unix() - 30, // stale but not expired
+		ExpiresAt: time.Now().Unix() + 60,
+	}
+	cache1.EXPECT().GetStale("test-key").Return(expectedEntry, true).Times(1)
 
-	val, found := multiCache.GetStale("test-key")
+	entry, found := multiCache.GetStale("test-key")
 
 	assert.True(t, found)
-	assert.Equal(t, expectedVal, val)
+	assert.Equal(t, expectedEntry, entry)
 }
 
 func TestMultiCache_GetStale_SecondCacheHit(t *testing.T) {
@@ -140,15 +153,22 @@ func TestMultiCache_GetStale_SecondCacheHit(t *testing.T) {
 
 	multiCache := NewMultiCache(caches, logger)
 
-	expectedVal := []byte("test-value")
+	expectedEntry := &models.CacheEntry{
+		Data:      []byte("test-value"),
+		CreatedAt: time.Now().Unix(),
+		StaleAt:   time.Now().Unix() - 30, // stale but not expired
+		ExpiresAt: time.Now().Unix() + 60,
+	}
 
 	cache1.EXPECT().GetStale("test-key").Return(nil, false).Times(1)
-	cache2.EXPECT().GetStale("test-key").Return(expectedVal, true).Times(1)
+	cache2.EXPECT().GetStale("test-key").Return(expectedEntry, true).Times(1)
+	// Expect propagation to cache1
+	cache1.EXPECT().Set("test-key", expectedEntry.Data, gomock.Any()).Times(1)
 
-	val, found := multiCache.GetStale("test-key")
+	entry, found := multiCache.GetStale("test-key")
 
 	assert.True(t, found)
-	assert.Equal(t, expectedVal, val)
+	assert.Equal(t, expectedEntry, entry)
 }
 
 func TestMultiCache_Set_AllCaches(t *testing.T) {

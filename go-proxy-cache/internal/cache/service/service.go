@@ -54,49 +54,41 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 		return nil, fmt.Errorf("failed to build cache key: %w", err)
 	}
 
-	s.logger.Debug("Cache get operation",
-		zap.String("key", key),
-		zap.String("method", request.Method),
-		zap.String("chain", chain),
-		zap.String("network", network))
-
 	// Try L1 cache first
-	data, fresh, found := s.l1Cache.Get(key)
+	entry, found := s.l1Cache.Get(key)
 	if found {
 		// Fix response ID to match current request
-		fixedData := utils.FixResponseID(string(data), request.ID)
+		fixedData := utils.FixResponseID(string(entry.Data), request.ID)
 
 		s.logger.Debug("L1 cache hit",
 			zap.String("key", key),
-			zap.Bool("fresh", fresh))
+			zap.Bool("fresh", entry.IsFresh()))
 
 		return &GetResponse{
 			Found: true,
-			Fresh: fresh,
+			Fresh: entry.IsFresh(),
 			Data:  fixedData,
 			Key:   key,
 		}, nil
 	}
 
 	// Try L2 cache
-	data, fresh, found = s.l2Cache.Get(key)
+	entry, found = s.l2Cache.Get(key)
 	if found {
-		// Get cache info for TTL
-		cacheInfo := s.cacheClassifier.GetTtl(chain, network, request)
-		// Store in L1 cache for future requests
-		ttlStruct := models.TTL{Fresh: cacheInfo.TTL, Stale: cacheInfo.TTL / 10} // stale TTL is 10% of fresh TTL
-		s.l1Cache.Set(key, data, ttlStruct)
+		// Store in L1 cache for future requests with remaining TTL
+		remainingTTL := entry.RemainingTTL()
+		s.l1Cache.Set(key, entry.Data, remainingTTL)
 
 		// Fix response ID to match current request
-		fixedData := utils.FixResponseID(string(data), request.ID)
+		fixedData := utils.FixResponseID(string(entry.Data), request.ID)
 
 		s.logger.Debug("L2 cache hit, stored in L1",
 			zap.String("key", key),
-			zap.Bool("fresh", fresh))
+			zap.Bool("fresh", entry.IsFresh()))
 
 		return &GetResponse{
 			Found: true,
-			Fresh: fresh,
+			Fresh: entry.IsFresh(),
 			Data:  fixedData,
 			Key:   key,
 		}, nil

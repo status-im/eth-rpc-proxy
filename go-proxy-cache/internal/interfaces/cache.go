@@ -8,8 +8,8 @@ import (
 
 // Cache interface defines the contract for cache implementations
 type Cache interface {
-	Get(key string) (val []byte, fresh bool, found bool)
-	GetStale(key string) (val []byte, found bool) // stale-if-error
+	Get(key string) (*models.CacheEntry, bool)      // returns entry and found flag
+	GetStale(key string) (*models.CacheEntry, bool) // stale-if-error, returns entry and found flag
 	Set(key string, val []byte, ttl models.TTL)
 	Delete(key string)
 }

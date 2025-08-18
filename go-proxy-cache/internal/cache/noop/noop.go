@@ -17,12 +17,12 @@ func NewNoOpCache() interfaces.Cache {
 }
 
 // Get always returns cache miss
-func (n *NoOpCache) Get(key string) (val []byte, fresh bool, found bool) {
-	return nil, false, false
+func (n *NoOpCache) Get(key string) (*models.CacheEntry, bool) {
+	return nil, false
 }
 
 // GetStale always returns cache miss
-func (n *NoOpCache) GetStale(key string) (val []byte, found bool) {
+func (n *NoOpCache) GetStale(key string) (*models.CacheEntry, bool) {
 	return nil, false
 }
 

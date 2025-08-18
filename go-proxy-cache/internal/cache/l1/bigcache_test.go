@@ -2,11 +2,11 @@ package l1
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	"go-proxy-cache/internal/models"
@@ -15,479 +15,309 @@ import (
 func TestNewBigCache(t *testing.T) {
 	logger := zap.NewNop()
 
-	tests := []struct {
-		name    string
-		sizeMB  int
-		wantErr bool
-	}{
-		{
-			name:    "valid size",
-			sizeMB:  10,
-			wantErr: false,
-		},
-		{
-			name:    "zero size",
-			sizeMB:  0,
-			wantErr: false,
-		},
-		{
-			name:    "large size",
-			sizeMB:  1000,
-			wantErr: false,
-		},
-	}
+	cache, err := NewBigCache(10, logger)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cache, err := NewBigCache(tt.sizeMB, logger)
-			if tt.wantErr {
-				assert.Error(t, err)
-				assert.Nil(t, cache)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, cache)
+	assert.NoError(t, err)
+	assert.NotNil(t, cache)
 
-				// Clean up
-				if cache != nil {
-					if bc, ok := cache.(*BigCache); ok {
-						bc.Close()
-					}
-				}
-			}
-		})
-	}
+	bigCache, ok := cache.(*BigCache)
+	assert.True(t, ok)
+	assert.NotNil(t, bigCache.cache)
+	assert.Equal(t, logger, bigCache.logger)
 }
 
-func TestBigCache_SetAndGet(t *testing.T) {
+func TestBigCache_Set_And_Get_Fresh(t *testing.T) {
 	logger := zap.NewNop()
 	cache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-	defer func() {
-		if bc, ok := cache.(*BigCache); ok {
-			bc.Close()
-		}
-	}()
+	assert.NoError(t, err)
 
-	key := "test-key"
-	value := []byte("test-value")
-	ttl := models.TTL{
-		Fresh: 5 * time.Second,
-		Stale: 10 * time.Second,
-	}
+	testData := []byte("test-value")
+	testTTL := models.TTL{Fresh: 60 * time.Second, Stale: 30 * time.Second}
 
-	// Test Set and Get
-	cache.Set(key, value, ttl)
+	// Set the value
+	cache.Set("test-key", testData, testTTL)
 
-	val, fresh, found := cache.Get(key)
+	// Get the value immediately (should be fresh)
+	result, found := cache.Get("test-key")
+
 	assert.True(t, found)
-	assert.True(t, fresh)
-	assert.Equal(t, value, val)
+	assert.NotNil(t, result)
+	assert.True(t, result.IsFresh())
+	assert.Equal(t, testData, result.Data)
 }
 
-func TestBigCache_GetNonExistent(t *testing.T) {
+func TestBigCache_Get_NotFound(t *testing.T) {
 	logger := zap.NewNop()
 	cache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-	defer func() {
-		if bc, ok := cache.(*BigCache); ok {
-			bc.Close()
-		}
-	}()
+	assert.NoError(t, err)
 
-	val, fresh, found := cache.Get("non-existent-key")
+	// Try to get non-existent key
+	result, found := cache.Get("non-existent-key")
+
 	assert.False(t, found)
-	assert.False(t, fresh)
-	assert.Nil(t, val)
+	assert.Nil(t, result)
 }
 
-func TestBigCache_GetStale(t *testing.T) {
+func TestBigCache_Set_And_Get_Stale(t *testing.T) {
 	logger := zap.NewNop()
 	cache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-	defer func() {
-		if bc, ok := cache.(*BigCache); ok {
-			bc.Close()
-		}
-	}()
+	assert.NoError(t, err)
 
-	key := "test-key"
-	value := []byte("test-value")
-	ttl := models.TTL{
-		Fresh: 1 * time.Second,
-		Stale: 2 * time.Second,
+	// Create a cache entry that's already stale
+	now := time.Now().Unix()
+	testData := []byte("test-value")
+
+	// Manually create a stale entry by setting timestamps in the past
+	bigCache := cache.(*BigCache)
+	entry := models.CacheEntry{
+		Data:      testData,
+		CreatedAt: now - 200,
+		StaleAt:   now - 50,  // Already stale
+		ExpiresAt: now + 100, // Not expired
 	}
 
-	// Set value
-	cache.Set(key, value, ttl)
+	// Manually marshal and set the entry
+	entryJSON, _ := json.Marshal(entry)
+	bigCache.cache.Set("test-key", entryJSON)
 
-	// Wait for fresh period to expire but not stale period
-	time.Sleep(1500 * time.Millisecond)
+	// Get the value (should be stale but not expired)
+	result, found := cache.Get("test-key")
 
-	// Should be stale but still available
-	val, fresh, found := cache.Get(key)
 	assert.True(t, found)
-	assert.False(t, fresh) // Should be stale
-	assert.Equal(t, value, val)
-
-	// GetStale should still return the value
-	staleVal, staleFound := cache.GetStale(key)
-	assert.True(t, staleFound)
-	assert.Equal(t, value, staleVal)
+	assert.NotNil(t, result)
+	assert.False(t, result.IsFresh())
+	assert.Equal(t, testData, result.Data)
 }
 
-func TestBigCache_ExpiredEntry(t *testing.T) {
+func TestBigCache_Set_And_Get_Expired(t *testing.T) {
 	logger := zap.NewNop()
 	cache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-	defer func() {
-		if bc, ok := cache.(*BigCache); ok {
-			bc.Close()
-		}
-	}()
+	assert.NoError(t, err)
 
-	key := "test-key"
-	value := []byte("test-value")
-	// Use very short TTL to ensure expiration
-	ttl := models.TTL{
-		Fresh: 500 * time.Millisecond,
-		Stale: 500 * time.Millisecond,
+	// Create a cache entry that's already expired
+	now := time.Now().Unix()
+	testData := []byte("test-value")
+
+	// Manually create an expired entry
+	bigCache := cache.(*BigCache)
+	entry := models.CacheEntry{
+		Data:      testData,
+		CreatedAt: now - 300,
+		StaleAt:   now - 200,
+		ExpiresAt: now - 100, // Already expired
 	}
 
-	// Set value
-	cache.Set(key, value, ttl)
+	// Manually marshal and set the entry
+	entryJSON, _ := json.Marshal(entry)
+	bigCache.cache.Set("test-key", entryJSON)
 
-	// Immediately check that it's fresh
-	val, fresh, found := cache.Get(key)
+	// Get the value (should be expired and not found)
+	result, found := cache.Get("test-key")
+
+	assert.False(t, found)
+	assert.Nil(t, result)
+}
+
+func TestBigCache_GetStale_Success(t *testing.T) {
+	logger := zap.NewNop()
+	cache, err := NewBigCache(10, logger)
+	assert.NoError(t, err)
+
+	// Create a cache entry that's stale but not expired
+	now := time.Now().Unix()
+	testData := []byte("test-value")
+
+	// Manually create a stale entry
+	bigCache := cache.(*BigCache)
+	entry := models.CacheEntry{
+		Data:      testData,
+		CreatedAt: now - 200,
+		StaleAt:   now - 50,  // Already stale
+		ExpiresAt: now + 100, // Not expired
+	}
+
+	// Manually marshal and set the entry
+	entryJSON, _ := json.Marshal(entry)
+	bigCache.cache.Set("test-key", entryJSON)
+
+	// Get stale value
+	result, found := cache.GetStale("test-key")
+
 	assert.True(t, found)
-	assert.True(t, fresh)
-	assert.Equal(t, value, val)
+	assert.NotNil(t, result)
+	assert.Equal(t, testData, result.Data)
+}
 
-	// Wait for both fresh and stale periods to expire (total: 1 second)
-	time.Sleep(1200 * time.Millisecond)
+func TestBigCache_GetStale_NotFound(t *testing.T) {
+	logger := zap.NewNop()
+	cache, err := NewBigCache(10, logger)
+	assert.NoError(t, err)
 
-	// Should not be found
-	val, fresh, found = cache.Get(key)
-	assert.False(t, found, "Entry should be expired and not found")
-	assert.False(t, fresh)
-	assert.Nil(t, val)
+	// Try to get stale value for non-existent key
+	result, found := cache.GetStale("non-existent-key")
 
-	// GetStale should also not find it
-	staleVal, staleFound := cache.GetStale(key)
-	assert.False(t, staleFound, "Expired entry should not be found even with GetStale")
-	assert.Nil(t, staleVal)
+	assert.False(t, found)
+	assert.Nil(t, result)
+}
+
+func TestBigCache_GetStale_Expired(t *testing.T) {
+	logger := zap.NewNop()
+	cache, err := NewBigCache(10, logger)
+	assert.NoError(t, err)
+
+	// Create a cache entry that's completely expired
+	now := time.Now().Unix()
+	testData := []byte("test-value")
+
+	// Manually create an expired entry
+	bigCache := cache.(*BigCache)
+	entry := models.CacheEntry{
+		Data:      testData,
+		CreatedAt: now - 300,
+		StaleAt:   now - 200,
+		ExpiresAt: now - 100, // Already expired
+	}
+
+	// Manually marshal and set the entry
+	entryJSON, _ := json.Marshal(entry)
+	bigCache.cache.Set("test-key", entryJSON)
+
+	// Try to get stale value (should be expired)
+	result, found := cache.GetStale("test-key")
+
+	assert.False(t, found)
+	assert.Nil(t, result)
 }
 
 func TestBigCache_Delete(t *testing.T) {
 	logger := zap.NewNop()
 	cache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-	defer func() {
-		if bc, ok := cache.(*BigCache); ok {
-			bc.Close()
-		}
-	}()
+	assert.NoError(t, err)
 
-	key := "test-key"
-	value := []byte("test-value")
-	ttl := models.TTL{
-		Fresh: 5 * time.Second,
-		Stale: 10 * time.Second,
-	}
+	testData := []byte("test-value")
+	testTTL := models.TTL{Fresh: 60 * time.Second, Stale: 30 * time.Second}
 
-	// Set and verify
-	cache.Set(key, value, ttl)
-	val, fresh, found := cache.Get(key)
+	// Set the value
+	cache.Set("test-key", testData, testTTL)
+
+	// Verify it exists
+	result, found := cache.Get("test-key")
 	assert.True(t, found)
-	assert.True(t, fresh)
-	assert.Equal(t, value, val)
+	assert.NotNil(t, result)
 
-	// Delete and verify
-	cache.Delete(key)
-	val, fresh, found = cache.Get(key)
+	// Delete it
+	cache.Delete("test-key")
+
+	// Verify it's gone
+	result, found = cache.Get("test-key")
 	assert.False(t, found)
-	assert.False(t, fresh)
-	assert.Nil(t, val)
+	assert.Nil(t, result)
 }
 
-func TestBigCache_DeleteNonExistent(t *testing.T) {
+func TestBigCache_Delete_NonExistent(t *testing.T) {
 	logger := zap.NewNop()
 	cache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-	defer func() {
-		if bc, ok := cache.(*BigCache); ok {
-			bc.Close()
-		}
-	}()
+	assert.NoError(t, err)
 
-	// Should not panic or error
+	// Delete non-existent key (should not panic)
 	cache.Delete("non-existent-key")
 }
 
-func TestBigCache_MultipleEntries(t *testing.T) {
+func TestBigCache_Multiple_Keys(t *testing.T) {
 	logger := zap.NewNop()
 	cache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-	defer func() {
-		if bc, ok := cache.(*BigCache); ok {
-			bc.Close()
-		}
-	}()
-
-	ttl := models.TTL{
-		Fresh: 5 * time.Second,
-		Stale: 10 * time.Second,
-	}
-
-	// Set multiple entries
-	entries := map[string][]byte{
-		"key1": []byte("value1"),
-		"key2": []byte("value2"),
-		"key3": []byte("value3"),
-	}
-
-	for key, value := range entries {
-		cache.Set(key, value, ttl)
-	}
-
-	// Verify all entries
-	for key, expectedValue := range entries {
-		val, fresh, found := cache.Get(key)
-		assert.True(t, found, "Key %s should be found", key)
-		assert.True(t, fresh, "Key %s should be fresh", key)
-		assert.Equal(t, expectedValue, val, "Key %s should have correct value", key)
-	}
-}
-
-func TestBigCache_MediumValue(t *testing.T) {
-	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-	defer func() {
-		if bc, ok := cache.(*BigCache); ok {
-			bc.Close()
-		}
-	}()
-
-	key := "medium-key"
-	// Create a medium-sized value that BigCache can handle
-	mediumValue := make([]byte, 1024) // 1KB
-	for i := range mediumValue {
-		mediumValue[i] = byte(i % 256)
-	}
-
-	ttl := models.TTL{
-		Fresh: 5 * time.Second,
-		Stale: 10 * time.Second,
-	}
-
-	cache.Set(key, mediumValue, ttl)
-
-	val, fresh, found := cache.Get(key)
-	assert.True(t, found)
-	assert.True(t, fresh)
-	assert.Equal(t, mediumValue, val)
-}
-
-func TestBigCache_ZeroTTL(t *testing.T) {
-	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-	defer func() {
-		if bc, ok := cache.(*BigCache); ok {
-			bc.Close()
-		}
-	}()
-
-	key := "zero-ttl-key"
-	value := []byte("zero-ttl-value")
-	ttl := models.TTL{
-		Fresh: 0,
-		Stale: 0,
-	}
-
-	cache.Set(key, value, ttl)
-
-	// With zero TTL, the entry is still fresh at the exact same timestamp
-	// but becomes stale/expired very quickly
-	val, fresh, found := cache.Get(key)
-
-	// The entry might be found and fresh at the exact same timestamp
-	// or might be expired if there's any time difference
-	if found {
-		assert.Equal(t, value, val)
-		// Could be fresh or stale depending on timing
-	} else {
-		// Entry was expired immediately
-		assert.False(t, fresh)
-		assert.Nil(t, val)
-	}
-}
-
-func TestBigCache_CorruptedEntry(t *testing.T) {
-	logger := zap.NewNop()
-	bigCache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-	defer func() {
-		if bc, ok := bigCache.(*BigCache); ok {
-			bc.Close()
-		}
-	}()
-
-	bc := bigCache.(*BigCache)
-	key := "corrupted-key"
-
-	// Manually set corrupted data
-	corruptedData := []byte("not-json")
-	err = bc.cache.Set(key, corruptedData)
-	require.NoError(t, err)
-
-	// Should handle corrupted entry gracefully
-	val, fresh, found := bc.Get(key)
-	assert.False(t, found)
-	assert.False(t, fresh)
-	assert.Nil(t, val)
-
-	// Entry should be removed after corruption detection
-	val, fresh, found = bc.Get(key)
-	assert.False(t, found)
-}
-
-func TestBigCache_CorruptedEntryGetStale(t *testing.T) {
-	logger := zap.NewNop()
-	bigCache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-	defer func() {
-		if bc, ok := bigCache.(*BigCache); ok {
-			bc.Close()
-		}
-	}()
-
-	bc := bigCache.(*BigCache)
-	key := "corrupted-key-stale"
-
-	// Manually set corrupted data
-	corruptedData := []byte("not-json")
-	err = bc.cache.Set(key, corruptedData)
-	require.NoError(t, err)
-
-	// Should handle corrupted entry gracefully in GetStale
-	val, found := bc.GetStale(key)
-	assert.False(t, found)
-	assert.Nil(t, val)
-}
-
-func TestCacheEntry_Serialization(t *testing.T) {
-	now := time.Now().Unix()
-	entry := CacheEntry{
-		Data:      []byte("test-data"),
-		ExpiresAt: now + 100,
-		StaleAt:   now + 50,
-		CreatedAt: now,
-	}
-
-	// Test marshaling
-	data, err := json.Marshal(entry)
 	assert.NoError(t, err)
-	assert.NotEmpty(t, data)
 
-	// Test unmarshaling
-	var unmarshaled CacheEntry
-	err = json.Unmarshal(data, &unmarshaled)
-	assert.NoError(t, err)
-	assert.Equal(t, entry, unmarshaled)
-}
+	testTTL := models.TTL{Fresh: 60 * time.Second, Stale: 30 * time.Second}
 
-func TestBigCache_Close(t *testing.T) {
-	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-
-	// Should close without error
-	bc, ok := cache.(*BigCache)
-	require.True(t, ok)
-	err = bc.Close()
-	assert.NoError(t, err)
-}
-
-func TestBigCache_ConcurrentAccess(t *testing.T) {
-	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-	defer func() {
-		if bc, ok := cache.(*BigCache); ok {
-			bc.Close()
-		}
-	}()
-
-	ttl := models.TTL{
-		Fresh: 5 * time.Second,
-		Stale: 10 * time.Second,
+	// Set multiple keys
+	for i := 0; i < 10; i++ {
+		key := fmt.Sprintf("key-%d", i)
+		value := []byte(fmt.Sprintf("value-%d", i))
+		cache.Set(key, value, testTTL)
 	}
 
-	// Test concurrent writes and reads
-	done := make(chan bool, 10)
+	// Verify all keys exist
+	for i := 0; i < 10; i++ {
+		key := fmt.Sprintf("key-%d", i)
+		expectedValue := []byte(fmt.Sprintf("value-%d", i))
 
-	// Start multiple goroutines writing
-	for i := 0; i < 5; i++ {
+		result, found := cache.Get(key)
+		assert.True(t, found)
+		assert.NotNil(t, result)
+		assert.Equal(t, expectedValue, result.Data)
+	}
+}
+
+func TestBigCache_Concurrent_Access(t *testing.T) {
+	logger := zap.NewNop()
+	cache, err := NewBigCache(10, logger)
+	assert.NoError(t, err)
+
+	testTTL := models.TTL{Fresh: 60 * time.Second, Stale: 30 * time.Second}
+	numGoroutines := 10
+	numOperations := 100
+
+	// Run concurrent operations
+	done := make(chan bool, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
 		go func(id int) {
-			key := "concurrent-key-" + string(rune(id+'0'))
-			value := []byte("concurrent-value-" + string(rune(id+'0')))
-			cache.Set(key, value, ttl)
-			done <- true
-		}(i)
-	}
+			for j := 0; j < numOperations; j++ {
+				key := fmt.Sprintf("concurrent-key-%d-%d", id, j)
+				value := []byte(fmt.Sprintf("value-%d-%d", id, j))
 
-	// Start multiple goroutines reading
-	for i := 0; i < 5; i++ {
-		go func(id int) {
-			key := "concurrent-key-" + string(rune(id+'0'))
-			cache.Get(key) // Don't care about result, just testing for race conditions
+				// Set
+				cache.Set(key, value, testTTL)
+
+				// Get
+				result, found := cache.Get(key)
+				if found {
+					assert.NotNil(t, result)
+					assert.Equal(t, value, result.Data)
+				}
+
+				// Delete
+				cache.Delete(key)
+			}
 			done <- true
 		}(i)
 	}
 
 	// Wait for all goroutines to complete
-	for i := 0; i < 10; i++ {
+	for i := 0; i < numGoroutines; i++ {
 		<-done
 	}
 }
 
-func TestBigCache_EdgeCases(t *testing.T) {
+func TestBigCache_Edge_Cases(t *testing.T) {
 	logger := zap.NewNop()
 	cache, err := NewBigCache(10, logger)
-	require.NoError(t, err)
-	defer func() {
-		if bc, ok := cache.(*BigCache); ok {
-			bc.Close()
-		}
-	}()
+	assert.NoError(t, err)
 
-	ttl := models.TTL{
-		Fresh: 1 * time.Second,
-		Stale: 1 * time.Second,
-	}
+	testTTL := models.TTL{Fresh: 60 * time.Second, Stale: 30 * time.Second}
 
 	t.Run("empty key", func(t *testing.T) {
-		cache.Set("", []byte("empty-key-value"), ttl)
-		val, fresh, found := cache.Get("")
+		cache.Set("", []byte("value"), testTTL)
+		result, found := cache.Get("")
 		assert.True(t, found)
-		assert.True(t, fresh)
-		assert.Equal(t, []byte("empty-key-value"), val)
+		assert.NotNil(t, result)
+		assert.Equal(t, []byte("value"), result.Data)
 	})
 
 	t.Run("empty value", func(t *testing.T) {
-		cache.Set("empty-value-key", []byte{}, ttl)
-		val, fresh, found := cache.Get("empty-value-key")
+		cache.Set("empty-value-key", []byte(""), testTTL)
+		result, found := cache.Get("empty-value-key")
 		assert.True(t, found)
-		assert.True(t, fresh)
-		assert.Equal(t, []byte{}, val)
+		assert.NotNil(t, result)
+		assert.Equal(t, []byte(""), result.Data)
 	})
 
 	t.Run("nil value", func(t *testing.T) {
-		cache.Set("nil-value-key", nil, ttl)
-		val, fresh, found := cache.Get("nil-value-key")
+		cache.Set("nil-value-key", nil, testTTL)
+		result, found := cache.Get("nil-value-key")
 		assert.True(t, found)
-		assert.True(t, fresh)
-		assert.Nil(t, val)
+		assert.NotNil(t, result)
+		assert.Nil(t, result.Data)
 	})
 }

@@ -53,13 +53,12 @@ func (mr *MockCacheMockRecorder) Delete(key any) *gomock.Call {
 }
 
 // Get mocks base method.
-func (m *MockCache) Get(key string) ([]byte, bool, bool) {
+func (m *MockCache) Get(key string) (*models.CacheEntry, bool) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", key)
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].(*models.CacheEntry)
 	ret1, _ := ret[1].(bool)
-	ret2, _ := ret[2].(bool)
-	return ret0, ret1, ret2
+	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
@@ -69,10 +68,10 @@ func (mr *MockCacheMockRecorder) Get(key any) *gomock.Call {
 }
 
 // GetStale mocks base method.
-func (m *MockCache) GetStale(key string) ([]byte, bool) {
+func (m *MockCache) GetStale(key string) (*models.CacheEntry, bool) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetStale", key)
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].(*models.CacheEntry)
 	ret1, _ := ret[1].(bool)
 	return ret0, ret1
 }

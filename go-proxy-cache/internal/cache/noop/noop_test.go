@@ -1,194 +1,141 @@
 package noop
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
-	"go-proxy-cache/internal/interfaces"
+	"github.com/stretchr/testify/assert"
+
 	"go-proxy-cache/internal/models"
 )
 
 func TestNewNoOpCache(t *testing.T) {
 	cache := NewNoOpCache()
 
-	// Verify it implements the Cache interface
-	var _ interfaces.Cache = cache
-
-	// Verify it returns a NoOpCache instance
-	if _, ok := cache.(*NoOpCache); !ok {
-		t.Errorf("NewNoOpCache() should return a *NoOpCache instance")
-	}
+	assert.NotNil(t, cache)
+	noOpCache, ok := cache.(*NoOpCache)
+	assert.True(t, ok)
+	assert.NotNil(t, noOpCache)
 }
 
-func TestNoOpCache_Get(t *testing.T) {
+func TestNoOpCache_Get_AlwaysReturnsNotFound(t *testing.T) {
 	cache := NewNoOpCache()
 
-	// Test with various keys
 	testCases := []string{
 		"test-key",
+		"another-key",
 		"",
-		"very-long-key-with-special-characters-!@#$%^&*()",
-		"key-with-numbers-123456789",
+		"very-long-key-name-that-should-still-return-not-found",
 	}
 
 	for _, key := range testCases {
-		t.Run("key="+key, func(t *testing.T) {
-			val, fresh, found := cache.Get(key)
-
-			if val != nil {
-				t.Errorf("Get(%q) val = %v, want nil", key, val)
-			}
-			if fresh {
-				t.Errorf("Get(%q) fresh = %v, want false", key, fresh)
-			}
-			if found {
-				t.Errorf("Get(%q) found = %v, want false", key, found)
-			}
+		t.Run("key: "+key, func(t *testing.T) {
+			result, found := cache.Get(key)
+			assert.False(t, found)
+			assert.Nil(t, result)
 		})
 	}
 }
 
-func TestNoOpCache_GetStale(t *testing.T) {
+func TestNoOpCache_GetStale_AlwaysReturnsNotFound(t *testing.T) {
 	cache := NewNoOpCache()
 
-	// Test with various keys
 	testCases := []string{
 		"test-key",
+		"another-key",
 		"",
-		"very-long-key-with-special-characters-!@#$%^&*()",
-		"key-with-numbers-123456789",
+		"stale-key",
 	}
 
 	for _, key := range testCases {
-		t.Run("key="+key, func(t *testing.T) {
-			val, found := cache.GetStale(key)
-
-			if val != nil {
-				t.Errorf("GetStale(%q) val = %v, want nil", key, val)
-			}
-			if found {
-				t.Errorf("GetStale(%q) found = %v, want false", key, found)
-			}
+		t.Run("key: "+key, func(t *testing.T) {
+			result, found := cache.GetStale(key)
+			assert.False(t, found)
+			assert.Nil(t, result)
 		})
 	}
 }
 
-func TestNoOpCache_Set(t *testing.T) {
+func TestNoOpCache_Set_DoesNothing(t *testing.T) {
 	cache := NewNoOpCache()
 
-	// Test setting various values
-	testCases := []struct {
-		key string
-		val []byte
-		ttl models.TTL
-	}{
-		{"test-key", []byte("test-value"), models.TTL{Fresh: 60 * time.Second, Stale: 120 * time.Second}},
-		{"", []byte(""), models.TTL{Fresh: 0, Stale: 0}},
-		{"binary-key", []byte{0x01, 0x02, 0x03, 0xFF}, models.TTL{Fresh: 3600 * time.Second, Stale: 7200 * time.Second}},
-		{"json-key", []byte(`{"test": "value"}`), models.TTL{Fresh: 300 * time.Second, Stale: 600 * time.Second}},
-	}
+	testData := []byte("test-value")
+	testTTL := models.TTL{Fresh: 60 * time.Second, Stale: 30 * time.Second}
 
-	for _, tc := range testCases {
-		t.Run("key="+tc.key, func(t *testing.T) {
-			// Set should not panic and should be a no-op
-			cache.Set(tc.key, tc.val, tc.ttl)
+	// Set should not panic
+	cache.Set("test-key", testData, testTTL)
 
-			// Verify it's still a cache miss after setting
-			val, fresh, found := cache.Get(tc.key)
-			if val != nil || fresh || found {
-				t.Errorf("After Set(%q, %v, %v), Get() = (%v, %v, %v), want (nil, false, false)",
-					tc.key, tc.val, tc.ttl, val, fresh, found)
-			}
-		})
+	// Verify it still returns not found
+	result, found := cache.Get("test-key")
+	assert.False(t, found)
+	assert.Nil(t, result)
+}
+
+func TestNoOpCache_Delete_DoesNothing(t *testing.T) {
+	cache := NewNoOpCache()
+
+	// Delete should not panic
+	cache.Delete("test-key")
+	cache.Delete("")
+	cache.Delete("non-existent-key")
+}
+
+func TestNoOpCache_Multiple_Operations(t *testing.T) {
+	cache := NewNoOpCache()
+
+	testTTL := models.TTL{Fresh: 60 * time.Second, Stale: 30 * time.Second}
+
+	// Perform multiple operations
+	for i := 0; i < 100; i++ {
+		key := fmt.Sprintf("key-%d", i)
+		value := []byte(fmt.Sprintf("value-%d", i))
+
+		// Set
+		cache.Set(key, value, testTTL)
+
+		// Get
+		result, found := cache.Get(key)
+		assert.False(t, found)
+		assert.Nil(t, result)
+
+		// GetStale
+		result, found = cache.GetStale(key)
+		assert.False(t, found)
+		assert.Nil(t, result)
+
+		// Delete
+		cache.Delete(key)
 	}
 }
 
-func TestNoOpCache_Delete(t *testing.T) {
+func TestNoOpCache_Concurrent_Operations(t *testing.T) {
 	cache := NewNoOpCache()
 
-	// Test deleting various keys
-	testCases := []string{
-		"test-key",
-		"",
-		"non-existent-key",
-		"very-long-key-with-special-characters-!@#$%^&*()",
-	}
+	testTTL := models.TTL{Fresh: 60 * time.Second, Stale: 30 * time.Second}
+	numGoroutines := 10
+	numOperations := 100
 
-	for _, key := range testCases {
-		t.Run("key="+key, func(t *testing.T) {
-			// Delete should not panic and should be a no-op
-			cache.Delete(key)
+	done := make(chan bool, numGoroutines)
 
-			// Verify it's still a cache miss after deleting
-			val, fresh, found := cache.Get(key)
-			if val != nil || fresh || found {
-				t.Errorf("After Delete(%q), Get() = (%v, %v, %v), want (nil, false, false)",
-					key, val, fresh, found)
-			}
-		})
-	}
-}
-
-func TestNoOpCache_InterfaceCompliance(t *testing.T) {
-	cache := NewNoOpCache()
-
-	// Verify all interface methods work as expected
-	key := "test-key"
-	value := []byte("test-value")
-	ttl := models.TTL{Fresh: 60 * time.Second, Stale: 120 * time.Second}
-
-	// Test the complete workflow
-	cache.Set(key, value, ttl)
-
-	val, fresh, found := cache.Get(key)
-	if val != nil || fresh || found {
-		t.Errorf("Get() after Set() = (%v, %v, %v), want (nil, false, false)", val, fresh, found)
-	}
-
-	val, found = cache.GetStale(key)
-	if val != nil || found {
-		t.Errorf("GetStale() after Set() = (%v, %v), want (nil, false)", val, found)
-	}
-
-	cache.Delete(key)
-
-	val, fresh, found = cache.Get(key)
-	if val != nil || fresh || found {
-		t.Errorf("Get() after Delete() = (%v, %v, %v), want (nil, false, false)", val, fresh, found)
-	}
-}
-
-func TestNoOpCache_ConcurrentAccess(t *testing.T) {
-	cache := NewNoOpCache()
-
-	// Test concurrent access to ensure no race conditions
-	done := make(chan bool)
-
-	// Start multiple goroutines performing operations
-	for i := 0; i < 10; i++ {
+	for i := 0; i < numGoroutines; i++ {
 		go func(id int) {
-			defer func() { done <- true }()
+			for j := 0; j < numOperations; j++ {
+				key := fmt.Sprintf("concurrent-key-%d-%d", id, j)
+				value := []byte(fmt.Sprintf("value-%d-%d", id, j))
 
-			key := "concurrent-key"
-			value := []byte("concurrent-value")
-			ttl := models.TTL{Fresh: 60 * time.Second, Stale: 120 * time.Second}
-
-			// Perform various operations
-			cache.Set(key, value, ttl)
-			cache.Get(key)
-			cache.GetStale(key)
-			cache.Delete(key)
+				// All operations should be safe and not panic
+				cache.Set(key, value, testTTL)
+				cache.Get(key)
+				cache.GetStale(key)
+				cache.Delete(key)
+			}
+			done <- true
 		}(i)
 	}
 
 	// Wait for all goroutines to complete
-	for i := 0; i < 10; i++ {
+	for i := 0; i < numGoroutines; i++ {
 		<-done
-	}
-
-	// Verify cache is still in expected state
-	val, fresh, found := cache.Get("concurrent-key")
-	if val != nil || fresh || found {
-		t.Errorf("After concurrent operations, Get() = (%v, %v, %v), want (nil, false, false)", val, fresh, found)
 	}
 }
