@@ -1,0 +1,52 @@
+# TTL defaults for different cache types and networks
+ttl_defaults:
+  # Default TTL values (in seconds)
+  default:
+    permanent: 86400    # 24 hours
+    short: 5           # 5 seconds  
+    minimal: 0         # No caching
+
+  # Ethereum mainnet specific TTLs
+  ethereum:mainnet:
+    permanent: 86400
+    short: 10
+    minimal: 0
+
+  # Polygon specific TTLs
+  polygon:mainnet:
+    permanent: 43200    # 12 hours
+    short: 5
+    minimal: 0
+
+# Cache rules mapping JSON-RPC methods to cache types
+cache_rules:
+  # Permanent cache - blockchain data that never changes
+  eth_getBlockByHash: "permanent"
+  eth_getBlockByNumber: "permanent"
+  eth_getTransactionByHash: "permanent"
+  eth_getTransactionReceipt: "permanent"
+  eth_getLogs: "permanent"
+  
+  # Short cache - data that changes frequently but can be cached briefly
+  eth_blockNumber: "short"
+  eth_gasPrice: "short"
+  eth_getBalance: "short"
+  eth_getCode: "short"
+  eth_getStorageAt: "short"
+  eth_getTransactionCount: "short"
+  eth_call: "short"
+  eth_estimateGas: "short"
+  
+  # Minimal/no cache - real-time data
+  eth_sendRawTransaction: "minimal"
+  eth_sendTransaction: "minimal"
+  
+  # Web3 methods
+  web3_clientVersion: "permanent"
+  web3_sha3: "permanent"
+  
+  # Net methods  
+  net_version: "permanent"
+  net_listening: "short"
+  net_peerCount: "short"
+

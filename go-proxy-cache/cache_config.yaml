@@ -1,0 +1,25 @@
+# L1 Cache Configuration (BigCache)
+l1:
+  enabled: true
+  size: 100  # Size in MB
+
+# L2 Cache Configuration (KeyDB/Redis)
+l2:
+  enabled: true
+  
+  # Connection settings
+  connection:
+    connect_timeout: 1000  # milliseconds
+    send_timeout: 1000     # milliseconds
+    read_timeout: 1000     # milliseconds
+
+  # Connection pool settings
+  keepalive:
+    pool_size: 10          # max connections in pool
+    max_idle_timeout: 10000 # milliseconds
+
+  # Cache settings
+  cache:
+    default_ttl: 3600      # default TTL in seconds
+    max_ttl: 86400         # max TTL in seconds
+

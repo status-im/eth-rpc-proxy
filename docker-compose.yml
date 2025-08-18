@@ -10,9 +10,7 @@ services:
       CUSTOM_DNS: '127.0.0.11'
       RELOAD_INTERVAL: '10'
       AUTH_CONFIG_FILE: '/app/auth_config.json'
-      CACHE_RULES_FILE: '/app/cache_rules.yaml'
-      KEYDB_CONFIG_FILE: '/app/keydb_config.yaml'
-      KEYDB_URL: 'redis://keydb:6379'
+      GO_CACHE_SOCKET: '/tmp/cache.sock'
     ports:
       - '8080:8080'
     networks:
@@ -21,12 +19,12 @@ services:
       - 'health-checker'
       - 'auth-service'
       - 'keydb'
+      - 'cache-service'
     volumes:
       - './secrets/default_providers.json:/app/providers.json:ro'
       - './secrets/.htpasswd:/etc/nginx/.htpasswd:ro'
       - './go-auth-service/auth_config.json:/app/auth_config.json:ro'
-      - './nginx-proxy/cache_rules.yaml:/app/cache_rules.yaml:ro'
-      - './nginx-proxy/keydb_config.yaml:/app/keydb_config.yaml:ro'
+      - 'cache_socket:/tmp'
     healthcheck:
       test: ['CMD-SHELL', 'nc -z 0.0.0.0 8080']
       interval: '30s'
@@ -126,9 +124,37 @@ services:
     depends_on:
       - 'keydb'
 
+  cache-service:
+    build:
+      context: './go-proxy-cache'
+      dockerfile: Dockerfile
+    container_name: 'cache-service'
+    restart: 'always'
+    environment:
+      CACHE_CONFIG_FILE: '/app/cache_config.yaml'
+      CACHE_RULES_FILE: '/app/cache_rules.yaml'
+      KEYDB_URL: 'redis://keydb:6379'
+      CACHE_SOCKET_PATH: '/tmp/cache.sock'
+    # No ports exposed - using Unix socket only
+    networks:
+      - 'rpc-network'
+    depends_on:
+      - 'keydb'
+    volumes:
+      - './go-proxy-cache/cache_config.yaml:/app/cache_config.yaml:ro'
+      - './go-proxy-cache/cache_rules.yaml:/app/cache_rules.yaml:ro'
+      - 'cache_socket:/tmp'
+    healthcheck:
+      test: ['CMD-SHELL', 'test -S /tmp/cache.sock || exit 1']
+      interval: '30s'
+      timeout: '30s'
+      retries: 3
+      start_period: '10s'
+
 networks:
   rpc-network:
     driver: bridge
 
 volumes:
   keydb-data:
+  cache_socket:
