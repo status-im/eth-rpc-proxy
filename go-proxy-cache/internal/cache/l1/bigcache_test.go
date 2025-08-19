@@ -9,13 +9,23 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
+	"go-proxy-cache/internal/config"
 	"go-proxy-cache/internal/models"
 )
 
+// Helper function to create test BigCache config
+func createTestBigCacheConfig() *config.BigCacheConfig {
+	return &config.BigCacheConfig{
+		Enabled: true,
+		Size:    10,
+	}
+}
+
 func TestNewBigCache(t *testing.T) {
 	logger := zap.NewNop()
+	cfg := createTestBigCacheConfig()
 
-	cache, err := NewBigCache(10, logger)
+	cache, err := NewBigCache(cfg, logger)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, cache)
@@ -28,7 +38,7 @@ func TestNewBigCache(t *testing.T) {
 
 func TestBigCache_Set_And_Get_Fresh(t *testing.T) {
 	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
+	cache, err := NewBigCache(createTestBigCacheConfig(), logger)
 	assert.NoError(t, err)
 
 	testData := []byte("test-value")
@@ -48,7 +58,7 @@ func TestBigCache_Set_And_Get_Fresh(t *testing.T) {
 
 func TestBigCache_Get_NotFound(t *testing.T) {
 	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
+	cache, err := NewBigCache(createTestBigCacheConfig(), logger)
 	assert.NoError(t, err)
 
 	// Try to get non-existent key
@@ -60,7 +70,7 @@ func TestBigCache_Get_NotFound(t *testing.T) {
 
 func TestBigCache_Set_And_Get_Stale(t *testing.T) {
 	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
+	cache, err := NewBigCache(createTestBigCacheConfig(), logger)
 	assert.NoError(t, err)
 
 	// Create a cache entry that's already stale
@@ -91,7 +101,7 @@ func TestBigCache_Set_And_Get_Stale(t *testing.T) {
 
 func TestBigCache_Set_And_Get_Expired(t *testing.T) {
 	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
+	cache, err := NewBigCache(createTestBigCacheConfig(), logger)
 	assert.NoError(t, err)
 
 	// Create a cache entry that's already expired
@@ -120,7 +130,7 @@ func TestBigCache_Set_And_Get_Expired(t *testing.T) {
 
 func TestBigCache_GetStale_Success(t *testing.T) {
 	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
+	cache, err := NewBigCache(createTestBigCacheConfig(), logger)
 	assert.NoError(t, err)
 
 	// Create a cache entry that's stale but not expired
@@ -150,7 +160,7 @@ func TestBigCache_GetStale_Success(t *testing.T) {
 
 func TestBigCache_GetStale_NotFound(t *testing.T) {
 	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
+	cache, err := NewBigCache(createTestBigCacheConfig(), logger)
 	assert.NoError(t, err)
 
 	// Try to get stale value for non-existent key
@@ -162,7 +172,7 @@ func TestBigCache_GetStale_NotFound(t *testing.T) {
 
 func TestBigCache_GetStale_Expired(t *testing.T) {
 	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
+	cache, err := NewBigCache(createTestBigCacheConfig(), logger)
 	assert.NoError(t, err)
 
 	// Create a cache entry that's completely expired
@@ -191,7 +201,7 @@ func TestBigCache_GetStale_Expired(t *testing.T) {
 
 func TestBigCache_Delete(t *testing.T) {
 	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
+	cache, err := NewBigCache(createTestBigCacheConfig(), logger)
 	assert.NoError(t, err)
 
 	testData := []byte("test-value")
@@ -216,7 +226,7 @@ func TestBigCache_Delete(t *testing.T) {
 
 func TestBigCache_Delete_NonExistent(t *testing.T) {
 	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
+	cache, err := NewBigCache(createTestBigCacheConfig(), logger)
 	assert.NoError(t, err)
 
 	// Delete non-existent key (should not panic)
@@ -225,7 +235,7 @@ func TestBigCache_Delete_NonExistent(t *testing.T) {
 
 func TestBigCache_Multiple_Keys(t *testing.T) {
 	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
+	cache, err := NewBigCache(createTestBigCacheConfig(), logger)
 	assert.NoError(t, err)
 
 	testTTL := models.TTL{Fresh: 60 * time.Second, Stale: 30 * time.Second}
@@ -251,7 +261,7 @@ func TestBigCache_Multiple_Keys(t *testing.T) {
 
 func TestBigCache_Concurrent_Access(t *testing.T) {
 	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
+	cache, err := NewBigCache(createTestBigCacheConfig(), logger)
 	assert.NoError(t, err)
 
 	testTTL := models.TTL{Fresh: 60 * time.Second, Stale: 30 * time.Second}
@@ -292,7 +302,7 @@ func TestBigCache_Concurrent_Access(t *testing.T) {
 
 func TestBigCache_Edge_Cases(t *testing.T) {
 	logger := zap.NewNop()
-	cache, err := NewBigCache(10, logger)
+	cache, err := NewBigCache(createTestBigCacheConfig(), logger)
 	assert.NoError(t, err)
 
 	testTTL := models.TTL{Fresh: 60 * time.Second, Stale: 30 * time.Second}

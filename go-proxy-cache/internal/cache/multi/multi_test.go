@@ -22,7 +22,7 @@ func TestNewMultiCache(t *testing.T) {
 	cache2 := mock.NewMockCache(ctrl)
 	caches := []interfaces.Cache{cache1, cache2}
 
-	multiCache := NewMultiCache(caches, logger)
+	multiCache := NewMultiCache(caches, logger, true)
 
 	assert.NotNil(t, multiCache)
 	mc := multiCache.(*MultiCache)
@@ -40,7 +40,7 @@ func TestMultiCache_Get_FirstCacheHit(t *testing.T) {
 	cache2 := mock.NewMockCache(ctrl)
 	caches := []interfaces.Cache{cache1, cache2}
 
-	multiCache := NewMultiCache(caches, logger)
+	multiCache := NewMultiCache(caches, logger, true)
 
 	expectedEntry := &models.CacheEntry{
 		Data:      []byte("test-value"),
@@ -66,7 +66,7 @@ func TestMultiCache_Get_SecondCacheHit(t *testing.T) {
 	cache2 := mock.NewMockCache(ctrl)
 	caches := []interfaces.Cache{cache1, cache2}
 
-	multiCache := NewMultiCache(caches, logger)
+	multiCache := NewMultiCache(caches, logger, true)
 
 	expectedEntry := &models.CacheEntry{
 		Data:      []byte("test-value"),
@@ -95,7 +95,7 @@ func TestMultiCache_Get_AllCachesMiss(t *testing.T) {
 	cache2 := mock.NewMockCache(ctrl)
 	caches := []interfaces.Cache{cache1, cache2}
 
-	multiCache := NewMultiCache(caches, logger)
+	multiCache := NewMultiCache(caches, logger, true)
 
 	cache1.EXPECT().Get("test-key").Return(nil, false).Times(1)
 	cache2.EXPECT().Get("test-key").Return(nil, false).Times(1)
@@ -109,7 +109,7 @@ func TestMultiCache_Get_AllCachesMiss(t *testing.T) {
 func TestMultiCache_Get_NoCaches(t *testing.T) {
 	logger := zap.NewNop()
 
-	multiCache := NewMultiCache([]interfaces.Cache{}, logger)
+	multiCache := NewMultiCache([]interfaces.Cache{}, logger, true)
 
 	entry, found := multiCache.Get("test-key")
 
@@ -126,7 +126,7 @@ func TestMultiCache_GetStale_FirstCacheHit(t *testing.T) {
 	cache2 := mock.NewMockCache(ctrl)
 	caches := []interfaces.Cache{cache1, cache2}
 
-	multiCache := NewMultiCache(caches, logger)
+	multiCache := NewMultiCache(caches, logger, true)
 
 	expectedEntry := &models.CacheEntry{
 		Data:      []byte("test-value"),
@@ -151,7 +151,7 @@ func TestMultiCache_GetStale_SecondCacheHit(t *testing.T) {
 	cache2 := mock.NewMockCache(ctrl)
 	caches := []interfaces.Cache{cache1, cache2}
 
-	multiCache := NewMultiCache(caches, logger)
+	multiCache := NewMultiCache(caches, logger, true)
 
 	expectedEntry := &models.CacheEntry{
 		Data:      []byte("test-value"),
@@ -180,7 +180,7 @@ func TestMultiCache_Set_AllCaches(t *testing.T) {
 	cache2 := mock.NewMockCache(ctrl)
 	caches := []interfaces.Cache{cache1, cache2}
 
-	multiCache := NewMultiCache(caches, logger)
+	multiCache := NewMultiCache(caches, logger, true)
 
 	testVal := []byte("test-value")
 	testTTL := models.TTL{Fresh: 60 * time.Second, Stale: 30 * time.Second}
@@ -194,7 +194,7 @@ func TestMultiCache_Set_AllCaches(t *testing.T) {
 func TestMultiCache_Set_NoCaches(t *testing.T) {
 	logger := zap.NewNop()
 
-	multiCache := NewMultiCache([]interfaces.Cache{}, logger)
+	multiCache := NewMultiCache([]interfaces.Cache{}, logger, true)
 
 	testVal := []byte("test-value")
 	testTTL := models.TTL{Fresh: 60 * time.Second, Stale: 30 * time.Second}
@@ -212,7 +212,7 @@ func TestMultiCache_Delete_AllCaches(t *testing.T) {
 	cache2 := mock.NewMockCache(ctrl)
 	caches := []interfaces.Cache{cache1, cache2}
 
-	multiCache := NewMultiCache(caches, logger)
+	multiCache := NewMultiCache(caches, logger, true)
 
 	cache1.EXPECT().Delete("test-key").Times(1)
 	cache2.EXPECT().Delete("test-key").Times(1)
@@ -223,7 +223,7 @@ func TestMultiCache_Delete_AllCaches(t *testing.T) {
 func TestMultiCache_Delete_NoCaches(t *testing.T) {
 	logger := zap.NewNop()
 
-	multiCache := NewMultiCache([]interfaces.Cache{}, logger)
+	multiCache := NewMultiCache([]interfaces.Cache{}, logger, true)
 
 	// Should not panic
 	multiCache.Delete("test-key")
@@ -238,8 +238,40 @@ func TestMultiCache_GetCacheCount(t *testing.T) {
 	cache2 := mock.NewMockCache(ctrl)
 	caches := []interfaces.Cache{cache1, cache2}
 
-	multiCache := NewMultiCache(caches, logger)
+	multiCache := NewMultiCache(caches, logger, true)
 	mc := multiCache.(*MultiCache)
 
 	assert.Equal(t, 2, mc.GetCacheCount())
+}
+
+func TestMultiCache_PropagationDisabled(t *testing.T) {
+	logger := zap.NewNop()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	cache1 := mock.NewMockCache(ctrl)
+	cache2 := mock.NewMockCache(ctrl)
+	caches := []interfaces.Cache{cache1, cache2}
+
+	// Create MultiCache with propagation disabled
+	multiCache := NewMultiCache(caches, logger, false)
+
+	expectedEntry := &models.CacheEntry{
+		Data:      []byte("test-value"),
+		CreatedAt: time.Now().Unix(),
+		StaleAt:   time.Now().Unix() + 60,
+		ExpiresAt: time.Now().Unix() + 120,
+	}
+
+	// First cache misses, second cache hits
+	cache1.EXPECT().Get("test-key").Return(nil, false)
+	cache2.EXPECT().Get("test-key").Return(expectedEntry, true)
+
+	// With propagation disabled, cache1.Set should NOT be called
+	// (no expectations set for cache1.Set)
+
+	entry, found := multiCache.Get("test-key")
+
+	assert.True(t, found)
+	assert.Equal(t, expectedEntry, entry)
 }

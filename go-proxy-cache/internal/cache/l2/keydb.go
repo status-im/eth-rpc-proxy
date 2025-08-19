@@ -17,23 +17,23 @@ var _ interfaces.Cache = (*KeyDBCache)(nil)
 
 // KeyDBCache implements L2 cache using Redis/KeyDB
 type KeyDBCache struct {
-	client interfaces.KeyDbClient
-	config *config.Config
-	logger *zap.Logger
+	client   interfaces.KeyDbClient
+	keydbCfg *config.KeyDBConfig
+	logger   *zap.Logger
 }
 
 // NewKeyDBCache creates a new KeyDBCache instance with provided client
-func NewKeyDBCache(cfg *config.Config, client interfaces.KeyDbClient, logger *zap.Logger) interfaces.Cache {
+func NewKeyDBCache(keydbCfg *config.KeyDBConfig, client interfaces.KeyDbClient, logger *zap.Logger) interfaces.Cache {
 	return &KeyDBCache{
-		client: client,
-		config: cfg,
-		logger: logger,
+		client:   client,
+		keydbCfg: keydbCfg,
+		logger:   logger,
 	}
 }
 
 // Get retrieves value from KeyDB cache with freshness information
 func (kc *KeyDBCache) Get(key string) (*models.CacheEntry, bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), kc.config.GetReadTimeout())
+	ctx, cancel := context.WithTimeout(context.Background(), kc.keydbCfg.Connection.ReadTimeout)
 	defer cancel()
 
 	data, err := kc.client.Get(ctx, key).Result()
@@ -60,7 +60,7 @@ func (kc *KeyDBCache) Get(key string) (*models.CacheEntry, bool) {
 
 // GetStale retrieves value from KeyDB cache regardless of freshness
 func (kc *KeyDBCache) GetStale(key string) (*models.CacheEntry, bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), kc.config.GetReadTimeout())
+	ctx, cancel := context.WithTimeout(context.Background(), kc.keydbCfg.Connection.ReadTimeout)
 	defer cancel()
 
 	data, err := kc.client.Get(ctx, key).Result()
@@ -87,7 +87,7 @@ func (kc *KeyDBCache) GetStale(key string) (*models.CacheEntry, bool) {
 
 // Set stores value in KeyDB cache with TTL
 func (kc *KeyDBCache) Set(key string, val []byte, ttl models.TTL) {
-	ctx, cancel := context.WithTimeout(context.Background(), kc.config.GetSendTimeout())
+	ctx, cancel := context.WithTimeout(context.Background(), kc.keydbCfg.Connection.SendTimeout)
 	defer cancel()
 
 	now := time.Now().Unix()
@@ -116,7 +116,7 @@ func (kc *KeyDBCache) Set(key string, val []byte, ttl models.TTL) {
 
 // Delete removes entry from KeyDB cache
 func (kc *KeyDBCache) Delete(key string) {
-	ctx, cancel := context.WithTimeout(context.Background(), kc.config.GetSendTimeout())
+	ctx, cancel := context.WithTimeout(context.Background(), kc.keydbCfg.Connection.SendTimeout)
 	defer cancel()
 
 	err := kc.client.Del(ctx, key).Err()

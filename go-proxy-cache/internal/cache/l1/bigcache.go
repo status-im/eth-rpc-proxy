@@ -8,6 +8,7 @@ import (
 	"github.com/allegro/bigcache/v3"
 	"go.uber.org/zap"
 
+	"go-proxy-cache/internal/config"
 	"go-proxy-cache/internal/interfaces"
 	"go-proxy-cache/internal/models"
 )
@@ -22,9 +23,9 @@ type BigCache struct {
 }
 
 // NewBigCache creates a new BigCache instance
-func NewBigCache(sizeMB int, logger *zap.Logger) (interfaces.Cache, error) {
+func NewBigCache(bigcacheCfg *config.BigCacheConfig, logger *zap.Logger) (interfaces.Cache, error) {
 	config := bigcache.DefaultConfig(10 * time.Minute) // Default eviction time
-	config.HardMaxCacheSize = sizeMB                   // Size in MB
+	config.HardMaxCacheSize = bigcacheCfg.Size         // Size in MB
 	config.Verbose = false
 	config.MaxEntrySize = 1024 * 1024 // 1MB max entry size
 

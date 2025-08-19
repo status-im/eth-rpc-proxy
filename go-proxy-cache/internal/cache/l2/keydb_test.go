@@ -16,12 +16,32 @@ import (
 	"go-proxy-cache/internal/models"
 )
 
+// Helper function to create test KeyDB config
+func createTestKeyDBConfig() *config.KeyDBConfig {
+	return &config.KeyDBConfig{
+		Enabled: true,
+		Connection: config.ConnectionConfig{
+			ConnectTimeout: 1000 * time.Millisecond,
+			SendTimeout:    1000 * time.Millisecond,
+			ReadTimeout:    1000 * time.Millisecond,
+		},
+		Keepalive: config.KeepaliveConfig{
+			PoolSize:       10,
+			MaxIdleTimeout: 10000 * time.Millisecond,
+		},
+		Cache: config.CacheConfig{
+			DefaultTTL: 3600 * time.Second,
+			MaxTTL:     86400 * time.Second,
+		},
+	}
+}
+
 func TestNewKeyDBCache(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockClient := mock.NewMockKeyDbClient(ctrl)
-	cfg := &config.Config{}
+	cfg := createTestKeyDBConfig()
 	logger := zap.NewNop()
 
 	cache := NewKeyDBCache(cfg, mockClient, logger)
@@ -30,7 +50,7 @@ func TestNewKeyDBCache(t *testing.T) {
 	keydbCache, ok := cache.(*KeyDBCache)
 	assert.True(t, ok)
 	assert.Equal(t, mockClient, keydbCache.client)
-	assert.Equal(t, cfg, keydbCache.config)
+	assert.Equal(t, cfg, keydbCache.keydbCfg)
 	assert.Equal(t, logger, keydbCache.logger)
 }
 
@@ -39,7 +59,7 @@ func TestKeyDBCache_Get_Success_Fresh(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := mock.NewMockKeyDbClient(ctrl)
-	cfg := &config.Config{}
+	cfg := createTestKeyDBConfig()
 	logger := zap.NewNop()
 
 	cache := NewKeyDBCache(cfg, mockClient, logger).(*KeyDBCache)
@@ -73,7 +93,7 @@ func TestKeyDBCache_Get_Success_Stale(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := mock.NewMockKeyDbClient(ctrl)
-	cfg := &config.Config{}
+	cfg := createTestKeyDBConfig()
 	logger := zap.NewNop()
 
 	cache := NewKeyDBCache(cfg, mockClient, logger).(*KeyDBCache)
@@ -107,7 +127,7 @@ func TestKeyDBCache_Get_NotFound(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := mock.NewMockKeyDbClient(ctrl)
-	cfg := &config.Config{}
+	cfg := createTestKeyDBConfig()
 	logger := zap.NewNop()
 
 	cache := NewKeyDBCache(cfg, mockClient, logger).(*KeyDBCache)
@@ -129,7 +149,7 @@ func TestKeyDBCache_Get_Error(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := mock.NewMockKeyDbClient(ctrl)
-	cfg := &config.Config{}
+	cfg := createTestKeyDBConfig()
 	logger := zap.NewNop()
 
 	cache := NewKeyDBCache(cfg, mockClient, logger).(*KeyDBCache)
@@ -151,7 +171,7 @@ func TestKeyDBCache_Get_Expired(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := mock.NewMockKeyDbClient(ctrl)
-	cfg := &config.Config{}
+	cfg := createTestKeyDBConfig()
 	logger := zap.NewNop()
 
 	cache := NewKeyDBCache(cfg, mockClient, logger).(*KeyDBCache)
@@ -186,7 +206,7 @@ func TestKeyDBCache_Get_InvalidJSON(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := mock.NewMockKeyDbClient(ctrl)
-	cfg := &config.Config{}
+	cfg := createTestKeyDBConfig()
 	logger := zap.NewNop()
 
 	cache := NewKeyDBCache(cfg, mockClient, logger).(*KeyDBCache)
@@ -211,7 +231,7 @@ func TestKeyDBCache_GetStale_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := mock.NewMockKeyDbClient(ctrl)
-	cfg := &config.Config{}
+	cfg := createTestKeyDBConfig()
 	logger := zap.NewNop()
 
 	cache := NewKeyDBCache(cfg, mockClient, logger).(*KeyDBCache)
@@ -244,7 +264,7 @@ func TestKeyDBCache_GetStale_NotFound(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := mock.NewMockKeyDbClient(ctrl)
-	cfg := &config.Config{}
+	cfg := createTestKeyDBConfig()
 	logger := zap.NewNop()
 
 	cache := NewKeyDBCache(cfg, mockClient, logger).(*KeyDBCache)
@@ -266,7 +286,7 @@ func TestKeyDBCache_GetStale_Expired(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := mock.NewMockKeyDbClient(ctrl)
-	cfg := &config.Config{}
+	cfg := createTestKeyDBConfig()
 	logger := zap.NewNop()
 
 	cache := NewKeyDBCache(cfg, mockClient, logger).(*KeyDBCache)
@@ -301,7 +321,7 @@ func TestKeyDBCache_Set_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := mock.NewMockKeyDbClient(ctrl)
-	cfg := &config.Config{}
+	cfg := createTestKeyDBConfig()
 	logger := zap.NewNop()
 
 	cache := NewKeyDBCache(cfg, mockClient, logger).(*KeyDBCache)
@@ -324,7 +344,7 @@ func TestKeyDBCache_Delete_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := mock.NewMockKeyDbClient(ctrl)
-	cfg := &config.Config{}
+	cfg := createTestKeyDBConfig()
 	logger := zap.NewNop()
 
 	cache := NewKeyDBCache(cfg, mockClient, logger).(*KeyDBCache)

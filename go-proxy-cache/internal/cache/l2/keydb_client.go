@@ -24,7 +24,7 @@ type RedisKeyDbClient struct {
 }
 
 // NewRedisKeyDbClient creates a new RedisKeyDbClient instance
-func NewRedisKeyDbClient(cfg *config.Config, keydbURL string, logger *zap.Logger) (interfaces.KeyDbClient, error) {
+func NewRedisKeyDbClient(keydbCfg *config.KeyDBConfig, keydbURL string, logger *zap.Logger) (interfaces.KeyDbClient, error) {
 	// Parse KeyDB URL
 	parsedURL, err := url.Parse(keydbURL)
 	if err != nil {
@@ -41,11 +41,11 @@ func NewRedisKeyDbClient(cfg *config.Config, keydbURL string, logger *zap.Logger
 	// Create Redis client options
 	opts := &redis.Options{
 		Addr:         fmt.Sprintf("%s:%s", host, port),
-		DialTimeout:  cfg.GetConnectTimeout(),
-		ReadTimeout:  cfg.GetReadTimeout(),
-		WriteTimeout: cfg.GetSendTimeout(),
-		PoolSize:     cfg.L2.Keepalive.PoolSize,
-		IdleTimeout:  cfg.GetMaxIdleTimeout(),
+		DialTimeout:  keydbCfg.Connection.ConnectTimeout,
+		ReadTimeout:  keydbCfg.Connection.ReadTimeout,
+		WriteTimeout: keydbCfg.Connection.SendTimeout,
+		PoolSize:     keydbCfg.Keepalive.PoolSize,
+		IdleTimeout:  keydbCfg.Keepalive.MaxIdleTimeout,
 	}
 
 	// Handle password if present in URL
@@ -65,7 +65,7 @@ func NewRedisKeyDbClient(cfg *config.Config, keydbURL string, logger *zap.Logger
 	client := redis.NewClient(opts)
 
 	// Test connection
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.GetConnectTimeout())
+	ctx, cancel := context.WithTimeout(context.Background(), keydbCfg.Connection.ConnectTimeout)
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
@@ -74,8 +74,8 @@ func NewRedisKeyDbClient(cfg *config.Config, keydbURL string, logger *zap.Logger
 
 	logger.Info("Connected to KeyDB",
 		zap.String("address", opts.Addr),
-		zap.Duration("connect_timeout", cfg.GetConnectTimeout()),
-		zap.Int("pool_size", cfg.L2.Keepalive.PoolSize))
+		zap.Duration("connect_timeout", keydbCfg.Connection.ConnectTimeout),
+		zap.Int("pool_size", keydbCfg.Keepalive.PoolSize))
 
 	return &RedisKeyDbClient{
 		client: client,
