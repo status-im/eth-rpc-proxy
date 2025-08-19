@@ -41,7 +41,7 @@ local function read_config_from_url(url)
         return nil, "HTTP error: " .. res.status
     end
 
-    ngx.log(ngx.INFO, "Successfully fetched configuration from URL: ", request_url)
+    ngx.log(ngx.INFO, "Successfully fetched configuration from URL")
     return res.body, nil
 end
 
@@ -100,7 +100,7 @@ function M.reload_providers(premature, url, fallbackLocalConfig)
     for _, chain in ipairs(parsed_config.chains or {}) do
         local key = chain.name .. ":" .. chain.network
         ngx.shared.providers:set(key, json.encode(chain.providers))
-        ngx.log(ngx.INFO, "Loaded providers for ", key, json.encode(chain.providers))
+        ngx.log(ngx.INFO, "Loaded providers for ", key, " (", #chain.providers, " providers)")
     end
 
     ngx.log(ngx.INFO, "Providers reloaded and stored by chain/network")

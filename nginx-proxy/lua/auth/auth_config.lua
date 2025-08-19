@@ -23,9 +23,9 @@ function _M.load_config(premature)
     _M.go_auth_service_url = final_url
     
     if resolved_url then
-        ngx.log(ngx.NOTICE, "auth_config: Resolved auth service URL: ", _M.go_auth_service_url)
+        ngx.log(ngx.NOTICE, "auth_config: Successfully resolved auth service URL")
     else
-        ngx.log(ngx.WARN, "auth_config: Failed to resolve auth service URL, using original: ", _M.go_auth_service_url, " Error: ", err or "unknown")
+        ngx.log(ngx.WARN, "auth_config: Failed to resolve auth service URL, using fallback. Error: ", err or "unknown")
     end
 
     -- Read and parse JSON config file
