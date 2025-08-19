@@ -29,22 +29,25 @@ func TestLoadConfig(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 
 	validConfig := `
-l1:
+bigcache:
   enabled: true
   size: 200
 
-l2:
+keydb:
   enabled: true
   connection:
-    connect_timeout: 2000
-    send_timeout: 2000
-    read_timeout: 2000
+    connect_timeout: 2s
+    send_timeout: 2s
+    read_timeout: 2s
   keepalive:
     pool_size: 20
-    max_idle_timeout: 20000
+    max_idle_timeout: 20s
   cache:
-    default_ttl: 7200
-    max_ttl: 172800
+    default_ttl: 2h
+    max_ttl: 48h
+
+multi_cache:
+  enable_propagation: true
 `
 
 	configFile := createTestConfigFile(t, validConfig)
@@ -55,26 +58,31 @@ l2:
 		t.Fatalf("LoadConfig() error = %v", err)
 	}
 
-	// Test L1 config
-	if !config.L1.Enabled {
-		t.Errorf("LoadConfig() L1.Enabled = false, want true")
+	// Test BigCache config
+	if !config.BigCache.Enabled {
+		t.Errorf("LoadConfig() BigCache.Enabled = false, want true")
 	}
-	if config.L1.Size != 200 {
-		t.Errorf("LoadConfig() L1.Size = %v, want 200", config.L1.Size)
+	if config.BigCache.Size != 200 {
+		t.Errorf("LoadConfig() BigCache.Size = %v, want 200", config.BigCache.Size)
 	}
 
-	// Test L2 config
-	if !config.L2.Enabled {
-		t.Errorf("LoadConfig() L2.Enabled = false, want true")
+	// Test KeyDB config
+	if !config.KeyDB.Enabled {
+		t.Errorf("LoadConfig() KeyDB.Enabled = false, want true")
 	}
-	if config.L2.Connection.ConnectTimeout != 2000 {
-		t.Errorf("LoadConfig() L2.Connection.ConnectTimeout = %v, want 2000", config.L2.Connection.ConnectTimeout)
+	if config.KeyDB.Connection.ConnectTimeout != 2*time.Second {
+		t.Errorf("LoadConfig() KeyDB.Connection.ConnectTimeout = %v, want 2s", config.KeyDB.Connection.ConnectTimeout)
 	}
-	if config.L2.Keepalive.PoolSize != 20 {
-		t.Errorf("LoadConfig() L2.Keepalive.PoolSize = %v, want 20", config.L2.Keepalive.PoolSize)
+	if config.KeyDB.Keepalive.PoolSize != 20 {
+		t.Errorf("LoadConfig() KeyDB.Keepalive.PoolSize = %v, want 20", config.KeyDB.Keepalive.PoolSize)
 	}
-	if config.L2.Cache.DefaultTTL != 7200 {
-		t.Errorf("LoadConfig() L2.Cache.DefaultTTL = %v, want 7200", config.L2.Cache.DefaultTTL)
+	if config.KeyDB.Cache.DefaultTTL != 2*time.Hour {
+		t.Errorf("LoadConfig() KeyDB.Cache.DefaultTTL = %v, want 2h", config.KeyDB.Cache.DefaultTTL)
+	}
+
+	// Test MultiCache config
+	if !config.MultiCache.EnablePropagation {
+		t.Errorf("LoadConfig() MultiCache.EnablePropagation = false, want true")
 	}
 }
 
@@ -82,10 +90,10 @@ func TestLoadConfig_WithDefaults(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 
 	minimalConfig := `
-l1:
+bigcache:
   enabled: true
 
-l2:
+keydb:
   enabled: true
 `
 
@@ -98,17 +106,17 @@ l2:
 	}
 
 	// Test that defaults are applied
-	if config.L1.Size != 100 {
-		t.Errorf("LoadConfig() L1.Size = %v, want 100 (default)", config.L1.Size)
+	if config.BigCache.Size != 100 {
+		t.Errorf("LoadConfig() BigCache.Size = %v, want 100 (default)", config.BigCache.Size)
 	}
-	if config.L2.Connection.ConnectTimeout != 1000 {
-		t.Errorf("LoadConfig() L2.Connection.ConnectTimeout = %v, want 1000 (default)", config.L2.Connection.ConnectTimeout)
+	if config.KeyDB.Connection.ConnectTimeout != 1000*time.Millisecond {
+		t.Errorf("LoadConfig() KeyDB.Connection.ConnectTimeout = %v, want 1000ms (default)", config.KeyDB.Connection.ConnectTimeout)
 	}
-	if config.L2.Keepalive.PoolSize != 10 {
-		t.Errorf("LoadConfig() L2.Keepalive.PoolSize = %v, want 10 (default)", config.L2.Keepalive.PoolSize)
+	if config.KeyDB.Keepalive.PoolSize != 10 {
+		t.Errorf("LoadConfig() KeyDB.Keepalive.PoolSize = %v, want 10 (default)", config.KeyDB.Keepalive.PoolSize)
 	}
-	if config.L2.Cache.DefaultTTL != 3600 {
-		t.Errorf("LoadConfig() L2.Cache.DefaultTTL = %v, want 3600 (default)", config.L2.Cache.DefaultTTL)
+	if config.KeyDB.Cache.DefaultTTL != 3600*time.Second {
+		t.Errorf("LoadConfig() KeyDB.Cache.DefaultTTL = %v, want 3600s (default)", config.KeyDB.Cache.DefaultTTL)
 	}
 }
 
@@ -125,7 +133,7 @@ func TestLoadConfig_InvalidYAML(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 
 	invalidConfig := `
-l1:
+bigcache:
   enabled: true
   invalid yaml syntax [
 `
@@ -139,116 +147,51 @@ l1:
 	}
 }
 
-func TestConfig_TimeoutMethods(t *testing.T) {
-	config := &Config{
-		L2: L2Config{
-			Connection: ConnectionConfig{
-				ConnectTimeout: 1500,
-				SendTimeout:    2500,
-				ReadTimeout:    3500,
-			},
-			Keepalive: KeepaliveConfig{
-				MaxIdleTimeout: 15000,
-			},
-			Cache: CacheConfig{
-				DefaultTTL: 7200,
-				MaxTTL:     86400,
-			},
-		},
-	}
-
-	tests := []struct {
-		name     string
-		method   func() time.Duration
-		expected time.Duration
-	}{
-		{
-			name:     "GetConnectTimeout",
-			method:   config.GetConnectTimeout,
-			expected: 1500 * time.Millisecond,
-		},
-		{
-			name:     "GetSendTimeout",
-			method:   config.GetSendTimeout,
-			expected: 2500 * time.Millisecond,
-		},
-		{
-			name:     "GetReadTimeout",
-			method:   config.GetReadTimeout,
-			expected: 3500 * time.Millisecond,
-		},
-		{
-			name:     "GetMaxIdleTimeout",
-			method:   config.GetMaxIdleTimeout,
-			expected: 15000 * time.Millisecond,
-		},
-		{
-			name:     "GetDefaultTTL",
-			method:   config.GetDefaultTTL,
-			expected: 7200 * time.Second,
-		},
-		{
-			name:     "GetMaxTTL",
-			method:   config.GetMaxTTL,
-			expected: 86400 * time.Second,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.method()
-			if result != tt.expected {
-				t.Errorf("%s() = %v, want %v", tt.name, result, tt.expected)
-			}
-		})
-	}
-}
-
 func TestConfig_ApplyDefaults(t *testing.T) {
 	config := &Config{}
 	config.applyDefaults()
 
-	// Test L1 defaults
-	if config.L1.Size != 100 {
-		t.Errorf("applyDefaults() L1.Size = %v, want 100", config.L1.Size)
+	// Test BigCache defaults
+	if config.BigCache.Size != 100 {
+		t.Errorf("applyDefaults() BigCache.Size = %v, want 100", config.BigCache.Size)
 	}
 
-	// Test L2 connection defaults
-	if config.L2.Connection.ConnectTimeout != 1000 {
-		t.Errorf("applyDefaults() L2.Connection.ConnectTimeout = %v, want 1000", config.L2.Connection.ConnectTimeout)
+	// Test KeyDB connection defaults
+	if config.KeyDB.Connection.ConnectTimeout != 1000*time.Millisecond {
+		t.Errorf("applyDefaults() KeyDB.Connection.ConnectTimeout = %v, want 1000ms", config.KeyDB.Connection.ConnectTimeout)
 	}
-	if config.L2.Connection.SendTimeout != 1000 {
-		t.Errorf("applyDefaults() L2.Connection.SendTimeout = %v, want 1000", config.L2.Connection.SendTimeout)
+	if config.KeyDB.Connection.SendTimeout != 1000*time.Millisecond {
+		t.Errorf("applyDefaults() KeyDB.Connection.SendTimeout = %v, want 1000ms", config.KeyDB.Connection.SendTimeout)
 	}
-	if config.L2.Connection.ReadTimeout != 1000 {
-		t.Errorf("applyDefaults() L2.Connection.ReadTimeout = %v, want 1000", config.L2.Connection.ReadTimeout)
-	}
-
-	// Test L2 keepalive defaults
-	if config.L2.Keepalive.PoolSize != 10 {
-		t.Errorf("applyDefaults() L2.Keepalive.PoolSize = %v, want 10", config.L2.Keepalive.PoolSize)
-	}
-	if config.L2.Keepalive.MaxIdleTimeout != 10000 {
-		t.Errorf("applyDefaults() L2.Keepalive.MaxIdleTimeout = %v, want 10000", config.L2.Keepalive.MaxIdleTimeout)
+	if config.KeyDB.Connection.ReadTimeout != 1000*time.Millisecond {
+		t.Errorf("applyDefaults() KeyDB.Connection.ReadTimeout = %v, want 1000ms", config.KeyDB.Connection.ReadTimeout)
 	}
 
-	// Test L2 cache defaults
-	if config.L2.Cache.DefaultTTL != 3600 {
-		t.Errorf("applyDefaults() L2.Cache.DefaultTTL = %v, want 3600", config.L2.Cache.DefaultTTL)
+	// Test KeyDB keepalive defaults
+	if config.KeyDB.Keepalive.PoolSize != 10 {
+		t.Errorf("applyDefaults() KeyDB.Keepalive.PoolSize = %v, want 10", config.KeyDB.Keepalive.PoolSize)
 	}
-	if config.L2.Cache.MaxTTL != 86400 {
-		t.Errorf("applyDefaults() L2.Cache.MaxTTL = %v, want 86400", config.L2.Cache.MaxTTL)
+	if config.KeyDB.Keepalive.MaxIdleTimeout != 10000*time.Millisecond {
+		t.Errorf("applyDefaults() KeyDB.Keepalive.MaxIdleTimeout = %v, want 10000ms", config.KeyDB.Keepalive.MaxIdleTimeout)
+	}
+
+	// Test KeyDB cache defaults
+	if config.KeyDB.Cache.DefaultTTL != 3600*time.Second {
+		t.Errorf("applyDefaults() KeyDB.Cache.DefaultTTL = %v, want 3600s", config.KeyDB.Cache.DefaultTTL)
+	}
+	if config.KeyDB.Cache.MaxTTL != 86400*time.Second {
+		t.Errorf("applyDefaults() KeyDB.Cache.MaxTTL = %v, want 86400s", config.KeyDB.Cache.MaxTTL)
 	}
 }
 
 func TestConfig_PartialDefaults(t *testing.T) {
 	config := &Config{
-		L1: L1Config{
+		BigCache: BigCacheConfig{
 			Size: 250, // Custom value
 		},
-		L2: L2Config{
+		KeyDB: KeyDBConfig{
 			Connection: ConnectionConfig{
-				ConnectTimeout: 2000, // Custom value
+				ConnectTimeout: 2000 * time.Millisecond, // Custom value
 				// SendTimeout and ReadTimeout should get defaults
 			},
 		},
@@ -257,18 +200,18 @@ func TestConfig_PartialDefaults(t *testing.T) {
 	config.applyDefaults()
 
 	// Custom values should be preserved
-	if config.L1.Size != 250 {
-		t.Errorf("applyDefaults() should preserve custom L1.Size = %v", config.L1.Size)
+	if config.BigCache.Size != 250 {
+		t.Errorf("applyDefaults() should preserve custom BigCache.Size = %v", config.BigCache.Size)
 	}
-	if config.L2.Connection.ConnectTimeout != 2000 {
-		t.Errorf("applyDefaults() should preserve custom L2.Connection.ConnectTimeout = %v", config.L2.Connection.ConnectTimeout)
+	if config.KeyDB.Connection.ConnectTimeout != 2000*time.Millisecond {
+		t.Errorf("applyDefaults() should preserve custom KeyDB.Connection.ConnectTimeout = %v", config.KeyDB.Connection.ConnectTimeout)
 	}
 
 	// Missing values should get defaults
-	if config.L2.Connection.SendTimeout != 1000 {
-		t.Errorf("applyDefaults() L2.Connection.SendTimeout = %v, want 1000 (default)", config.L2.Connection.SendTimeout)
+	if config.KeyDB.Connection.SendTimeout != 1000*time.Millisecond {
+		t.Errorf("applyDefaults() KeyDB.Connection.SendTimeout = %v, want 1000ms (default)", config.KeyDB.Connection.SendTimeout)
 	}
-	if config.L2.Connection.ReadTimeout != 1000 {
-		t.Errorf("applyDefaults() L2.Connection.ReadTimeout = %v, want 1000 (default)", config.L2.Connection.ReadTimeout)
+	if config.KeyDB.Connection.ReadTimeout != 1000*time.Millisecond {
+		t.Errorf("applyDefaults() KeyDB.Connection.ReadTimeout = %v, want 1000ms (default)", config.KeyDB.Connection.ReadTimeout)
 	}
 }

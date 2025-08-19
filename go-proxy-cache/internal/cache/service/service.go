@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	"go-proxy-cache/internal/cache"
+	"go-proxy-cache/internal/cache/multi"
 	"go-proxy-cache/internal/interfaces"
 	"go-proxy-cache/internal/models"
 	"go-proxy-cache/internal/utils"
@@ -14,18 +15,20 @@ import (
 
 // CacheService handles cache operations with business logic
 type CacheService struct {
-	l1Cache         interfaces.Cache
-	l2Cache         interfaces.Cache
+	multiCache      interfaces.Cache
 	keyBuilder      interfaces.KeyBuilder
 	cacheClassifier interfaces.CacheRulesClassifier
 	logger          *zap.Logger
 }
 
-// NewCacheService creates a new cache service instance
-func NewCacheService(l1Cache, l2Cache interfaces.Cache, cacheClassifier interfaces.CacheRulesClassifier, logger *zap.Logger) *CacheService {
+// NewCacheService creates a new cache service instance with MultiCache
+func NewCacheService(l1Cache, l2Cache interfaces.Cache, cacheClassifier interfaces.CacheRulesClassifier, enablePropagation bool, logger *zap.Logger) *CacheService {
+	// Create MultiCache with L1 and L2 caches
+	caches := []interfaces.Cache{l1Cache, l2Cache}
+	multiCache := multi.NewMultiCache(caches, logger, enablePropagation)
+
 	return &CacheService{
-		l1Cache:         l1Cache,
-		l2Cache:         l2Cache,
+		multiCache:      multiCache,
 		keyBuilder:      cache.NewKeyBuilder(),
 		cacheClassifier: cacheClassifier,
 		logger:          logger,
@@ -40,7 +43,7 @@ type GetResponse struct {
 	Key   string `json:"key"`
 }
 
-// Get retrieves data from cache with L1/L2 fallback and ID fixing
+// Get retrieves data from cache using MultiCache and ID fixing
 func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error) {
 	// Parse JSON-RPC request from raw body
 	request, err := utils.ParseJSONRPCRequest(rawBody)
@@ -54,15 +57,11 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 		return nil, fmt.Errorf("failed to build cache key: %w", err)
 	}
 
-	// Try L1 cache first
-	entry, found := s.l1Cache.Get(key)
+	// Try MultiCache
+	entry, found := s.multiCache.Get(key)
 	if found {
 		// Fix response ID to match current request
 		fixedData := utils.FixResponseID(string(entry.Data), request.ID)
-
-		s.logger.Debug("L1 cache hit",
-			zap.String("key", key),
-			zap.Bool("fresh", entry.IsFresh()))
 
 		return &GetResponse{
 			Found: true,
@@ -71,32 +70,6 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 			Key:   key,
 		}, nil
 	}
-
-	// Try L2 cache
-	entry, found = s.l2Cache.Get(key)
-	if found {
-		// Store in L1 cache for future requests with remaining TTL
-		remainingTTL := entry.RemainingTTL()
-		s.l1Cache.Set(key, entry.Data, remainingTTL)
-
-		// Fix response ID to match current request
-		fixedData := utils.FixResponseID(string(entry.Data), request.ID)
-
-		s.logger.Debug("L2 cache hit, stored in L1",
-			zap.String("key", key),
-			zap.Bool("fresh", entry.IsFresh()))
-
-		return &GetResponse{
-			Found: true,
-			Fresh: entry.IsFresh(),
-			Data:  fixedData,
-			Key:   key,
-		}, nil
-	}
-
-	// Cache miss
-	s.logger.Debug("Cache miss",
-		zap.String("key", key))
 
 	return &GetResponse{
 		Found: false,
@@ -106,7 +79,7 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 	}, nil
 }
 
-// Set stores data in both L1 and L2 caches
+// Set stores data using MultiCache
 func (s *CacheService) Set(chain, network, rawBody, responseData string, customTTL, customStaleTTL *int) error {
 	// Parse JSON-RPC request from raw body
 	request, err := utils.ParseJSONRPCRequest(rawBody)
@@ -135,22 +108,12 @@ func (s *CacheService) Set(chain, network, rawBody, responseData string, customT
 
 	// Don't cache if TTL is 0
 	if ttl == 0 {
-		s.logger.Debug("TTL is 0, not caching",
-			zap.String("key", key),
-			zap.String("method", request.Method))
 		return nil
 	}
 
-	// Store in both L1 and L2 caches
+	// Store using MultiCache (will store in all configured caches)
 	ttlStruct := models.TTL{Fresh: ttl, Stale: staleTTL}
-	s.l1Cache.Set(key, []byte(responseData), ttlStruct)
-	s.l2Cache.Set(key, []byte(responseData), ttlStruct)
-
-	s.logger.Debug("Stored in cache",
-		zap.String("key", key),
-		zap.String("method", request.Method),
-		zap.Duration("fresh_ttl", ttl),
-		zap.Duration("stale_ttl", staleTTL))
+	s.multiCache.Set(key, []byte(responseData), ttlStruct)
 
 	return nil
 }
