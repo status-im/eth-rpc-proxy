@@ -133,11 +133,10 @@ func main() {
 	}
 
 	fmt.Printf("%s✓ Puzzle solved successfully!%s\n", Green, NC)
-	tokenJSON, _ := json.MarshalIndent(tokenResp, "", "  ")
-	fmt.Printf("Token response:\n%s\n", tokenJSON)
+	fmt.Printf("Token response: [JWT token received - details below]")
 
 	fmt.Printf("%s✓ JWT token received%s\n", Green, NC)
-	fmt.Printf("  Token: %s...\n", tokenResp.Token[:50])
+	fmt.Printf("  Token: %s...\n", tokenResp.Token[:20])
 	fmt.Printf("  Expires: %s\n", tokenResp.ExpiresAt)
 	fmt.Printf("  Request limit: %d\n", tokenResp.RequestLimit)
 
@@ -173,8 +172,8 @@ func main() {
 	fmt.Printf("%sDifficulty level: %d%s\n", Yellow, puzzleResp.Difficulty, NC)
 	fmt.Printf("%sNonce found: %d%s\n", Yellow, solution.Nonce, NC)
 
-	fmt.Printf("\n%sFinal JWT Token:%s\n", Yellow, NC)
-	fmt.Printf("%s\n", tokenResp.Token)
+	fmt.Printf("\n%sFinal JWT Token (truncated):%s\n", Yellow, NC)
+	fmt.Printf("%s...\n", tokenResp.Token[:20])
 }
 
 func checkServiceStatus(baseURL string) bool {
