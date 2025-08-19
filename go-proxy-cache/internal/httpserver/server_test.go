@@ -15,13 +15,11 @@ import (
 	"go-proxy-cache/internal/cache"
 	"go-proxy-cache/internal/cache/service"
 	"go-proxy-cache/internal/interfaces/mock"
-	"go-proxy-cache/internal/metrics"
 	"go-proxy-cache/internal/models"
 	"go-proxy-cache/internal/utils"
 )
 
-// Global metrics instance for tests to avoid duplicate registration
-var testMetrics = metrics.NewCacheMetrics()
+// Note: Metrics are now package-level variables in the metrics package
 
 // mockCache implements the Cache interface for testing
 type mockCache struct {
