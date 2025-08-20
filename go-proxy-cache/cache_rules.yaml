@@ -1,22 +1,22 @@
 # TTL defaults for different cache types and networks
 ttl_defaults:
-  # Default TTL values (in seconds)
+  # Default TTL values
   default:
-    permanent: 86400    # 24 hours
-    short: 5           # 5 seconds  
-    minimal: 0         # No caching
+    permanent: 24h
+    short: 5s
+    minimal: 0s
 
   # Ethereum mainnet specific TTLs
   ethereum:mainnet:
-    permanent: 86400
-    short: 10
-    minimal: 0
+    permanent: 24h
+    short: 10s
+    minimal: 0s
 
   # Polygon specific TTLs
   polygon:mainnet:
-    permanent: 43200    # 12 hours
-    short: 5
-    minimal: 0
+    permanent: 12h
+    short: 5s
+    minimal: 0s
 
 # Cache rules mapping JSON-RPC methods to cache types
 cache_rules:

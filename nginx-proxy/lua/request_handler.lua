@@ -40,6 +40,9 @@ end
 local cache_info = cache.check_cache(chain, network, body_data)
 if cache_info.cached_response then
     ngx.header["Content-Type"] = "application/json"
+    if cache_info.cache_status then
+        ngx.header["X-Cache-Status"] = cache_info.cache_status
+    end
     ngx.say(cache_info.cached_response)
     return
 end
@@ -98,6 +101,14 @@ for _, provider in ipairs(providers_to_try) do
             local filtered_headers = request_utils.filter_response_headers(res.headers)
             for key, value in pairs(filtered_headers) do
                 ngx.header[key] = value
+            end
+            
+            -- Set cache status header for non-cached responses
+            if cache_info.cache_status then
+                ngx.header["X-Cache-Status"] = cache_info.cache_status
+            else
+                -- Default to MISS if cache_status is not available
+                ngx.header["X-Cache-Status"] = "MISS"
             end
             
             -- Set response body

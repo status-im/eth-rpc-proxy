@@ -37,10 +37,11 @@ func NewCacheService(l1Cache, l2Cache interfaces.Cache, cacheClassifier interfac
 
 // GetResponse represents the result of a cache get operation
 type GetResponse struct {
-	Found bool   `json:"found"`
-	Fresh bool   `json:"fresh"`
-	Data  string `json:"data,omitempty"`
-	Key   string `json:"key"`
+	Found  bool   `json:"found"`
+	Fresh  bool   `json:"fresh"`
+	Data   string `json:"data,omitempty"`
+	Key    string `json:"key"`
+	Bypass bool   `json:"bypass"`
 }
 
 // Get retrieves data from cache using MultiCache and ID fixing
@@ -57,6 +58,18 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 		return nil, fmt.Errorf("failed to build cache key: %w", err)
 	}
 
+	// Check if caching should be bypassed (TTL = 0)
+	cacheInfo := s.cacheClassifier.GetTtl(chain, network, request)
+	if cacheInfo.TTL == 0 {
+		return &GetResponse{
+			Found:  false,
+			Fresh:  false,
+			Data:   "",
+			Key:    key,
+			Bypass: true,
+		}, nil
+	}
+
 	// Try MultiCache
 	entry, found := s.multiCache.Get(key)
 	if found {
@@ -64,18 +77,20 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 		fixedData := utils.FixResponseID(string(entry.Data), request.ID)
 
 		return &GetResponse{
-			Found: true,
-			Fresh: entry.IsFresh(),
-			Data:  fixedData,
-			Key:   key,
+			Found:  true,
+			Fresh:  entry.IsFresh(),
+			Data:   fixedData,
+			Key:    key,
+			Bypass: false,
 		}, nil
 	}
 
 	return &GetResponse{
-		Found: false,
-		Fresh: false,
-		Data:  "",
-		Key:   key,
+		Found:  false,
+		Fresh:  false,
+		Data:   "",
+		Key:    key,
+		Bypass: false,
 	}, nil
 }
 

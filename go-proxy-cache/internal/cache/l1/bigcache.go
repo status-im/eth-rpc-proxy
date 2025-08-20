@@ -120,3 +120,13 @@ func (bc *BigCache) Delete(key string) {
 func (bc *BigCache) Close() error {
 	return bc.cache.Close()
 }
+
+// GetStats returns cache statistics for metrics
+func (bc *BigCache) GetStats() (capacity, used int64) {
+	stats := bc.cache.Stats()
+	// BigCache doesn't expose exact capacity, but we can use the configured size
+	// Convert from MB to bytes
+	capacity = int64(bc.cache.Capacity())   // This returns the configured size in bytes
+	used = int64(stats.Hits + stats.Misses) // Approximate usage based on operations
+	return capacity, used
+}

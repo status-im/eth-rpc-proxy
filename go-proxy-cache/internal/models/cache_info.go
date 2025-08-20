@@ -17,6 +17,30 @@ const (
 	CacheTypeNone      CacheType = "none"
 )
 
+// CacheStatus represents the cache status for a request
+type CacheStatus string
+
+const (
+	CacheStatusHit    CacheStatus = "HIT"
+	CacheStatusMiss   CacheStatus = "MISS"
+	CacheStatusBypass CacheStatus = "BYPASS"
+)
+
+// String returns the string representation of the cache status
+func (cs CacheStatus) String() string {
+	return string(cs)
+}
+
+// IsValid checks if the cache status is one of the valid values
+func (cs CacheStatus) IsValid() bool {
+	switch cs {
+	case CacheStatusHit, CacheStatusMiss, CacheStatusBypass:
+		return true
+	default:
+		return false
+	}
+}
+
 // UnmarshalYAML implements custom YAML unmarshaling for CacheType
 func (c *CacheType) UnmarshalYAML(value *yaml.Node) error {
 	var str string

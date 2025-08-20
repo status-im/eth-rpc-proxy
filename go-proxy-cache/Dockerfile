@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # Install dependencies
 RUN apk add --no-cache git
@@ -17,7 +17,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o rpc-cache cmd/rpc-cache/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o rpc-cache ./cmd/rpc-cache
 
 # Final stage
 FROM alpine:latest
@@ -34,8 +34,8 @@ COPY --from=builder /app/rpc-cache .
 # Create config directory
 RUN mkdir -p /app
 
-# Copy default config files if they exist
-COPY --from=builder /app/*.yaml /app/ 2>/dev/null || true
+# Copy config files
+COPY cache_config.yaml cache_rules.yaml /app/
 
 # Expose port
 EXPOSE 8080

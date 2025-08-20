@@ -1,5 +1,7 @@
 package httpserver
 
+import "go-proxy-cache/internal/models"
+
 // CacheRequest represents a cache operation request
 type CacheRequest struct {
 	Chain    string `json:"chain"`
@@ -12,12 +14,13 @@ type CacheRequest struct {
 
 // CacheResponse represents a cache operation response
 type CacheResponse struct {
-	Success   bool   `json:"success"`
-	Found     bool   `json:"found,omitempty"`
-	Fresh     bool   `json:"fresh,omitempty"`
-	Data      string `json:"data,omitempty"`
-	Key       string `json:"key,omitempty"`
-	CacheType string `json:"cache_type,omitempty"`
-	TTL       int    `json:"ttl,omitempty"`
-	Error     string `json:"error,omitempty"`
+	Success     bool               `json:"success"`
+	Found       bool               `json:"found,omitempty"`
+	Fresh       bool               `json:"fresh,omitempty"`
+	Data        string             `json:"data,omitempty"`
+	Key         string             `json:"key,omitempty"`
+	CacheType   string             `json:"cache_type,omitempty"`
+	TTL         int                `json:"ttl,omitempty"`
+	Error       string             `json:"error,omitempty"`
+	CacheStatus models.CacheStatus `json:"cache_status,omitempty"` // HIT, MISS, or BYPASS
 }

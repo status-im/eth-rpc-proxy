@@ -118,12 +118,10 @@ function _M.check_cache(chain, network, body_data)
     end
     
     local cached_response = nil
+    local cache_status = response.cache_status or "MISS"
+    
     if response.found and response.data then
-        -- Use cached response directly (Go service handles ID fixing)
         cached_response = response.data
-        ngx.log(ngx.INFO, "[CACHE_DEBUG] Cache HIT - returning cached response for key: ", response.key or "unknown")
-    else
-        ngx.log(ngx.INFO, "[CACHE_DEBUG] Cache MISS for key: ", response.key or "unknown")
     end
     
     return {
@@ -132,7 +130,8 @@ function _M.check_cache(chain, network, body_data)
         ttl = response.ttl,
         cached_response = cached_response,
         raw_body = body_data,
-        fresh = response.fresh
+        fresh = response.fresh,
+        cache_status = cache_status
     }
 end
 

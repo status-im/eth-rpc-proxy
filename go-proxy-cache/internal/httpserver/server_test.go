@@ -235,6 +235,97 @@ func TestServer_HandleGet(t *testing.T) {
 	}
 }
 
+func TestServer_HandleGet_CacheStatus(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	logger := zaptest.NewLogger(t)
+	cacheService, l1Cache, l2Cache := setupCacheService(ctrl, logger)
+
+	server := NewServer(cacheService, logger)
+
+	tests := []struct {
+		name                string
+		requestBody         CacheRequest
+		setupCache          func()
+		expectedStatus      int
+		expectedCacheStatus models.CacheStatus
+	}{
+		{
+			name: "cache status MISS",
+			requestBody: CacheRequest{
+				Chain:   "ethereum",
+				Network: "mainnet",
+				RawBody: `{"method":"eth_blockNumber","params":[],"jsonrpc":"2.0","id":1}`,
+			},
+			expectedStatus:      http.StatusOK,
+			expectedCacheStatus: models.CacheStatusMiss,
+		},
+		{
+			name: "cache status HIT",
+			requestBody: CacheRequest{
+				Chain:   "ethereum",
+				Network: "mainnet",
+				RawBody: `{"method":"eth_blockNumber","params":[],"jsonrpc":"2.0","id":1}`,
+			},
+			setupCache: func() {
+				key, _ := generateCacheKey("ethereum", "mainnet", `{"method":"eth_blockNumber","params":[],"jsonrpc":"2.0","id":1}`)
+				l1Cache.Set(key, []byte(`{"result":"0x123","id":1}`), models.TTL{Fresh: time.Hour, Stale: time.Minute})
+			},
+			expectedStatus:      http.StatusOK,
+			expectedCacheStatus: models.CacheStatusHit,
+		},
+		{
+			name: "cache status BYPASS",
+			requestBody: CacheRequest{
+				Chain:   "ethereum",
+				Network: "mainnet",
+				RawBody: `{"method":"unknown_method","params":[],"jsonrpc":"2.0","id":1}`,
+			},
+			expectedStatus:      http.StatusOK,
+			expectedCacheStatus: models.CacheStatusBypass,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset caches
+			l1Cache.data = make(map[string]*models.CacheEntry)
+			l2Cache.data = make(map[string]*models.CacheEntry)
+
+			if tt.setupCache != nil {
+				tt.setupCache()
+			}
+
+			body, _ := json.Marshal(tt.requestBody)
+			req := httptest.NewRequest("POST", "/cache/get", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			server.handleGet(w, req)
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("handleGet() status = %v, want %v", w.Code, tt.expectedStatus)
+			}
+
+			if tt.expectedStatus == http.StatusOK {
+				var response CacheResponse
+				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+					t.Fatalf("Failed to unmarshal response: %v", err)
+				}
+
+				if response.CacheStatus != tt.expectedCacheStatus {
+					t.Errorf("handleGet() CacheStatus = %v, want %v", response.CacheStatus, tt.expectedCacheStatus)
+				}
+
+				if !response.Success {
+					t.Errorf("handleGet() Success = false, want true")
+				}
+			}
+		})
+	}
+}
+
 func TestServer_HandleSet(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

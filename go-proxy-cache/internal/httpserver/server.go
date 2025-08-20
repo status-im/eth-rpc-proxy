@@ -44,8 +44,8 @@ func (s *Server) StartUnixSocket(socketPath string) error {
 		return err
 	}
 
-	// Set socket permissions (readable/writable by owner and group)
-	if err := os.Chmod(socketPath, 0660); err != nil {
+	// Set socket permissions (readable/writable by all users for cross-container access)
+	if err := os.Chmod(socketPath, 0666); err != nil {
 		s.logger.Warn("Failed to set socket permissions", zap.String("path", socketPath), zap.Error(err))
 	}
 

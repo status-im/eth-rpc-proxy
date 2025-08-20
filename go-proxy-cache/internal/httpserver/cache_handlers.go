@@ -3,6 +3,8 @@ package httpserver
 import (
 	"fmt"
 	"net/http"
+
+	"go-proxy-cache/internal/models"
 )
 
 // handleGet handles GET cache requests
@@ -25,12 +27,23 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Determine cache status
+	var cacheStatus models.CacheStatus
+	if result.Bypass {
+		cacheStatus = models.CacheStatusBypass
+	} else if result.Found {
+		cacheStatus = models.CacheStatusHit
+	} else {
+		cacheStatus = models.CacheStatusMiss
+	}
+
 	s.writeResponse(w, &CacheResponse{
-		Success: true,
-		Found:   result.Found,
-		Fresh:   result.Fresh,
-		Data:    result.Data,
-		Key:     result.Key,
+		Success:     true,
+		Found:       result.Found,
+		Fresh:       result.Fresh,
+		Data:        result.Data,
+		Key:         result.Key,
+		CacheStatus: cacheStatus,
 	})
 }
 
