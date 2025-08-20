@@ -5,15 +5,6 @@ local schedule_reload_providers = provider_loader.schedule_reload_providers
 local auth_config = require("auth.auth_config")
 auth_config.init()
 
--- Initialize cache rules configuration
-local cache_rules = require("cache.cache_rules")
-local cache_rules_file = os.getenv("CACHE_RULES_FILE") or "/app/cache_rules.yaml"
-cache_rules.init(cache_rules_file)
-
--- Initialize KeyDB L3 cache configuration
-local keydb_config = require("cache.keydb_config")
-keydb_config.init()
-
 -- Read URL from environment variable
 local url = os.getenv("CONFIG_HEALTH_CHECKER_URL")
 local fallback = "/app/providers.json"
