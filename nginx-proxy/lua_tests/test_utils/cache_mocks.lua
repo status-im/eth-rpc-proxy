@@ -1,171 +1,84 @@
+-- Simplified cache_mocks.lua for go-proxy-cache integration
+-- Only mocks the HTTP communication, not internal cache logic
+
 local _M = {}
 
-local storage = {
-    rpc_cache = {},
-    rpc_cache_short = {},
-    rpc_cache_minimal = {},
-    cache_stats = {},
-    mlcache_locks = {},
-    mlcache_miss = {}
-}
-
--- Mock shared dict interface
-local function create_shared_dict_mock(storage_table)
+-- Simple HTTP mock for go-proxy-cache communication
+function _M.setup_go_cache_http_mock(response_data)
+  response_data = response_data or {
+    success = true,
+    found = false,
+    cache_status = "MISS",
+    cache_type = "short"
+  }
+  
+  package.preload["resty.http"] = function()
     return {
-        get = function(_, key)
-            return storage_table[key]
-        end,
-        set = function(_, key, value, ttl)
-            storage_table[key] = value
-            return true, nil
-        end,
-        incr = function(_, key, value, init)
-            storage_table[key] = (storage_table[key] or init or 0) + value
-            return storage_table[key], nil
-        end,
-        flush_all = function(_)
-            for k in pairs(storage_table) do
-                storage_table[k] = nil
-            end
-        end
-    }
-end
-
--- Mock mlcache instance
-local function create_mlcache_mock(shm_name)
-    local cache_storage = storage[shm_name] or {}
-    
-    return {
-        get = function(_, key, ttl, callback, ...)
-            local value = cache_storage[key]
-            if value ~= nil then
-                return value, nil -- cache hit
-            end
-            
-            -- Cache miss - if callback provided, call it
-            if callback then
-                local success, result = pcall(callback, ...)
-                if success and result ~= nil then
-                    cache_storage[key] = result
-                    return result, nil
-                end
-                return nil, "callback failed"
-            end
-            
-            return nil, nil -- cache miss, no callback
-        end,
-        
-        set = function(_, key, ttl, value)
-            cache_storage[key] = value
-            return true, nil
-        end,
-        
-        delete = function(_, key)
-            cache_storage[key] = nil
-            return true, nil
-        end,
-        
-        peek = function(_, key)
-            local value = cache_storage[key]
-            if value ~= nil then
-                return 3600, nil, value -- return ttl, err, value
-            end
-            return nil, nil, nil
-        end,
-        
-        purge = function(_)
-            for k in pairs(cache_storage) do
-                cache_storage[k] = nil
-            end
-            return true, nil
-        end
-    }
-end
-
-function _M.setup_cache_shared_dicts()
-    if not _G.ngx then
-        error("nginx mocks must be setup first")
-    end
-    
-    _G.ngx.shared = _G.ngx.shared or {}
-    _G.ngx.shared.rpc_cache = create_shared_dict_mock(storage.rpc_cache)
-    _G.ngx.shared.rpc_cache_short = create_shared_dict_mock(storage.rpc_cache_short)
-    _G.ngx.shared.rpc_cache_minimal = create_shared_dict_mock(storage.rpc_cache_minimal)
-    _G.ngx.shared.cache_stats = create_shared_dict_mock(storage.cache_stats)
-    _G.ngx.shared.mlcache_locks = create_shared_dict_mock(storage.mlcache_locks)
-    _G.ngx.shared.mlcache_miss = create_shared_dict_mock(storage.mlcache_miss)
-end
-
--- Mock mlcache module
-function _M.setup_mlcache_mock()
-    package.preload["resty.mlcache"] = function()
+      new = function()
         return {
-            new = function(name, shm_name, opts)
-                return create_mlcache_mock(shm_name), nil
-            end
+          set_timeout = function() end,
+          connect = function() return true, nil end,
+          request = function()
+            return {
+              status = 200,
+              read_body = function()
+                return require("cjson").encode(response_data)
+              end
+            }, nil
+          end,
+          set_keepalive = function() end
         }
+      end
+    }
+  end
+end
+
+-- Mock environment variables
+function _M.setup_cache_env_vars()
+  _G.os = _G.os or {}
+  _G.os.getenv = function(var)
+    if var == "GO_CACHE_SOCKET" then
+      return "/tmp/cache.sock"
     end
+    return nil
+  end
+end
+
+-- Mock cache diagnostics
+function _M.setup_cache_diagnostics_mock()
+  package.preload["utils.cache_diagnostics"] = function()
+    return {
+      test_cache_connectivity = function()
+        return true
+      end
+    }
+  end
+end
+
+-- Legacy shared dicts (minimal, for compatibility)
+function _M.setup_cache_shared_dicts()
+  if not _G.ngx then
+    error("nginx mocks must be setup first")
+  end
+  
+  _G.ngx.shared = _G.ngx.shared or {}
+  -- Only create empty mocks, not used anymore
+  _G.ngx.shared.providers = { get = function() return nil end, set = function() return true end }
 end
 
 function _M.clear_cache_storage()
-    for dict_name, dict_storage in pairs(storage) do
-        for k in pairs(dict_storage) do
-            dict_storage[k] = nil
-        end
-    end
-end
-
-function _M.get_storage()
-    return storage
-end
-
--- Mock cache_rules_reader with valid config
-function _M.setup_cache_rules_reader_mock()
-    package.preload["cache.cache_rules_reader"] = function()
-        return {
-            read_yaml_config = function(file_path)
-                if string.match(file_path, "valid") then
-                    return {
-                        ttl_defaults = {
-                            default = { permanent = 86400, short = 5, minimal = 0 },  -- minimal=0 for testing
-                            ethereum = { short = 15, minimal = 5 },
-                            arbitrum = { short = 1, minimal = 0.25 },
-                            optimism = { short = 2, minimal = 0.25 },
-                            base = { short = 2, minimal = 0.25 },
-                            polygon = { permanent = 7200, short = 2, minimal = 0.25 },
-                            bsc = { permanent = 3600, short = 3, minimal = 0.5 }
-                        },
-                        cache_rules = {
-                            eth_getBlockByHash = "permanent",
-                            eth_getTransactionReceipt = "permanent",
-                            eth_blockNumber = "short",
-                            eth_getBalance = "short",
-                            eth_gasPrice = "minimal",
-                            eth_chainId = "permanent",  -- Add missing eth_chainId
-                            unknown_method = "unknown_type"
-                        }
-                    }
-                elseif string.match(file_path, "invalid") then
-                    return nil
-                end
-                return nil
-            end,
-            validate_config = function(config)
-                return config ~= nil and config.ttl_defaults ~= nil and config.cache_rules ~= nil
-            end
-        }
-    end
+  -- Nothing to clear in new architecture
 end
 
 function _M.setup_all()
-    _M.setup_cache_shared_dicts()
-    _M.setup_mlcache_mock()
-    _M.setup_cache_rules_reader_mock()
+  _M.setup_cache_shared_dicts()
+  _M.setup_go_cache_http_mock()
+  _M.setup_cache_env_vars()
+  _M.setup_cache_diagnostics_mock()
 end
 
 function _M.reset_all()
-    _M.clear_cache_storage()
-    -- Don't call setup_all() here - it will be called by spec_helper
+  _M.clear_cache_storage()
 end
 
-return _M 
+return _M
