@@ -43,7 +43,10 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
 		Fresh:       result.Fresh,
 		Data:        result.Data,
 		Key:         result.Key,
+		CacheType:   result.CacheType,
+		TTL:         result.TTL,
 		CacheStatus: cacheStatus,
+		CacheLevel:  result.CacheLevel,
 	})
 }
 

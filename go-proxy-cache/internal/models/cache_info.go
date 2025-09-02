@@ -69,6 +69,40 @@ type TTL struct {
 	Stale time.Duration // How long stale data can be served (stale-if-error)
 }
 
+// CacheLevel represents the cache level where data was found
+type CacheLevel string
+
+const (
+	CacheLevelL1   CacheLevel = "L1"
+	CacheLevelL2   CacheLevel = "L2"
+	CacheLevelMiss CacheLevel = "MISS"
+)
+
+// String returns the string representation of the cache level
+func (cl CacheLevel) String() string {
+	return string(cl)
+}
+
+// CacheLevelFromIndex creates a CacheLevel from a cache index
+// Index 0 returns L1, index 1 returns L2, higher indices return L3, L4, etc.
+func CacheLevelFromIndex(index int) CacheLevel {
+	switch index {
+	case 0:
+		return CacheLevelL1
+	case 1:
+		return CacheLevelL2
+	default:
+		return CacheLevel(fmt.Sprintf("L%d", index+1))
+	}
+}
+
+// CacheResult represents the result of a cache operation with level information
+type CacheResult struct {
+	Entry *CacheEntry `json:"entry,omitempty"`
+	Found bool        `json:"found"`
+	Level CacheLevel  `json:"level"`
+}
+
 // CacheEntry represents an entry in the cache with TTL information
 type CacheEntry struct {
 	Data      []byte `json:"data"`

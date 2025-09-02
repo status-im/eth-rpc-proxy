@@ -43,6 +43,9 @@ if cache_info.cached_response then
     if cache_info.cache_status then
         ngx.header["X-Cache-Status"] = cache_info.cache_status
     end
+    if cache_info.cache_level then
+        ngx.header["X-Cache-Level"] = cache_info.cache_level
+    end
     ngx.say(cache_info.cached_response)
     return
 end
@@ -109,6 +112,14 @@ for _, provider in ipairs(providers_to_try) do
             else
                 -- Default to MISS if cache_status is not available
                 ngx.header["X-Cache-Status"] = "MISS"
+            end
+            
+            -- Set cache level header for non-cached responses
+            if cache_info.cache_level then
+                ngx.header["X-Cache-Level"] = cache_info.cache_level
+            else
+                -- Default to MISS if cache_level is not available
+                ngx.header["X-Cache-Level"] = "MISS"
             end
             
             -- Set response body

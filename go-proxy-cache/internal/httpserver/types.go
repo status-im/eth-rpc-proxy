@@ -23,4 +23,5 @@ type CacheResponse struct {
 	TTL         int                `json:"ttl,omitempty"`
 	Error       string             `json:"error,omitempty"`
 	CacheStatus models.CacheStatus `json:"cache_status,omitempty"` // HIT, MISS, or BYPASS
+	CacheLevel  models.CacheLevel  `json:"cache_level,omitempty"`  // L1, L2, or MISS
 }

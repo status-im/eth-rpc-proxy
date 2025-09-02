@@ -15,7 +15,7 @@ import (
 
 // CacheService handles cache operations with business logic
 type CacheService struct {
-	multiCache      interfaces.Cache
+	multiCache      interfaces.LevelAwareCache
 	keyBuilder      interfaces.KeyBuilder
 	cacheClassifier interfaces.CacheRulesClassifier
 	logger          *zap.Logger
@@ -37,11 +37,14 @@ func NewCacheService(l1Cache, l2Cache interfaces.Cache, cacheClassifier interfac
 
 // GetResponse represents the result of a cache get operation
 type GetResponse struct {
-	Found  bool   `json:"found"`
-	Fresh  bool   `json:"fresh"`
-	Data   string `json:"data,omitempty"`
-	Key    string `json:"key"`
-	Bypass bool   `json:"bypass"`
+	Found      bool              `json:"found"`
+	Fresh      bool              `json:"fresh"`
+	Data       string            `json:"data,omitempty"`
+	Key        string            `json:"key"`
+	Bypass     bool              `json:"bypass"`
+	CacheType  string            `json:"cache_type,omitempty"`
+	TTL        int               `json:"ttl,omitempty"`
+	CacheLevel models.CacheLevel `json:"cache_level,omitempty"`
 }
 
 // Get retrieves data from cache using MultiCache and ID fixing
@@ -62,35 +65,44 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 	cacheInfo := s.cacheClassifier.GetTtl(chain, network, request)
 	if cacheInfo.TTL == 0 {
 		return &GetResponse{
-			Found:  false,
-			Fresh:  false,
-			Data:   "",
-			Key:    key,
-			Bypass: true,
+			Found:      false,
+			Fresh:      false,
+			Data:       "",
+			Key:        key,
+			Bypass:     true,
+			CacheType:  string(cacheInfo.CacheType),
+			TTL:        int(cacheInfo.TTL.Seconds()),
+			CacheLevel: models.CacheLevelMiss,
 		}, nil
 	}
 
-	// Try MultiCache
-	entry, found := s.multiCache.Get(key)
-	if found {
+	// Try MultiCache with level information
+	result := s.multiCache.GetWithLevel(key)
+	if result.Found && result.Entry != nil {
 		// Fix response ID to match current request
-		fixedData := utils.FixResponseID(string(entry.Data), request.ID)
+		fixedData := utils.FixResponseID(string(result.Entry.Data), request.ID)
 
 		return &GetResponse{
-			Found:  true,
-			Fresh:  entry.IsFresh(),
-			Data:   fixedData,
-			Key:    key,
-			Bypass: false,
+			Found:      true,
+			Fresh:      result.Entry.IsFresh(),
+			Data:       fixedData,
+			Key:        key,
+			Bypass:     false,
+			CacheType:  string(cacheInfo.CacheType),
+			TTL:        int(cacheInfo.TTL.Seconds()),
+			CacheLevel: result.Level,
 		}, nil
 	}
 
 	return &GetResponse{
-		Found:  false,
-		Fresh:  false,
-		Data:   "",
-		Key:    key,
-		Bypass: false,
+		Found:      false,
+		Fresh:      false,
+		Data:       "",
+		Key:        key,
+		Bypass:     false,
+		CacheType:  string(cacheInfo.CacheType),
+		TTL:        int(cacheInfo.TTL.Seconds()),
+		CacheLevel: models.CacheLevelMiss,
 	}, nil
 }
 

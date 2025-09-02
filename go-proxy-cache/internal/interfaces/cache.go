@@ -13,3 +13,10 @@ type Cache interface {
 	Set(key string, val []byte, ttl models.TTL)
 	Delete(key string)
 }
+
+// LevelAwareCache interface extends Cache with level-aware operations
+type LevelAwareCache interface {
+	Cache
+	GetWithLevel(key string) *models.CacheResult      // returns result with level information
+	GetStaleWithLevel(key string) *models.CacheResult // stale-if-error with level information
+}
