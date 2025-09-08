@@ -85,7 +85,12 @@ func (cl CacheLevel) String() string {
 
 // CacheLevelFromIndex creates a CacheLevel from a cache index
 // Index 0 returns L1, index 1 returns L2, higher indices return L3, L4, etc.
+// Negative indices are treated as L1 (fallback to first level)
 func CacheLevelFromIndex(index int) CacheLevel {
+	if index < 0 {
+		return CacheLevelL1
+	}
+
 	switch index {
 	case 0:
 		return CacheLevelL1

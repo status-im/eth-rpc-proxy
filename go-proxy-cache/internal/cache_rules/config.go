@@ -21,6 +21,9 @@ var _ interfaces.CacheRulesConfig = (*CacheConfig)(nil)
 
 // NewCacheConfig creates a new CacheConfig instance
 func NewCacheConfig(config *CacheRulesConfig, logger *zap.Logger) *CacheConfig {
+	if config == nil {
+		panic("config cannot be nil")
+	}
 	return &CacheConfig{
 		config: config,
 		logger: logger,

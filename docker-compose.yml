@@ -18,7 +18,6 @@ services:
     depends_on:
       - 'health-checker'
       - 'auth-service'
-      - 'keydb'
       - 'cache-service'
     volumes:
       - './secrets/default_providers.json:/app/providers.json:ro'
@@ -88,41 +87,6 @@ services:
     networks:
       - 'rpc-network'
 
-  keydb:
-    image: 'eqalpha/keydb:latest' # FIXME alpine_x86_64_v6.3.4
-    container_name: 'keydb'
-    restart: 'always'
-    ports:
-      - '6379:6379'
-    networks:
-      - 'rpc-network'
-    command: 
-      - 'keydb-server'
-      - '--protected-mode'
-      - 'no'
-      - '--appendonly'
-      - 'yes'
-    healthcheck:
-      test: ['CMD', 'keydb-cli', 'ping']
-      interval: '30s'
-      timeout: '10s'
-      retries: 3
-      start_period: '10s'
-    volumes:
-      - 'keydb-data:/data'
-
-  keydb-exporter:
-    image: 'oliver006/redis_exporter:v1.74.0'
-    container_name: 'keydb-exporter'
-    restart: 'always'
-    ports:
-      - '9121:9121'
-    networks:
-      - 'rpc-network'
-    environment:
-      REDIS_ADDR: 'keydb:6379'
-    depends_on:
-      - 'keydb'
 
   cache-service:
     build:
@@ -133,13 +97,11 @@ services:
     environment:
       CACHE_CONFIG_FILE: '/app/cache_config.yaml'
       CACHE_RULES_FILE: '/app/cache_rules.yaml'
-      KEYDB_URL: 'redis://keydb:6379'
+      KEYDB_URL: '${EXTERNAL_KEYDB_URL:-redis://keydb:6379}'
       CACHE_SOCKET_PATH: '/tmp/cache.sock'
     # No ports exposed - using Unix socket only
     networks:
       - 'rpc-network'
-    depends_on:
-      - 'keydb'
     volumes:
       - './go-proxy-cache/cache_config.yaml:/app/cache_config.yaml:ro'
       - './go-proxy-cache/cache_rules.yaml:/app/cache_rules.yaml:ro'
@@ -156,5 +118,4 @@ networks:
     driver: bridge
 
 volumes:
-  keydb-data:
   cache_socket:
