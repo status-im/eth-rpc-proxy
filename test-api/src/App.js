@@ -1,31 +1,33 @@
 import React, { useState } from 'react';
 import './App.css';
-import PuzzleSolver from './components/PuzzleSolver';
-import RpcTester from './components/RpcTester';
+import HomePage from './components/HomePage';
+import JwtRpcApp from './components/JwtRpcApp';
+import CacheMetrics from './components/CacheMetrics';
 
 function App() {
-  const [token, setToken] = useState('');
+  const [currentApp, setCurrentApp] = useState('home');
 
-  return (
-    <div className="App">
-      <header className="App-header">
-        <h1>🔐 JWT RPC Test Application</h1>
-        <p>Test JWT authentication and RPC requests to the proxy</p>
-      </header>
-      
-      <main className="App-main">
-        <div className="container">
-          <div className="section">
-            <PuzzleSolver onTokenGenerated={setToken} />
-          </div>
-          
-          <div className="section">
-            <RpcTester token={token} />
-          </div>
-        </div>
-      </main>
-    </div>
-  );
+  const navigateToApp = (appId) => {
+    setCurrentApp(appId);
+  };
+
+  const navigateToHome = () => {
+    setCurrentApp('home');
+  };
+
+  const renderCurrentApp = () => {
+    switch (currentApp) {
+      case 'jwt-rpc':
+        return <JwtRpcApp onBackToHome={navigateToHome} />;
+      case 'cache-metrics':
+        return <CacheMetrics onBackToHome={navigateToHome} />;
+      case 'home':
+      default:
+        return <HomePage onNavigateToApp={navigateToApp} />;
+    }
+  };
+
+  return renderCurrentApp();
 }
 
 export default App; 

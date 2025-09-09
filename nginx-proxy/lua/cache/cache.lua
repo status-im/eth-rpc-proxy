@@ -1,105 +1,203 @@
 local json = require("cjson")
-local cache_rules = require("cache.cache_rules")
+local http = require("resty.http")
+local cache_diagnostics = require("utils.cache_diagnostics")
 
 local _M = {}
 
-local cache_dicts = {
-    permanent = ngx.shared.rpc_cache,
-    short = ngx.shared.rpc_cache_short,
-    minimal = ngx.shared.rpc_cache_minimal
-}
+-- Cache service configuration
+local cache_socket_path = os.getenv("GO_CACHE_SOCKET") or "/tmp/cache.sock"
 
--- Helper function to decode JSON once and cache result
-local function get_decoded_body(body_data)
-    if not body_data then return nil end
+-- Helper function to make request to cache service via Unix socket
+local function make_cache_request(endpoint, method, data)
+    local httpc = http.new()
+    httpc:set_timeout(5000) -- 5 second timeout
+
+    local body = nil
+    local headers = {
+        ["Host"] = "cache-service",
+        ["Content-Type"] = "application/json",
+        ["Connection"] = "keep-alive"
+    }
     
-    -- If already decoded (table), return as is
-    if type(body_data) == "table" then
-        return body_data
+    if data then
+        body = json.encode(data)
+    end
+
+    -- Make request using the correct method
+    local ok, err = httpc:connect("unix:" .. cache_socket_path)
+    if not ok then
+        ngx.log(ngx.ERR, "[CACHE_UNIX] Failed to connect to socket: ", err)
+        return nil, err
+    end
+
+    local res, err = httpc:request({
+        method = method,
+        path = endpoint,
+        headers = headers,
+        body = body
+    })
+    
+    if not res then
+        ngx.log(ngx.ERR, "[CACHE_UNIX] Failed to make request: ", err)
+        return nil, err
     end
     
-    local ok, body_json = pcall(json.decode, body_data)
-    if not ok or not body_json or not body_json.method then
-        return nil
+    if res.status ~= 200 then
+        ngx.log(ngx.ERR, "[CACHE_UNIX] Cache service returned error status: ", res.status)
+        return nil, "HTTP " .. res.status
     end
     
-    return body_json
+    local response_body = res:read_body()
+    if not response_body then
+        ngx.log(ngx.ERR, "[CACHE_UNIX] Failed to read response body")
+        return nil, "Failed to read cache response"
+    end
+    
+    -- Set keepalive for connection reuse
+    httpc:set_keepalive(60000, 10) -- 60s timeout, max 10 connections in pool
+    
+    local ok, response_data = pcall(json.decode, response_body)
+    if not ok then
+        ngx.log(ngx.ERR, "[CACHE_UNIX] Failed to decode JSON response: ", response_data)
+        return nil, "Invalid JSON response"
+    end
+    
+    return response_data, nil
 end
 
--- Unified cache function that handles all cache operations
--- Returns cache information along with decoded request body to avoid duplicate JSON parsing
+-- Helper function to validate raw body
+local function validate_body(body_data)
+    if not body_data or body_data == "" then 
+        return false
+    end
+    
+    -- Basic validation - should be JSON string
+    if type(body_data) ~= "string" then
+        return false
+    end
+    
+    return true
+end
+
+-- Check cache for a request
 function _M.check_cache(chain, network, body_data)
-    local decoded_body = get_decoded_body(body_data)
-    if not decoded_body then
+    if not validate_body(body_data) then
+        ngx.log(ngx.WARN, "[CACHE_DEBUG] Invalid body data")
         return {
             cache_type = nil,
             cache_key = nil,
             ttl = nil,
             cached_response = nil,
-            decoded_body = nil
+            raw_body = nil,
+            chain = chain,
+            network = network
         }
     end
     
-    local cache_info = cache_rules.get_cache_info(chain, network, decoded_body)
-    if not cache_info or cache_info.cache_type == "none" or cache_info.ttl == 0 then
+    -- Prepare request for cache service with raw body
+    local cache_request = {
+        chain = chain,
+        network = network,
+        raw_body = body_data
+    }
+    
+    -- Make GET request to cache service
+    local response, err = make_cache_request("/cache/get", "POST", cache_request)
+    if not response then
+        ngx.log(ngx.ERR, "[CACHE_GET] Failed to get from cache service: ", err)
         return {
             cache_type = nil,
             cache_key = nil,
             ttl = nil,
             cached_response = nil,
-            decoded_body = decoded_body
+            raw_body = body_data,
+            chain = chain,
+            network = network
         }
     end
     
-    local cache_type = cache_info.cache_type
-    local ttl = cache_info.ttl
-    
-    local cache_key = chain .. ":" .. network .. ":" .. ngx.md5(body_data)
-    local shared_dict = cache_dicts[cache_type]
-    
-    local cached_response = shared_dict:get(cache_key)
-    local stats_dict = ngx.shared.cache_stats
-    
-    if cached_response then
-        -- Increment cache hit counter
-        stats_dict:incr("cache_hits_" .. cache_type, 1, 0)
-        stats_dict:incr("cache_hits_total", 1, 0)
-    else
-        -- Increment cache miss counter
-        stats_dict:incr("cache_misses_" .. cache_type, 1, 0)
-        stats_dict:incr("cache_misses_total", 1, 0)
+    if not response.success then
+        ngx.log(ngx.ERR, "[CACHE_GET] Cache service returned error: ", response.error or "unknown")
+        return {
+            cache_type = nil,
+            cache_key = nil,
+            ttl = nil,
+            cached_response = nil,
+            raw_body = body_data,
+            chain = chain,
+            network = network
+        }
     end
     
-    -- Increment total requests counter
-    stats_dict:incr("total_requests_" .. cache_type, 1, 0)
-    stats_dict:incr("total_requests_all", 1, 0)
+    local cached_response = nil
+    local cache_status = response.cache_status or "MISS"
+    local cache_level = response.cache_level or "MISS"
+    
+    if response.found and response.data then
+        cached_response = response.data
+    end
     
     return {
-        cache_type = cache_type,
-        cache_key = cache_key,
-        ttl = ttl,
+        cache_type = response.cache_type,
+        cache_key = response.key,
+        ttl = nil, -- cache will calculate ttl itself
         cached_response = cached_response,
-        decoded_body = decoded_body
+        raw_body = body_data,
+        fresh = response.fresh,
+        cache_status = cache_status,
+        cache_level = cache_level,
+        chain = chain,
+        network = network
     }
 end
 
--- Save function that uses cache_info
+-- Save response to cache
 function _M.save_to_cache(cache_info, response_body)
-    if not cache_info.cache_type or not cache_info.cache_key or not cache_info.ttl then
+    if not cache_info.cache_key or not cache_info.raw_body then
+        ngx.log(ngx.WARN, "[CACHE_SET] Missing cache info parameters, cannot save to cache")
         return false
     end
     
-    local shared_dict = cache_dicts[cache_info.cache_type]
-    if not shared_dict then
-        ngx.log(ngx.ERR, "Invalid cache_type: ", cache_info.cache_type)
+    if not cache_info.cache_type then
         return false
     end
     
-    local success, err = shared_dict:set(cache_info.cache_key, response_body, cache_info.ttl)
-    if not success then
-        ngx.log(ngx.ERR, "Failed to cache response (", cache_info.cache_type, "): ", err)
+    -- Prepare request for cache service
+    local cache_request = {
+        chain = cache_info.chain,
+        network = cache_info.network,
+        raw_body = cache_info.raw_body,
+        data = response_body
+    }
+    
+    -- Add TTL if provided
+    if cache_info.ttl then
+        cache_request.ttl = cache_info.ttl
     end
-    return success
+    
+    -- Make SET request to cache service
+    local response, err = make_cache_request("/cache/set", "POST", cache_request)
+    if not response then
+        ngx.log(ngx.ERR, "[CACHE_SET] Failed to save to cache service: ", err)
+        return false
+    end
+    
+    if not response.success then
+        ngx.log(ngx.ERR, "[CACHE_SET] Cache service save failed: ", response.error or "unknown")
+        return false
+    end
+    return true
 end
 
-return _M 
+-- Function to reset cache instances (for testing compatibility)
+function _M.reset_cache_instances()
+    -- No-op for HTTP-based cache
+    ngx.log(ngx.INFO, "[CACHE_DEBUG] reset_cache_instances called (no-op for HTTP cache)")
+end
+
+-- Function to run cache diagnostics
+function _M.run_diagnostics()
+    cache_diagnostics.test_cache_connectivity()
+end
+
+return _M

@@ -42,7 +42,12 @@ function _M.setup()
             end
         },
         md5 = function(str)
-            return "mock_hash_" .. string.len(str)
+            -- Create a simple hash that includes content, not just length
+            local hash = 0
+            for i = 1, #str do
+                hash = hash + string.byte(str, i) * i
+            end
+            return "mock_hash_" .. tostring(hash % 1000)
         end,
         encode_base64 = encode_base64,
         AF_INET = 2,

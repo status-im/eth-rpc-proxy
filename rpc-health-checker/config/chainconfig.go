@@ -124,7 +124,7 @@ func LoadChains(filePath string) (ChainsConfig, error) {
 
 	// Validate and normalize each chain
 	for i := range config.Chains {
-		config.Chains[i].normalize()
+		config.Chains[i].Normalize()
 
 		// Set ChainName for all providers
 		for j := range config.Chains[i].Providers {
@@ -157,7 +157,7 @@ func LoadReferenceChains(filePath string) (ReferenceChainsConfig, error) {
 
 	// Validate and normalize each reference chain
 	for i := range config.Chains {
-		config.Chains[i].normalize()
+		config.Chains[i].Normalize()
 		// Set ChainID and ChainName for the provider
 		config.Chains[i].Provider.ChainID = int64(config.Chains[i].ChainId)
 		config.Chains[i].Provider.ChainName = config.Chains[i].Name
@@ -190,8 +190,8 @@ func GetReferenceProvider(chains []ReferenceChainConfig, name, network string) (
 	return nil, fmt.Errorf("reference provider for %s (%s) not found", name, network)
 }
 
-// normalize ensures chain name and network are lowercase
-func (c *ChainConfig) normalize() {
+// Normalize ensures chain name and network are lowercase
+func (c *ChainConfig) Normalize() {
 	c.Name = strings.ToLower(c.Name)
 	c.Network = strings.ToLower(c.Network)
 	for i := range c.Providers {
@@ -199,8 +199,8 @@ func (c *ChainConfig) normalize() {
 	}
 }
 
-// normalize ensures reference chain name and network are lowercase
-func (c *ReferenceChainConfig) normalize() {
+// Normalize ensures reference chain name and network are lowercase
+func (c *ReferenceChainConfig) Normalize() {
 	c.Name = strings.ToLower(c.Name)
 	c.Network = strings.ToLower(c.Network)
 	c.Provider.Type = strings.ToLower(c.Provider.Type)
@@ -268,3 +268,6 @@ func validateChainConfig(chain ChainConfig) error {
 
 	return nil
 }
+
+var _ ChainConfigurer = (*ChainConfig)(nil)
+var _ ChainConfigurer = (*ReferenceChainConfig)(nil)

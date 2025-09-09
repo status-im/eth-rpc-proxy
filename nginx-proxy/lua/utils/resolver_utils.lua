@@ -6,7 +6,7 @@ local function resolve_url_with_custom_dns(url, custom_dns)
         ngx.log(ngx.ERR, "URL is required")
         return nil, "URL is required"
     end
-    
+
     if not custom_dns or custom_dns == "" then
         ngx.log(ngx.ERR, "Custom DNS resolver is required")
         return nil, "Custom DNS resolver is required"
@@ -44,7 +44,7 @@ local function resolve_url_with_custom_dns(url, custom_dns)
 
     -- Process DNS answers
     if answers.errcode then
-        ngx.log(ngx.ERR, "DNS server returned error code: ", answers.errcode, 
+        ngx.log(ngx.ERR, "DNS server returned error code: ", answers.errcode,
                 " ", answers.errstr)
         return nil, "DNS server error"
     end

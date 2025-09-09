@@ -12,10 +12,38 @@ CORS_ORIGIN="$2"
 # Create a backup of the original file
 cp "$NGINX_CONF" "${NGINX_CONF}.bak"
 
+# Function to generate CORS configuration block
+generate_cors_config() {
+    local origin="$1"
+    local indent="$2"
+    
+    cat << EOF
+${indent}# CORS headers for regular requests
+${indent}add_header 'Access-Control-Allow-Origin' '${origin}' always;
+${indent}add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+${indent}add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,If-None-Match,Accept-Encoding' always;
+${indent}add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range,X-Proxy-Cache,X-Response-Size,ETag,Content-Encoding,Vary' always;
+
+${indent}# Handle OPTIONS method
+${indent}if (\$request_method = 'OPTIONS') {
+${indent}    add_header 'Access-Control-Allow-Origin' '${origin}' always;
+${indent}    add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+${indent}    add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,If-None-Match,Accept-Encoding' always;
+${indent}    add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range,X-Proxy-Cache,X-Response-Size,ETag,Content-Encoding,Vary' always;
+${indent}    add_header 'Access-Control-Max-Age' 1728000;
+${indent}    add_header 'Content-Type' 'text/plain; charset=utf-8';
+${indent}    return 204;
+${indent}}
+EOF
+}
+
 # Function to add CORS configuration to a location block
 add_cors_config() {
     local file="$1"
     local location="$2"
+    
+    # Generate CORS configuration
+    local cors_config=$(generate_cors_config "$CORS_ORIGIN" "            ")
     
     # Create a temporary file with the CORS configuration
     local temp_file=$(mktemp)
@@ -30,25 +58,10 @@ add_cors_config() {
     
     # Create a new file with the CORS headers inserted
     local new_file=$(mktemp)
-    awk -v loc="$location" -v origin="$CORS_ORIGIN" '
+    awk -v loc="$location" -v cors_config="$cors_config" '
         $0 ~ "location " loc " {" {
             print
-            print "            # CORS headers for regular requests"
-            print "            add_header '\''Access-Control-Allow-Origin'\'' '\''" origin "'\'' always;"
-            print "            add_header '\''Access-Control-Allow-Methods'\'' '\''GET, POST, OPTIONS'\'' always;"
-            print "            add_header '\''Access-Control-Allow-Headers'\'' '\''DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,If-None-Match,Accept-Encoding'\'' always;"
-            print "            add_header '\''Access-Control-Expose-Headers'\'' '\''Content-Length,Content-Range,X-Proxy-Cache,X-Response-Size,ETag,Content-Encoding,Vary'\'' always;"
-            print ""
-            print "            # Handle OPTIONS method"
-            print "            if (\$request_method = '\''OPTIONS'\'') {"
-            print "                add_header '\''Access-Control-Allow-Origin'\'' '\''" origin "'\'' always;"
-            print "                add_header '\''Access-Control-Allow-Methods'\'' '\''GET, POST, OPTIONS'\'' always;"
-            print "                add_header '\''Access-Control-Allow-Headers'\'' '\''DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,If-None-Match,Accept-Encoding'\'' always;"
-            print "                add_header '\''Access-Control-Expose-Headers'\'' '\''Content-Length,Content-Range,X-Proxy-Cache,X-Response-Size,ETag,Content-Encoding,Vary'\'' always;"
-            print "                add_header '\''Access-Control-Max-Age'\'' 1728000;"
-            print "                add_header '\''Content-Type'\'' '\''text/plain; charset=utf-8'\'';"
-            print "                return 204;"
-            print "            }"
+            print cors_config
             next
         }
         { print }
@@ -59,10 +72,12 @@ add_cors_config() {
     rm "$temp_file"
 }
 
-
+# Note: cache_metrics.conf function removed - metrics now served by go-proxy-cache service
 
 # Add CORS configuration for all endpoints
 add_cors_config "$NGINX_CONF" "\/auth\/"
 add_cors_config "$NGINX_CONF" "\/"
+
+# Note: cache_metrics.conf patching removed - metrics now served by go-proxy-cache service
 
 echo "Added CORS configuration to $NGINX_CONF for RPC proxy with origin $CORS_ORIGIN"

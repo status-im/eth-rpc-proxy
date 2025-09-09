@@ -1,4 +1,4 @@
--- spec_helper.lua - Setup for Busted tests
+-- spec_helper.lua - Simplified setup for go-proxy-cache integration tests
 
 -- Setup LUA_PATH to include our modules
 local current_dir = debug.getinfo(1, "S").source:sub(2):match("(.*)/")
@@ -18,7 +18,7 @@ package.path = package.path .. ";" ..
 local nginx_mocks = require("test_utils.nginx_mocks")
 nginx_mocks.setup_all()
 
--- Setup cache mocks after nginx (adds shared dicts to ngx.shared)
+-- Setup simplified cache mocks for go-proxy-cache integration
 local cache_mocks = require("test_utils.cache_mocks")
 cache_mocks.setup_all()
 
@@ -41,14 +41,15 @@ _G.test_helpers = {
   end,
   
   reset_mocks = function()
-    cache_mocks.clear_cache_storage() -- Only clear data, don't recreate mocks
+    cache_mocks.clear_cache_storage()
   end,
   
-  -- Setup function to be called from tests
   setup_test_environment = function()
-    cache_mocks.clear_cache_storage() -- Only clear data, don't recreate mocks
+    cache_mocks.clear_cache_storage()
+  end,
+  
+  -- Helper to mock go-proxy-cache responses
+  mock_cache_response = function(response_data)
+    cache_mocks.setup_go_cache_http_mock(response_data)
   end
 }
-
--- Note: before_each hooks should be defined in individual test files
--- because they require Busted context to be loaded 

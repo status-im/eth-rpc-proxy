@@ -169,3 +169,5 @@ func (r *RequestsRunner) CallMethod(
 		ElapsedTime: time.Since(startTime),
 	}
 }
+
+var _ MethodCaller = (*RequestsRunner)(nil)
