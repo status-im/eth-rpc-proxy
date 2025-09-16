@@ -43,7 +43,6 @@ EXPOSE 8080
 # Environment variables with defaults
 ENV CACHE_CONFIG_FILE=/app/cache_config.yaml
 ENV CACHE_RULES_FILE=/app/cache_rules.yaml
-ENV KEYDB_URL=redis://keydb:6379
 ENV CACHE_SERVER_ADDR=:8080
 
 # Run the binary
