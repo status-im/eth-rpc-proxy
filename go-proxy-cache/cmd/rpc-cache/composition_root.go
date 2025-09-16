@@ -167,9 +167,9 @@ func (r *CompositionRoot) initL1Cache() error {
 // initL2Cache initializes the L2 cache (KeyDB)
 func (r *CompositionRoot) initL2Cache() error {
 	if r.Config.KeyDB.Enabled {
-		keydbURL := os.Getenv("KEYDB_URL")
-		if keydbURL == "" {
-			keydbURL = "redis://keydb:6379"
+		keydbURL, err := GetKeyDBURL(r.Logger)
+		if err != nil {
+			return fmt.Errorf("failed to get KeyDB URL: %w", err)
 		}
 
 		// Create KeyDB client
