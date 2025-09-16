@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
 
 	"go-proxy-cache/internal/config"
@@ -38,7 +39,10 @@ func (kc *KeyDBCache) Get(key string) (*models.CacheEntry, bool) {
 
 	data, err := kc.client.Get(ctx, key).Result()
 	if err != nil {
-		kc.logger.Error("L2 cache get error", zap.String("key", key), zap.Error(err))
+		if errors.Is(err, redis.Nil) { // Cache miss
+			return nil, false
+		}
+		kc.logger.Warn("L2 cache get failed", zap.String("key", key), zap.Error(err))
 		return nil, false
 	}
 
@@ -65,7 +69,10 @@ func (kc *KeyDBCache) GetStale(key string) (*models.CacheEntry, bool) {
 
 	data, err := kc.client.Get(ctx, key).Result()
 	if err != nil {
-		kc.logger.Error("L2 cache stale get error", zap.String("key", key), zap.Error(err))
+		if errors.Is(err, redis.Nil) { // Cache miss
+			return nil, false
+		}
+		kc.logger.Warn("L2 cache stale get failed", zap.String("key", key), zap.Error(err))
 		return nil, false
 	}
 
@@ -109,7 +116,7 @@ func (kc *KeyDBCache) Set(key string, val []byte, ttl models.TTL) {
 	totalTTL := ttl.Fresh + ttl.Stale
 	err = kc.client.Set(ctx, key, data, totalTTL).Err()
 	if err != nil {
-		kc.logger.Error("Failed to set L2 cache entry", zap.String("key", key), zap.Error(err))
+		kc.logger.Warn("Failed to set L2 cache entry", zap.String("key", key), zap.Error(err))
 		return
 	}
 }
@@ -121,7 +128,7 @@ func (kc *KeyDBCache) Delete(key string) {
 
 	err := kc.client.Del(ctx, key).Err()
 	if err != nil {
-		kc.logger.Error("Failed to delete L2 cache entry", zap.String("key", key), zap.Error(err))
+		kc.logger.Warn("Failed to delete L2 cache entry", zap.String("key", key), zap.Error(err))
 		return
 	}
 }

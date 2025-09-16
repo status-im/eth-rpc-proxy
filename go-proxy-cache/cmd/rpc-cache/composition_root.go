@@ -172,7 +172,11 @@ func (r *CompositionRoot) initL2Cache() error {
 		// Create KeyDB client
 		keydbClient, err := l2.NewRedisKeyDbClient(&r.Config.KeyDB, keydbURL, r.Logger)
 		if err != nil {
-			return err
+			r.Logger.Warn("Failed to connect to KeyDB, falling back to no L2 cache",
+				zap.String("keydb_url", keydbURL),
+				zap.Error(err))
+			r.L2Cache = noop.NewNoOpCache()
+			return nil
 		}
 
 		// Create L2 cache with the client

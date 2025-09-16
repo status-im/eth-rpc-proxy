@@ -17,7 +17,7 @@ const (
 // 3. Default value
 func GetKeyDBURL(logger *zap.Logger) string {
 	// Priority 1: Environment variable
-	if keydbURL := os.Getenv("KEYDB_URL"); keydbURL != "" {
+	if keydbURL := strings.TrimSpace(os.Getenv("KEYDB_URL")); keydbURL != "" {
 		logger.Info("Using KeyDB URL from environment variable", zap.String("url", keydbURL))
 		return keydbURL
 	}
@@ -33,6 +33,8 @@ func GetKeyDBURL(logger *zap.Logger) string {
 		if len(keydbURL) > 0 {
 			logger.Info("Using KeyDB URL from connection file", zap.String("file", connectionFile), zap.String("url", keydbURL))
 			return keydbURL
+		} else {
+			logger.Warn("KeyDB connection file is empty", zap.String("file", connectionFile))
 		}
 	} else {
 		logger.Debug("KeyDB connection file not found", zap.String("file", connectionFile), zap.Error(err))
