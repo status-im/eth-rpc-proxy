@@ -12,6 +12,7 @@ import (
 	"go-proxy-cache/internal/interfaces"
 	"go-proxy-cache/internal/metrics"
 	"go-proxy-cache/internal/models"
+	"go-proxy-cache/internal/scheduler"
 )
 
 // Ensure BigCache implements interfaces.Cache
@@ -19,10 +20,9 @@ var _ interfaces.Cache = (*BigCache)(nil)
 
 // BigCache implements L1 cache using BigCache
 type BigCache struct {
-	cache         *bigcache.BigCache
-	logger        *zap.Logger
-	stopMetrics   chan struct{}
-	metricsTicker *time.Ticker
+	cache            *bigcache.BigCache
+	logger           *zap.Logger
+	metricsScheduler *scheduler.Scheduler
 }
 
 // NewBigCache creates a new BigCache instance
@@ -38,9 +38,8 @@ func NewBigCache(bigcacheCfg *config.BigCacheConfig, logger *zap.Logger) (interf
 	}
 
 	bc := &BigCache{
-		cache:       cache,
-		logger:      logger,
-		stopMetrics: make(chan struct{}),
+		cache:  cache,
+		logger: logger,
 	}
 
 	// Start periodic metrics collection
@@ -150,33 +149,20 @@ func (bc *BigCache) GetStats() (capacity, used int64) {
 
 // startMetricsCollection starts periodic metrics collection
 func (bc *BigCache) startMetricsCollection() {
-	bc.metricsTicker = time.NewTicker(30 * time.Second)
+	bc.metricsScheduler = scheduler.New(30*time.Second, bc.updateMetrics)
+	bc.metricsScheduler.Start()
 
-	go func() {
-		defer bc.metricsTicker.Stop()
-
-		// Initial collection
-		bc.updateMetrics()
-
-		for {
-			select {
-			case <-bc.metricsTicker.C:
-				bc.updateMetrics()
-			case <-bc.stopMetrics:
-				bc.logger.Debug("Stopping L1 cache metrics collection")
-				return
-			}
-		}
-	}()
+	// Initial collection
+	bc.updateMetrics()
 
 	bc.logger.Debug("Started L1 cache metrics collection")
 }
 
 // stopMetricsCollection stops periodic metrics collection
 func (bc *BigCache) stopMetricsCollection() {
-	if bc.metricsTicker != nil {
-		close(bc.stopMetrics)
-		bc.metricsTicker.Stop()
+	if bc.metricsScheduler != nil {
+		bc.metricsScheduler.Stop()
+		bc.logger.Debug("Stopped L1 cache metrics collection")
 	}
 }
 

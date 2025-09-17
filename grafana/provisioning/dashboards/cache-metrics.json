@@ -124,13 +124,13 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(cache_requests_total[5m]))",
+          "expr": "sum(rate(eth_rpc_proxy_cache_requests_total[5m]))",
           "interval": "",
           "legendFormat": "Total RPS",
           "refId": "A"
         },
         {
-          "expr": "sum by (level) (rate(cache_requests_total[5m]))",
+          "expr": "sum by (level) (rate(eth_rpc_proxy_cache_requests_total[5m]))",
           "interval": "",
           "legendFormat": "{{level}} RPS",
           "refId": "B"
@@ -200,7 +200,7 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
-          "expr": "sum(rate(cache_hits_total[5m])) / sum(rate(cache_requests_total[5m]))",
+          "expr": "sum(rate(eth_rpc_proxy_cache_hits_total[5m])) / sum(rate(eth_rpc_proxy_cache_requests_total[5m]))",
           "interval": "",
           "legendFormat": "Overall Hit Ratio",
           "refId": "A"
@@ -285,7 +285,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (level) (rate(cache_hits_total{level!=\"miss\"}[5m])) / sum by (level) (rate(cache_requests_total{level!=\"miss\"}[5m]))",
+          "expr": "sum by (level) (rate(eth_rpc_proxy_cache_hits_total{level!=\"miss\"}[5m])) / sum by (level) (rate(eth_rpc_proxy_cache_requests_total{level!=\"miss\"}[5m]))",
           "interval": "",
           "legendFormat": "{{level}} Hit Ratio",
           "refId": "A"
@@ -381,7 +381,7 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
-          "expr": "sum by (cache_type) (rate(cache_hits_total[5m])) / sum by (cache_type) (rate(cache_requests_total[5m]))",
+          "expr": "sum by (cache_type) (rate(eth_rpc_proxy_cache_hits_total[5m])) / sum by (cache_type) (rate(eth_rpc_proxy_cache_requests_total[5m]))",
           "interval": "",
           "legendFormat": "{{cache_type}}",
           "refId": "A"
@@ -442,7 +442,7 @@
       },
       "targets": [
         {
-          "expr": "topk(10, sum by (rpc_method) (rate(cache_requests_total{rpc_method!=\"other\"}[5m])))",
+          "expr": "topk(10, sum by (rpc_method) (rate(eth_rpc_proxy_cache_requests_total{rpc_method!=\"other\"}[5m])))",
           "interval": "",
           "legendFormat": "{{rpc_method}}",
           "refId": "A"
@@ -512,7 +512,7 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
-          "expr": "sum by (network) (rate(cache_hits_total[5m])) / sum by (network) (rate(cache_requests_total[5m]))",
+          "expr": "sum by (network) (rate(eth_rpc_proxy_cache_hits_total[5m])) / sum by (network) (rate(eth_rpc_proxy_cache_requests_total[5m]))",
           "interval": "",
           "legendFormat": "{{network}}",
           "refId": "A"
@@ -623,19 +623,19 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum by (le,level) (rate(cache_operation_duration_seconds_bucket{operation=\"get\"}[5m]))) * 1000",
+          "expr": "histogram_quantile(0.5, sum by (le,level) (rate(eth_rpc_proxy_cache_operation_duration_seconds_bucket{operation=\"get\"}[5m]))) * 1000",
           "interval": "",
           "legendFormat": "{{level}} p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (le,level) (rate(cache_operation_duration_seconds_bucket{operation=\"get\"}[5m]))) * 1000",
+          "expr": "histogram_quantile(0.95, sum by (le,level) (rate(eth_rpc_proxy_cache_operation_duration_seconds_bucket{operation=\"get\"}[5m]))) * 1000",
           "interval": "",
           "legendFormat": "{{level}} p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum by (le,level) (rate(cache_operation_duration_seconds_bucket{operation=\"get\"}[5m]))) * 1000",
+          "expr": "histogram_quantile(0.99, sum by (le,level) (rate(eth_rpc_proxy_cache_operation_duration_seconds_bucket{operation=\"get\"}[5m]))) * 1000",
           "interval": "",
           "legendFormat": "{{level}} p99",
           "refId": "C"
@@ -720,13 +720,13 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum by (le,level) (rate(cache_operation_duration_seconds_bucket{operation=\"set\"}[5m]))) * 1000",
+          "expr": "histogram_quantile(0.5, sum by (le,level) (rate(eth_rpc_proxy_cache_operation_duration_seconds_bucket{operation=\"set\"}[5m]))) * 1000",
           "interval": "",
           "legendFormat": "{{level}} p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (le,level) (rate(cache_operation_duration_seconds_bucket{operation=\"set\"}[5m]))) * 1000",
+          "expr": "histogram_quantile(0.95, sum by (le,level) (rate(eth_rpc_proxy_cache_operation_duration_seconds_bucket{operation=\"set\"}[5m]))) * 1000",
           "interval": "",
           "legendFormat": "{{level}} p95",
           "refId": "B"
@@ -818,7 +818,7 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
-          "expr": "100 * (cache_used_bytes{level=\"l1\"} / cache_capacity_bytes{level=\"l1\"})",
+          "expr": "100 * (eth_rpc_proxy_cache_used_bytes{level=\"l1\"} / eth_rpc_proxy_cache_capacity_bytes{level=\"l1\"})",
           "interval": "",
           "legendFormat": "L1 Usage %",
           "refId": "A"
@@ -903,7 +903,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (level) (rate(cache_evictions_total[5m]))",
+          "expr": "sum by (level) (rate(eth_rpc_proxy_cache_evictions_total[5m]))",
           "interval": "",
           "legendFormat": "{{level}} Evictions/sec",
           "refId": "A"
@@ -988,7 +988,7 @@
       },
       "targets": [
         {
-          "expr": "cache_keys{level=\"l1\"}",
+          "expr": "eth_rpc_proxy_cache_keys{level=\"l1\"}",
           "interval": "",
           "legendFormat": "L1 Keys Count",
           "refId": "A"
@@ -1088,7 +1088,7 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
-          "expr": "rate(cache_item_age_seconds_bucket[5m])",
+          "expr": "rate(eth_rpc_proxy_cache_item_age_seconds_bucket[5m])",
           "format": "heatmap",
           "interval": "",
           "legendFormat": "{{le}}",
@@ -1200,7 +1200,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (kind) (rate(cache_errors_total[5m]))",
+          "expr": "sum by (kind) (rate(eth_rpc_proxy_cache_errors_total[5m]))",
           "interval": "",
           "legendFormat": "{{kind}} errors/sec",
           "refId": "A"

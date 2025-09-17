@@ -15,7 +15,7 @@ var (
 	// Core request/hit/miss counters with unified labels
 	CacheRequests = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "cache_requests_total",
+			Name: "eth_rpc_proxy_cache_requests_total",
 			Help: "Total number of cache requests",
 		},
 		[]string{"cache_type", "level", "network", "rpc_method"},
@@ -23,7 +23,7 @@ var (
 
 	CacheHits = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "cache_hits_total",
+			Name: "eth_rpc_proxy_cache_hits_total",
 			Help: "Total number of cache hits",
 		},
 		[]string{"cache_type", "level", "network", "rpc_method"},
@@ -31,7 +31,7 @@ var (
 
 	CacheMisses = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "cache_misses_total",
+			Name: "eth_rpc_proxy_cache_misses_total",
 			Help: "Total number of cache misses",
 		},
 		[]string{"cache_type", "level", "network", "rpc_method"},
@@ -40,7 +40,7 @@ var (
 	// New metrics for enhanced monitoring
 	CacheSets = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "cache_sets_total",
+			Name: "eth_rpc_proxy_cache_sets_total",
 			Help: "Total number of cache set operations",
 		},
 		[]string{"level", "cache_type", "network"},
@@ -48,7 +48,7 @@ var (
 
 	CacheEvictions = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "cache_evictions_total",
+			Name: "eth_rpc_proxy_cache_evictions_total",
 			Help: "Total number of cache evictions",
 		},
 		[]string{"level", "cache_type", "network"},
@@ -56,7 +56,7 @@ var (
 
 	CacheErrors = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "cache_errors_total",
+			Name: "eth_rpc_proxy_cache_errors_total",
 			Help: "Cache errors by kind",
 		},
 		[]string{"level", "kind"},
@@ -64,7 +64,7 @@ var (
 
 	CacheBytesRead = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "cache_bytes_read_total",
+			Name: "eth_rpc_proxy_cache_bytes_read_total",
 			Help: "Bytes read from cache",
 		},
 		[]string{"level", "cache_type", "network"},
@@ -72,7 +72,7 @@ var (
 
 	CacheBytesWritten = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "cache_bytes_written_total",
+			Name: "eth_rpc_proxy_cache_bytes_written_total",
 			Help: "Bytes written to cache",
 		},
 		[]string{"level", "cache_type", "network"},
@@ -81,7 +81,7 @@ var (
 	// Extended operation latency for get and set operations
 	CacheOperationDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "cache_operation_duration_seconds",
+			Name:    "eth_rpc_proxy_cache_operation_duration_seconds",
 			Help:    "Duration of cache operations",
 			Buckets: prometheus.DefBuckets,
 		},
@@ -91,7 +91,7 @@ var (
 	// Cache keys count (mainly for L1)
 	CacheKeys = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "cache_keys",
+			Name: "eth_rpc_proxy_cache_keys",
 			Help: "Current number of keys in cache",
 		},
 		[]string{"level"},
@@ -100,7 +100,7 @@ var (
 	// Cache item age at hit time (for TTL effectiveness analysis)
 	CacheItemAge = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "cache_item_age_seconds",
+			Name:    "eth_rpc_proxy_cache_item_age_seconds",
 			Help:    "Age of item at hit time",
 			Buckets: []float64{0.1, 0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600, 1800, 3600}, // up to 1 hour
 		},
@@ -110,7 +110,7 @@ var (
 	// L1 capacity metrics only (if L1 is in-memory)
 	CacheCapacity = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "cache_capacity_bytes",
+			Name: "eth_rpc_proxy_cache_capacity_bytes",
 			Help: "L1 cache capacity in bytes",
 		},
 		[]string{"level"}, // only "l1"
@@ -118,7 +118,7 @@ var (
 
 	CacheUsed = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "cache_used_bytes",
+			Name: "eth_rpc_proxy_cache_used_bytes",
 			Help: "L1 cache used space in bytes",
 		},
 		[]string{"level"}, // only "l1"
@@ -149,12 +149,6 @@ func normalizeNetwork(chain, network string) string {
 		return "unknown"
 	}
 	return chain + ":" + network
-}
-
-// RecordCacheRequest records a cache request with enhanced labels
-// Note: level will be determined when we know if it's a hit or miss
-func RecordCacheRequest(cacheType, chain, network, rpcMethod string) {
-	// We'll record the request when we know the outcome (hit/miss) with proper level
 }
 
 // RecordCacheHit records a cache hit with enhanced labels and age tracking

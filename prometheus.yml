@@ -28,7 +28,7 @@ scrape_configs:
 
   - job_name: 'cache-service'
     static_configs:
-      - targets: ['cache-service:8080']
+      - targets: ['cache-service:8099']
     scrape_interval: 15s
     metrics_path: '/metrics'
     scheme: http

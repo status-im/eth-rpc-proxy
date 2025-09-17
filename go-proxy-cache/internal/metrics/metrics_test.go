@@ -9,11 +9,6 @@ func TestCacheMetrics(t *testing.T) {
 	// Note: Metrics are now package-level variables, automatically registered
 	// This test just verifies the functions don't panic
 
-	t.Run("RecordCacheRequest", func(t *testing.T) {
-		// This function is now empty, but test that it doesn't panic
-		RecordCacheRequest("permanent", "ethereum", "mainnet", "eth_getBlockByHash")
-	})
-
 	t.Run("RecordCacheHit", func(t *testing.T) {
 		// This should not panic
 		RecordCacheHit("permanent", "l1", "ethereum", "mainnet", "eth_getBlockByHash", time.Second*30)

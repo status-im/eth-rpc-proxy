@@ -3,6 +3,8 @@
 ## Overview
 Brief description of all cache metrics with their types and cardinality.
 
+**Note**: All cache metrics are prefixed with `eth_rpc_proxy_` in the actual Prometheus output
+
 ## Core Cache Metrics
 
 | Metric Name | Type | Labels | Cardinality | Description |
