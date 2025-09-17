@@ -36,8 +36,9 @@ type CompositionRoot struct {
 	KeyBuilder interfaces.KeyBuilder
 
 	// Services
-	CacheService *service.CacheService
-	HTTPServer   *httpserver.Server
+	CacheService  *service.CacheService
+	HTTPServer    *httpserver.Server
+	MetricsServer *httpserver.MetricsServer
 }
 
 // NewCompositionRoot creates and initializes all application dependencies.
@@ -82,6 +83,11 @@ func NewCompositionRoot() (*CompositionRoot, error) {
 	// Initialize HTTP server
 	if err := root.initHTTPServer(); err != nil {
 		return nil, fmt.Errorf("failed to initialize HTTP server: %w", err)
+	}
+
+	// Initialize metrics server
+	if err := root.initMetricsServer(); err != nil {
+		return nil, fmt.Errorf("failed to initialize metrics server: %w", err)
 	}
 
 	return root, nil
@@ -213,6 +219,12 @@ func (r *CompositionRoot) initHTTPServer() error {
 	return nil
 }
 
+// initMetricsServer initializes the metrics HTTP server
+func (r *CompositionRoot) initMetricsServer() error {
+	r.MetricsServer = httpserver.NewMetricsServer(r.Logger)
+	return nil
+}
+
 // Cleanup performs cleanup of all resources
 func (r *CompositionRoot) Cleanup() error {
 	var errors []error
@@ -257,4 +269,13 @@ func (r *CompositionRoot) GetSocketPath() string {
 		socketPath = "/tmp/cache.sock"
 	}
 	return socketPath
+}
+
+// GetMetricsPort returns the port for the metrics HTTP server
+func (r *CompositionRoot) GetMetricsPort() string {
+	port := os.Getenv("CACHE_METRICS_PORT")
+	if port == "" {
+		port = "8080"
+	}
+	return port
 }

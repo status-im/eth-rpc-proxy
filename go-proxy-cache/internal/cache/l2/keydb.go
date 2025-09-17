@@ -3,6 +3,7 @@ package l2
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/go-redis/redis/v8"

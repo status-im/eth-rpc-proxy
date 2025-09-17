@@ -37,6 +37,15 @@ func main() {
 		}
 	}()
 
+	// Start metrics server on HTTP port
+	metricsPort := root.GetMetricsPort()
+	root.Logger.Info("Starting metrics server", zap.String("port", metricsPort))
+	go func() {
+		if err := root.MetricsServer.Start(metricsPort); err != nil {
+			root.Logger.Error("Metrics server failed to start", zap.Error(err))
+		}
+	}()
+
 	// Wait for interrupt signal to gracefully shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -48,9 +57,12 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Shutdown server
+	// Shutdown servers
 	if err := root.HTTPServer.Stop(ctx); err != nil {
-		root.Logger.Error("Server forced to shutdown", zap.Error(err))
+		root.Logger.Error("HTTP server forced to shutdown", zap.Error(err))
+	}
+	if err := root.MetricsServer.Stop(ctx); err != nil {
+		root.Logger.Error("Metrics server forced to shutdown", zap.Error(err))
 	}
 
 	root.Logger.Info("Server exited")

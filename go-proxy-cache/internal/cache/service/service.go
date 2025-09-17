@@ -9,6 +9,7 @@ import (
 	"go-proxy-cache/internal/cache"
 	"go-proxy-cache/internal/cache/multi"
 	"go-proxy-cache/internal/interfaces"
+	"go-proxy-cache/internal/metrics"
 	"go-proxy-cache/internal/models"
 	"go-proxy-cache/internal/utils"
 )
@@ -19,6 +20,7 @@ type CacheService struct {
 	keyBuilder      interfaces.KeyBuilder
 	cacheClassifier interfaces.CacheRulesClassifier
 	logger          *zap.Logger
+	l1Cache         interfaces.Cache // Keep reference to L1 cache for metrics
 }
 
 // NewCacheService creates a new cache service instance with MultiCache
@@ -27,12 +29,18 @@ func NewCacheService(l1Cache, l2Cache interfaces.Cache, cacheClassifier interfac
 	caches := []interfaces.Cache{l1Cache, l2Cache}
 	multiCache := multi.NewMultiCache(caches, logger, enablePropagation)
 
-	return &CacheService{
+	service := &CacheService{
 		multiCache:      multiCache,
 		keyBuilder:      cache.NewKeyBuilder(),
 		cacheClassifier: cacheClassifier,
 		logger:          logger,
+		l1Cache:         l1Cache,
 	}
+
+	// Start metrics collection goroutine
+	go service.collectMetricsPeriodically()
+
+	return service
 }
 
 // GetResponse represents the result of a cache get operation
@@ -63,6 +71,11 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 
 	// Check if caching should be bypassed (TTL = 0)
 	cacheInfo := s.cacheClassifier.GetTtl(chain, network, request)
+	cacheType := string(cacheInfo.CacheType)
+
+	// Record cache request
+	metrics.RecordCacheRequest(cacheType)
+
 	if cacheInfo.TTL == 0 {
 		return &GetResponse{
 			Found:      false,
@@ -70,15 +83,31 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 			Data:       "",
 			Key:        key,
 			Bypass:     true,
-			CacheType:  string(cacheInfo.CacheType),
+			CacheType:  cacheType,
 			TTL:        int(cacheInfo.TTL.Seconds()),
 			CacheLevel: models.CacheLevelMiss,
 		}, nil
 	}
 
+	// Start timing cache get operation
+	timer := metrics.TimeCacheGetOperation("multi")
+	defer timer()
+
 	// Try MultiCache with level information
 	result := s.multiCache.GetWithLevel(key)
 	if result.Found && result.Entry != nil {
+		// Record cache hit with level information
+		var level string
+		switch result.Level {
+		case models.CacheLevelL1:
+			level = "l1"
+		case models.CacheLevelL2:
+			level = "l2"
+		default:
+			level = "unknown"
+		}
+		metrics.RecordCacheHit(cacheType, level)
+
 		// Fix response ID to match current request
 		fixedData := utils.FixResponseID(string(result.Entry.Data), request.ID)
 
@@ -88,11 +117,14 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 			Data:       fixedData,
 			Key:        key,
 			Bypass:     false,
-			CacheType:  string(cacheInfo.CacheType),
+			CacheType:  cacheType,
 			TTL:        int(cacheInfo.TTL.Seconds()),
 			CacheLevel: result.Level,
 		}, nil
 	}
+
+	// Record cache miss
+	metrics.RecordCacheMiss(cacheType)
 
 	return &GetResponse{
 		Found:      false,
@@ -100,7 +132,7 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 		Data:       "",
 		Key:        key,
 		Bypass:     false,
-		CacheType:  string(cacheInfo.CacheType),
+		CacheType:  cacheType,
 		TTL:        int(cacheInfo.TTL.Seconds()),
 		CacheLevel: models.CacheLevelMiss,
 	}, nil
@@ -157,4 +189,23 @@ func (s *CacheService) GetCacheInfo(chain, network, rawBody string) (string, int
 	cacheInfo := s.cacheClassifier.GetTtl(chain, network, request)
 
 	return string(cacheInfo.CacheType), int(cacheInfo.TTL.Seconds()), nil
+}
+
+// collectMetricsPeriodically runs in a goroutine to collect cache capacity metrics
+func (s *CacheService) collectMetricsPeriodically() {
+	ticker := time.NewTicker(30 * time.Second) // Update every 30 seconds
+	defer ticker.Stop()
+
+	for range ticker.C {
+		s.updateCacheCapacityMetrics()
+	}
+}
+
+// updateCacheCapacityMetrics updates L1 cache capacity metrics
+func (s *CacheService) updateCacheCapacityMetrics() {
+	// Check if L1 cache has stats capability (like BigCache)
+	if statsCache, ok := s.l1Cache.(interface{ GetStats() (int64, int64) }); ok {
+		capacity, used := statsCache.GetStats()
+		metrics.UpdateL1CacheCapacity(capacity, used)
+	}
 }
