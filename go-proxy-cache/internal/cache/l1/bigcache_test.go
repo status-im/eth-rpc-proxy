@@ -88,7 +88,7 @@ func TestBigCache_Set_And_Get_Stale(t *testing.T) {
 
 	// Manually marshal and set the entry
 	entryJSON, _ := json.Marshal(entry)
-	bigCache.cache.Set("test-key", entryJSON)
+	_ = bigCache.cache.Set("test-key", entryJSON)
 
 	// Get the value (should be stale but not expired)
 	result, found := cache.Get("test-key")
@@ -119,7 +119,7 @@ func TestBigCache_Set_And_Get_Expired(t *testing.T) {
 
 	// Manually marshal and set the entry
 	entryJSON, _ := json.Marshal(entry)
-	bigCache.cache.Set("test-key", entryJSON)
+	_ = bigCache.cache.Set("test-key", entryJSON)
 
 	// Get the value (should be expired and not found)
 	result, found := cache.Get("test-key")
@@ -148,7 +148,7 @@ func TestBigCache_GetStale_Success(t *testing.T) {
 
 	// Manually marshal and set the entry
 	entryJSON, _ := json.Marshal(entry)
-	bigCache.cache.Set("test-key", entryJSON)
+	_ = bigCache.cache.Set("test-key", entryJSON)
 
 	// Get stale value
 	result, found := cache.GetStale("test-key")
@@ -190,7 +190,7 @@ func TestBigCache_GetStale_Expired(t *testing.T) {
 
 	// Manually marshal and set the entry
 	entryJSON, _ := json.Marshal(entry)
-	bigCache.cache.Set("test-key", entryJSON)
+	_ = bigCache.cache.Set("test-key", entryJSON)
 
 	// Try to get stale value (should be expired)
 	result, found := cache.GetStale("test-key")

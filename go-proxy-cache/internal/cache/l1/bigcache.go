@@ -59,13 +59,13 @@ func (bc *BigCache) Get(key string) (*models.CacheEntry, bool) {
 	if err := json.Unmarshal(data, &entry); err != nil {
 		bc.logger.Warn("Failed to unmarshal L1 cache entry", zap.String("key", key), zap.Error(err))
 		metrics.RecordCacheError("l1", "decode")
-		bc.cache.Delete(key) // Remove corrupted entry
+		_ = bc.cache.Delete(key) // Remove corrupted entry
 		return nil, false
 	}
 
 	// Check if entry is expired
 	if entry.IsExpired() {
-		bc.cache.Delete(key)
+		_ = bc.cache.Delete(key)
 		return nil, false
 	}
 
@@ -81,13 +81,13 @@ func (bc *BigCache) GetStale(key string) (*models.CacheEntry, bool) {
 
 	var entry models.CacheEntry
 	if err := json.Unmarshal(data, &entry); err != nil {
-		bc.cache.Delete(key) // Remove corrupted entry
+		_ = bc.cache.Delete(key) // Remove corrupted entry
 		return nil, false
 	}
 
 	// Check if entry is completely expired (beyond stale time)
 	if entry.IsExpired() {
-		bc.cache.Delete(key)
+		_ = bc.cache.Delete(key)
 		return nil, false
 	}
 
@@ -122,10 +122,7 @@ func (bc *BigCache) Set(key string, val []byte, ttl models.TTL) {
 
 // Delete removes entry from cache
 func (bc *BigCache) Delete(key string) {
-	err := bc.cache.Delete(key)
-	if err != nil {
-		return
-	}
+	_ = bc.cache.Delete(key)
 }
 
 // Close closes the cache
