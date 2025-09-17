@@ -99,7 +99,9 @@ services:
       CACHE_RULES_FILE: '/app/cache_rules.yaml'
       CACHE_KEYDB_URL_FILE: '/app/.keydb-url'
       CACHE_SOCKET_PATH: '/tmp/cache.sock'
-    # No ports exposed - using Unix socket only
+      CACHE_METRICS_PORT: '8099'
+    ports:
+      - '8099:8099'  # Expose metrics endpoint on port 8099
     networks:
       - 'rpc-network'
     volumes:

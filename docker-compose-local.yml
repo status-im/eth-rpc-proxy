@@ -110,19 +110,6 @@ services:
     volumes:
       - 'keydb-data:/data'
 
-  keydb-exporter:
-    image: 'oliver006/redis_exporter:v1.74.0'
-    container_name: 'keydb-exporter'
-    restart: 'always'
-    ports:
-      - '9121:9121'
-    networks:
-      - 'rpc-network'
-    environment:
-      REDIS_ADDR: 'keydb:6379'
-    depends_on:
-      - 'keydb'
-
   cache-service:
     build:
       context: './go-proxy-cache'
@@ -132,7 +119,7 @@ services:
     environment:
       CACHE_CONFIG_FILE: '/app/cache_config.yaml'
       CACHE_RULES_FILE: '/app/cache_rules.yaml'
-      KEYDB_URL: 'redis://keydb:6379'
+      CACHE_KEYDB_URL_FILE: '/app/.keydb-url'
       CACHE_SOCKET_PATH: '/tmp/cache.sock'
     # No ports exposed - using Unix socket only
     networks:
@@ -142,6 +129,7 @@ services:
     volumes:
       - './go-proxy-cache/cache_config.yaml:/app/cache_config.yaml:ro'
       - './go-proxy-cache/cache_rules.yaml:/app/cache_rules.yaml:ro'
+      - './secrets/.keydb-url:/app/.keydb-url:ro'
       - 'cache_socket:/tmp'
     healthcheck:
       test: ['CMD-SHELL', 'test -S /tmp/cache.sock || exit 1']

@@ -61,25 +61,6 @@ func (m *mockCache) Delete(key string) {
 	delete(m.data, key)
 }
 
-// mockKeyBuilder implements the KeyBuilder interface for testing
-type mockKeyBuilder struct{}
-
-func (m *mockKeyBuilder) Build(chain string, network string, req *models.JSONRPCRequest) (key string, paramsHash uint32) {
-	if req == nil || req.Method == "" {
-		return "", 0
-	}
-	return chain + ":" + network + ":" + req.Method, 12345
-}
-
-func (m *mockKeyBuilder) BuildBatch(chain, network string, reqs []models.JSONRPCRequest) ([]string, []uint32) {
-	keys := make([]string, len(reqs))
-	hashes := make([]uint32, len(reqs))
-	for i, req := range reqs {
-		keys[i], hashes[i] = m.Build(chain, network, &req)
-	}
-	return keys, hashes
-}
-
 // setupMockCacheClassifier configures the mock cache classifier with common expectations
 func setupMockCacheClassifier(ctrl *gomock.Controller) *mock.MockCacheRulesClassifier {
 	mockClassifier := mock.NewMockCacheRulesClassifier(ctrl)

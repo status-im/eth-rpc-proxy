@@ -15,6 +15,7 @@ import (
 	"go-proxy-cache/internal/config"
 	"go-proxy-cache/internal/httpserver"
 	"go-proxy-cache/internal/interfaces"
+	"go-proxy-cache/internal/metrics"
 )
 
 // CompositionRoot holds all application dependencies and provides a centralized
@@ -36,8 +37,9 @@ type CompositionRoot struct {
 	KeyBuilder interfaces.KeyBuilder
 
 	// Services
-	CacheService *service.CacheService
-	HTTPServer   *httpserver.Server
+	CacheService  *service.CacheService
+	HTTPServer    *httpserver.Server
+	MetricsServer *httpserver.MetricsServer
 }
 
 // NewCompositionRoot creates and initializes all application dependencies.
@@ -84,6 +86,11 @@ func NewCompositionRoot() (*CompositionRoot, error) {
 		return nil, fmt.Errorf("failed to initialize HTTP server: %w", err)
 	}
 
+	// Initialize metrics server
+	if err := root.initMetricsServer(); err != nil {
+		return nil, fmt.Errorf("failed to initialize metrics server: %w", err)
+	}
+
 	return root, nil
 }
 
@@ -127,6 +134,10 @@ func (r *CompositionRoot) loadCacheRules() error {
 
 	// Create classifier from the loaded config
 	r.CacheRules = cache_rules.NewClassifier(r.Logger, cacheRules)
+
+	// Initialize metrics allowed methods from cache rules
+	r.initMetrics(cacheRules)
+
 	return nil
 }
 
@@ -172,7 +183,11 @@ func (r *CompositionRoot) initL2Cache() error {
 		// Create KeyDB client
 		keydbClient, err := l2.NewRedisKeyDbClient(&r.Config.KeyDB, keydbURL, r.Logger)
 		if err != nil {
-			return err
+			r.Logger.Warn("Failed to connect to KeyDB, falling back to no L2 cache",
+				zap.String("keydb_url", keydbURL),
+				zap.Error(err))
+			r.L2Cache = noop.NewNoOpCache()
+			return nil
 		}
 
 		// Create L2 cache with the client
@@ -206,6 +221,12 @@ func (r *CompositionRoot) initHTTPServer() error {
 		r.Logger,
 	)
 
+	return nil
+}
+
+// initMetricsServer initializes the metrics HTTP server
+func (r *CompositionRoot) initMetricsServer() error {
+	r.MetricsServer = httpserver.NewMetricsServer(r.Logger)
 	return nil
 }
 
@@ -253,4 +274,20 @@ func (r *CompositionRoot) GetSocketPath() string {
 		socketPath = "/tmp/cache.sock"
 	}
 	return socketPath
+}
+
+// initMetrics initializes metrics system with allowed methods from cache rules
+func (r *CompositionRoot) initMetrics(cacheRulesConfig interfaces.CacheRulesConfig) {
+	methods := cacheRulesConfig.GetAllMethods()
+	metrics.InitializeAllowedMethods(methods)
+	r.Logger.Info("Metrics initialized", zap.Int("allowed_methods_count", len(methods)), zap.Strings("methods", methods))
+}
+
+// GetMetricsPort returns the port for the metrics HTTP server
+func (r *CompositionRoot) GetMetricsPort() string {
+	port := os.Getenv("CACHE_METRICS_PORT")
+	if port == "" {
+		port = "8080"
+	}
+	return port
 }

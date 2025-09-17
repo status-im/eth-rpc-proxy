@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
 	"go-proxy-cache/internal/cache/service"
@@ -65,7 +64,13 @@ func (s *Server) StartUnixSocket(socketPath string) error {
 // Stop stops the HTTP server
 func (s *Server) Stop(ctx context.Context) error {
 	s.logger.Info("Stopping cache HTTP server")
-	return s.server.Shutdown(ctx)
+
+	// Stop main server
+	if s.server != nil {
+		return s.server.Shutdown(ctx)
+	}
+
+	return nil
 }
 
 // createRouter creates and configures the HTTP router
@@ -81,9 +86,6 @@ func (s *Server) createRouter() *mux.Router {
 
 	// Cache info endpoint (equivalent to cache rules check)
 	router.HandleFunc("/cache/info", s.handleCacheInfo).Methods("POST")
-
-	// Prometheus metrics endpoint
-	router.Handle("/metrics", promhttp.Handler()).Methods("GET")
 
 	return router
 }

@@ -41,6 +41,20 @@ func (m *MockCacheRulesConfig) EXPECT() *MockCacheRulesConfigMockRecorder {
 	return m.recorder
 }
 
+// GetAllMethods mocks base method.
+func (m *MockCacheRulesConfig) GetAllMethods() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllMethods")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// GetAllMethods indicates an expected call of GetAllMethods.
+func (mr *MockCacheRulesConfigMockRecorder) GetAllMethods() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllMethods", reflect.TypeOf((*MockCacheRulesConfig)(nil).GetAllMethods))
+}
+
 // GetCacheTypeForMethod mocks base method.
 func (m *MockCacheRulesConfig) GetCacheTypeForMethod(method string) models.CacheType {
 	m.ctrl.T.Helper()

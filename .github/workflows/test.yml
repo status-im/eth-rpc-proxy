@@ -8,8 +8,8 @@ on:
     branches: [ master ]
 
 jobs:
-  test:
-    name: Run Tests
+  test-rpc-health-checker:
+    name: Run Tests (RPC Health Checker)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,4 +33,31 @@ jobs:
       id: tests
       run: |
         cd rpc-health-checker
+        go test -v -race ./...
+
+  test-go-proxy-cache:
+    name: Run Tests (Go Proxy Cache)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+        cache: true
+        cache-dependency-path: go-proxy-cache/go.sum
+
+    - name: Install dependencies
+      run: |
+        cd go-proxy-cache
+        go mod download
+
+    - name: Run tests
+      id: tests
+      run: |
+        cd go-proxy-cache
         go test -v -race ./... 
