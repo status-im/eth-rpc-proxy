@@ -1,0 +1,119 @@
+groups:
+  - name: cache_alerts
+    rules:
+      # 1. Hit ratio degradation
+      - alert: CacheHitRatioLow
+        expr: sum(rate(cache_hits_total[10m])) / sum(rate(cache_requests_total[10m])) < 0.6
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Cache hit ratio has degraded"
+          description: "Cache hit ratio is {{ $value | humanizePercentage }}, which is below the 60% threshold. This may indicate cache configuration issues or increased cache pressure."
+
+      # 2. High L1 cache latency
+      - alert: CacheL1LatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(cache_operation_duration_seconds_bucket{operation="get",level="l1"}[5m]))) > 0.005
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+          level: l1
+        annotations:
+          summary: "L1 cache latency is high"
+          description: "L1 cache p95 latency is {{ $value | humanizeDuration }}, which is above 5ms threshold. This may indicate memory pressure or cache contention."
+
+      # 3. High L2 cache latency
+      - alert: CacheL2LatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(cache_operation_duration_seconds_bucket{operation="get",level="l2"}[5m]))) > 0.050
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+          level: l2
+        annotations:
+          summary: "L2 cache latency is high"
+          description: "L2 cache p95 latency is {{ $value | humanizeDuration }}, which is above 50ms threshold. This may indicate Redis/KeyDB performance issues."
+
+      # 4. High eviction rate
+      - alert: CacheEvictionsHigh
+        expr: sum(rate(cache_evictions_total[5m])) > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Cache eviction rate is high"
+          description: "Cache evictions are occurring at {{ $value }} per second, which may indicate insufficient cache capacity or suboptimal TTL settings."
+
+      # 5. High L1 cache usage
+      - alert: CacheL1UsageHigh
+        expr: 100 * (cache_used_bytes{level="l1"} / cache_capacity_bytes{level="l1"}) > 90
+        for: 15m
+        labels:
+          severity: critical
+          component: cache
+          level: l1
+        annotations:
+          summary: "L1 cache usage is critically high"
+          description: "L1 cache usage is {{ $value }}%, which is above 90% threshold. Consider increasing cache size or reviewing TTL policies."
+
+      # 6. Cache errors occurring
+      - alert: CacheErrorsDetected
+        expr: sum(rate(cache_errors_total[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Cache errors detected"
+          description: "Cache errors are occurring at {{ $value }} per second. Check cache system health and connectivity."
+
+
+      # 9. Cache hit ratio by level (L1 should be higher than L2)
+      - alert: CacheL1HitRatioLow
+        expr: sum(rate(cache_hits_total{level="l1"}[10m])) / sum(rate(cache_requests_total{level="l1"}[10m])) < 0.3
+        for: 15m
+        labels:
+          severity: warning
+          component: cache
+          level: l1
+        annotations:
+          summary: "L1 cache hit ratio is low"
+          description: "L1 cache hit ratio is {{ $value | humanizePercentage }}, indicating potential L1 cache sizing or configuration issues."
+
+      # 10. Bytes read/write imbalance (more reads than writes might indicate good caching)
+      - alert: CacheBytesImbalance
+        expr: sum(rate(cache_bytes_read_total[10m])) / sum(rate(cache_bytes_written_total[10m])) < 2
+        for: 30m
+        labels:
+          severity: info
+          component: cache
+        annotations:
+          summary: "Cache read/write ratio is low"
+          description: "Cache read/write ratio is {{ $value }}, which might indicate suboptimal cache utilization. Expected ratio should be higher for effective caching."
+
+  - name: network_specific_alerts
+    rules:
+      # Network-specific hit ratio alerts
+      - alert: NetworkCacheHitRatioLow
+        expr: sum by (network) (rate(cache_hits_total[10m])) / sum by (network) (rate(cache_requests_total[10m])) < 0.4
+        for: 15m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Cache hit ratio low for network {{ $labels.network }}"
+          description: "Cache hit ratio for network {{ $labels.network }} is {{ $value | humanizePercentage }}, which is below expected levels."
+
+      # Method-specific alerts for critical RPC methods
+      - alert: CriticalMethodCacheHitRatioLow
+        expr: sum by (rpc_method) (rate(cache_hits_total{rpc_method=~"eth_getBlockByHash|eth_getTransactionReceipt|eth_getLogs"}[10m])) / sum by (rpc_method) (rate(cache_requests_total{rpc_method=~"eth_getBlockByHash|eth_getTransactionReceipt|eth_getLogs"}[10m])) < 0.8
+        for: 15m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Low cache hit ratio for critical method {{ $labels.rpc_method }}"
+          description: "Cache hit ratio for {{ $labels.rpc_method }} is {{ $value | humanizePercentage }}. This method should have high cache effectiveness."

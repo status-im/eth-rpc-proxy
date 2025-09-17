@@ -1,6 +1,9 @@
 global:
   scrape_interval: 15s
 
+rule_files:
+  - "prometheus-alerts.yml"
+
 scrape_configs:
   - job_name: 'health-checker'
     static_configs:
@@ -23,9 +26,9 @@ scrape_configs:
     metrics_path: '/metrics/cache'
     scheme: http
 
-  - job_name: 'keydb'
+  - job_name: 'cache-service'
     static_configs:
-      - targets: ['keydb-exporter:9121']
+      - targets: ['cache-service:8080']
     scrape_interval: 15s
     metrics_path: '/metrics'
     scheme: http

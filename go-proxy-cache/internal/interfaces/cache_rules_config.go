@@ -14,4 +14,6 @@ type CacheRulesConfig interface {
 	// for a given chain and network combination
 	GetTtlForCacheType(chain, network string, cacheType models.CacheType) time.Duration
 	GetCacheTypeForMethod(method string) models.CacheType
+	// GetAllMethods returns all configured RPC methods
+	GetAllMethods() []string
 }

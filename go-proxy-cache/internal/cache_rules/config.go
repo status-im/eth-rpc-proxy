@@ -73,6 +73,15 @@ func (cr *CacheConfig) lookupTTL(key string, cacheType models.CacheType) time.Du
 	return 0
 }
 
+// GetAllMethods returns all configured RPC methods from cache rules
+func (cr *CacheConfig) GetAllMethods() []string {
+	methods := make([]string, 0, len(cr.config.CacheRules))
+	for method := range cr.config.CacheRules {
+		methods = append(methods, method)
+	}
+	return methods
+}
+
 // getFallbackTTL provides fallback TTL values when config is not available
 func (cr *CacheConfig) getFallbackTTL(cacheType models.CacheType) time.Duration {
 	fallbackTTLs := map[models.CacheType]time.Duration{

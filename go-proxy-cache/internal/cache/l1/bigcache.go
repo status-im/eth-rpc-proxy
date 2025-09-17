@@ -10,6 +10,7 @@ import (
 
 	"go-proxy-cache/internal/config"
 	"go-proxy-cache/internal/interfaces"
+	"go-proxy-cache/internal/metrics"
 	"go-proxy-cache/internal/models"
 )
 
@@ -18,8 +19,10 @@ var _ interfaces.Cache = (*BigCache)(nil)
 
 // BigCache implements L1 cache using BigCache
 type BigCache struct {
-	cache  *bigcache.BigCache
-	logger *zap.Logger
+	cache         *bigcache.BigCache
+	logger        *zap.Logger
+	stopMetrics   chan struct{}
+	metricsTicker *time.Ticker
 }
 
 // NewBigCache creates a new BigCache instance
@@ -34,10 +37,16 @@ func NewBigCache(bigcacheCfg *config.BigCacheConfig, logger *zap.Logger) (interf
 		return nil, err
 	}
 
-	return &BigCache{
-		cache:  cache,
-		logger: logger,
-	}, nil
+	bc := &BigCache{
+		cache:       cache,
+		logger:      logger,
+		stopMetrics: make(chan struct{}),
+	}
+
+	// Start periodic metrics collection
+	bc.startMetricsCollection()
+
+	return bc, nil
 }
 
 // Get retrieves value from cache with freshness information
@@ -49,6 +58,8 @@ func (bc *BigCache) Get(key string) (*models.CacheEntry, bool) {
 
 	var entry models.CacheEntry
 	if err := json.Unmarshal(data, &entry); err != nil {
+		bc.logger.Warn("Failed to unmarshal L1 cache entry", zap.String("key", key), zap.Error(err))
+		metrics.RecordCacheError("l1", "decode")
 		bc.cache.Delete(key) // Remove corrupted entry
 		return nil, false
 	}
@@ -98,12 +109,14 @@ func (bc *BigCache) Set(key string, val []byte, ttl models.TTL) {
 	data, err := json.Marshal(entry)
 	if err != nil {
 		bc.logger.Error("Failed to marshal cache entry", zap.String("key", key), zap.Error(err))
+		metrics.RecordCacheError("l1", "encode")
 		return
 	}
 
 	err = bc.cache.Set(key, data)
 	if err != nil {
 		bc.logger.Error("Failed to set cache entry", zap.String("key", key), zap.Error(err))
+		metrics.RecordCacheError("l1", "upstream")
 		return
 	}
 }
@@ -118,6 +131,9 @@ func (bc *BigCache) Delete(key string) {
 
 // Close closes the cache
 func (bc *BigCache) Close() error {
+	// Stop metrics collection
+	bc.stopMetricsCollection()
+
 	return bc.cache.Close()
 }
 
@@ -128,5 +144,51 @@ func (bc *BigCache) GetStats() (capacity, used int64) {
 	// Convert from MB to bytes
 	capacity = int64(bc.cache.Capacity())   // This returns the configured size in bytes
 	used = int64(stats.Hits + stats.Misses) // Approximate usage based on operations
+
 	return capacity, used
+}
+
+// startMetricsCollection starts periodic metrics collection
+func (bc *BigCache) startMetricsCollection() {
+	bc.metricsTicker = time.NewTicker(30 * time.Second)
+
+	go func() {
+		defer bc.metricsTicker.Stop()
+
+		// Initial collection
+		bc.updateMetrics()
+
+		for {
+			select {
+			case <-bc.metricsTicker.C:
+				bc.updateMetrics()
+			case <-bc.stopMetrics:
+				bc.logger.Debug("Stopping L1 cache metrics collection")
+				return
+			}
+		}
+	}()
+
+	bc.logger.Debug("Started L1 cache metrics collection")
+}
+
+// stopMetricsCollection stops periodic metrics collection
+func (bc *BigCache) stopMetricsCollection() {
+	if bc.metricsTicker != nil {
+		close(bc.stopMetrics)
+		bc.metricsTicker.Stop()
+	}
+}
+
+// updateMetrics updates cache metrics
+func (bc *BigCache) updateMetrics() {
+	capacity, used := bc.GetStats()
+
+	// Update capacity metrics
+	metrics.UpdateL1CacheCapacity(capacity, used)
+
+	// Update key count (estimated from operations)
+	stats := bc.cache.Stats()
+	totalOps := stats.Hits + stats.Misses
+	metrics.UpdateCacheKeys("l1", int64(totalOps))
 }

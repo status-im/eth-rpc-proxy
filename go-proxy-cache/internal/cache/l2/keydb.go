@@ -11,6 +11,7 @@ import (
 
 	"go-proxy-cache/internal/config"
 	"go-proxy-cache/internal/interfaces"
+	"go-proxy-cache/internal/metrics"
 	"go-proxy-cache/internal/models"
 )
 
@@ -50,6 +51,7 @@ func (kc *KeyDBCache) Get(key string) (*models.CacheEntry, bool) {
 	var entry models.CacheEntry
 	if err := json.Unmarshal([]byte(data), &entry); err != nil {
 		kc.logger.Error("Failed to unmarshal L2 cache entry", zap.String("key", key), zap.Error(err))
+		metrics.RecordCacheError("l2", "decode")
 		kc.client.Del(context.Background(), key)
 		return nil, false
 	}
@@ -110,6 +112,7 @@ func (kc *KeyDBCache) Set(key string, val []byte, ttl models.TTL) {
 	data, err := json.Marshal(entry)
 	if err != nil {
 		kc.logger.Error("Failed to marshal L2 cache entry", zap.String("key", key), zap.Error(err))
+		metrics.RecordCacheError("l2", "encode")
 		return
 	}
 
@@ -118,6 +121,7 @@ func (kc *KeyDBCache) Set(key string, val []byte, ttl models.TTL) {
 	err = kc.client.Set(ctx, key, data, totalTTL).Err()
 	if err != nil {
 		kc.logger.Warn("Failed to set L2 cache entry", zap.String("key", key), zap.Error(err))
+		metrics.RecordCacheError("l2", "redis")
 		return
 	}
 }

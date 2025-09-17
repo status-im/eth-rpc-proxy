@@ -15,6 +15,7 @@ import (
 	"go-proxy-cache/internal/config"
 	"go-proxy-cache/internal/httpserver"
 	"go-proxy-cache/internal/interfaces"
+	"go-proxy-cache/internal/metrics"
 )
 
 // CompositionRoot holds all application dependencies and provides a centralized
@@ -133,6 +134,10 @@ func (r *CompositionRoot) loadCacheRules() error {
 
 	// Create classifier from the loaded config
 	r.CacheRules = cache_rules.NewClassifier(r.Logger, cacheRules)
+
+	// Initialize metrics allowed methods from cache rules
+	r.initMetrics(cacheRules)
+
 	return nil
 }
 
@@ -269,6 +274,13 @@ func (r *CompositionRoot) GetSocketPath() string {
 		socketPath = "/tmp/cache.sock"
 	}
 	return socketPath
+}
+
+// initMetrics initializes metrics system with allowed methods from cache rules
+func (r *CompositionRoot) initMetrics(cacheRulesConfig interfaces.CacheRulesConfig) {
+	methods := cacheRulesConfig.GetAllMethods()
+	metrics.InitializeAllowedMethods(methods)
+	r.Logger.Info("Metrics initialized", zap.Int("allowed_methods_count", len(methods)), zap.Strings("methods", methods))
 }
 
 // GetMetricsPort returns the port for the metrics HTTP server

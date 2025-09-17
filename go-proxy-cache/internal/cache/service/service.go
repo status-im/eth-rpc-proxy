@@ -37,9 +37,6 @@ func NewCacheService(l1Cache, l2Cache interfaces.Cache, cacheClassifier interfac
 		l1Cache:         l1Cache,
 	}
 
-	// Start metrics collection goroutine
-	go service.collectMetricsPeriodically()
-
 	return service
 }
 
@@ -73,9 +70,6 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 	cacheInfo := s.cacheClassifier.GetTtl(chain, network, request)
 	cacheType := string(cacheInfo.CacheType)
 
-	// Record cache request
-	metrics.RecordCacheRequest(cacheType)
-
 	if cacheInfo.TTL == 0 {
 		return &GetResponse{
 			Found:      false,
@@ -106,7 +100,12 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 		default:
 			level = "unknown"
 		}
-		metrics.RecordCacheHit(cacheType, level)
+		// Calculate item age for TTL effectiveness analysis
+		itemAge := time.Duration(time.Now().Unix()-result.Entry.CreatedAt) * time.Second
+		metrics.RecordCacheHit(cacheType, level, chain, network, request.Method, itemAge)
+
+		// Record bytes read
+		metrics.RecordCacheBytesRead(level, cacheType, chain, network, len(result.Entry.Data))
 
 		// Fix response ID to match current request
 		fixedData := utils.FixResponseID(string(result.Entry.Data), request.ID)
@@ -124,7 +123,7 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 	}
 
 	// Record cache miss
-	metrics.RecordCacheMiss(cacheType)
+	metrics.RecordCacheMiss(cacheType, chain, network, request.Method)
 
 	return &GetResponse{
 		Found:      false,
@@ -172,7 +171,20 @@ func (s *CacheService) Set(chain, network, rawBody, responseData string, customT
 
 	// Store using MultiCache (will store in all configured caches)
 	ttlStruct := models.TTL{Fresh: ttl, Stale: staleTTL}
+
+	// Time the set operation
+	timer := metrics.TimeCacheOperation("set", "multi")
 	s.multiCache.Set(key, []byte(responseData), ttlStruct)
+	timer()
+
+	// Record cache set operation and bytes written for each level
+	cacheInfo := s.cacheClassifier.GetTtl(chain, network, request)
+	cacheType := string(cacheInfo.CacheType)
+	dataSize := len(responseData)
+
+	// Record for both L1 and L2 (since MultiCache writes to both)
+	metrics.RecordCacheSet("l1", cacheType, chain, network, dataSize)
+	metrics.RecordCacheSet("l2", cacheType, chain, network, dataSize)
 
 	return nil
 }
@@ -189,23 +201,4 @@ func (s *CacheService) GetCacheInfo(chain, network, rawBody string) (string, int
 	cacheInfo := s.cacheClassifier.GetTtl(chain, network, request)
 
 	return string(cacheInfo.CacheType), int(cacheInfo.TTL.Seconds()), nil
-}
-
-// collectMetricsPeriodically runs in a goroutine to collect cache capacity metrics
-func (s *CacheService) collectMetricsPeriodically() {
-	ticker := time.NewTicker(30 * time.Second) // Update every 30 seconds
-	defer ticker.Stop()
-
-	for range ticker.C {
-		s.updateCacheCapacityMetrics()
-	}
-}
-
-// updateCacheCapacityMetrics updates L1 cache capacity metrics
-func (s *CacheService) updateCacheCapacityMetrics() {
-	// Check if L1 cache has stats capability (like BigCache)
-	if statsCache, ok := s.l1Cache.(interface{ GetStats() (int64, int64) }); ok {
-		capacity, used := statsCache.GetStats()
-		metrics.UpdateL1CacheCapacity(capacity, used)
-	}
 }
