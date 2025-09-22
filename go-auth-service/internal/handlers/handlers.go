@@ -181,23 +181,29 @@ func (h *Handlers) TestSolveHandler(w http.ResponseWriter, r *http.Request) {
 
 // VerifyHandler handles JWT token verification for nginx auth_request
 func (h *Handlers) VerifyHandler(w http.ResponseWriter, r *http.Request) {
-	// Extract Authorization header
+	var tokenString string
+
+	// Try to extract token from Authorization header first
 	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
+	if authHeader != "" {
+		// Check if it's a Bearer token
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) == 2 && parts[0] == "Bearer" {
+			tokenString = parts[1]
+		}
+	}
+
+	// If no token from header, try query parameter
+	if tokenString == "" {
+		tokenString = r.URL.Query().Get("token")
+	}
+
+	// If still no token found, return unauthorized
+	if tokenString == "" {
 		metrics.RecordTokenVerification("missing_token")
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-
-	// Check if it's a Bearer token
-	parts := strings.SplitN(authHeader, " ", 2)
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		metrics.RecordTokenVerification("invalid_format")
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	tokenString := parts[1]
 
 	// Verify JWT token
 	claims, err := jwt.Verify(tokenString, h.config.JWTSecret)

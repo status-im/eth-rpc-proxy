@@ -1,19 +1,19 @@
 local json = require("cjson")
 local auth_config = require("auth.auth_config")
+local auth_utils = require("utils.auth_utils")
 
--- Extract Authorization header
-local auth_header = ngx.var.http_authorization
+-- Extract JWT token from Authorization header or query parameters
+local token, token_source = auth_utils.extract_jwt_token()
 
-if not auth_header then
+if not token then
     ngx.status = 401
     ngx.exit(401)
 end
 
--- Check if it's a Bearer token
-local auth_type, token = auth_header:match("^(%S+)%s+(.+)$")
-if auth_type ~= "Bearer" then
-    ngx.status = 401
-    ngx.exit(401)
+-- If token was extracted from query parameters, remove them from the request
+-- since no other query params are expected, we can safely clear all args
+if token_source == "query" then
+    ngx.req.set_uri_args({})
 end
 
 -- Get configuration values dynamically
@@ -66,10 +66,12 @@ end
 local current_url = auth_config.get_go_auth_service_url()
 
 -- Create subrequest to Go auth service
+-- Always use Bearer token format for internal verification
+local auth_header_for_go = "Bearer " .. token
 local res = ngx.location.capture("/_auth_go_verify", {
     method = ngx.HTTP_GET,
     headers = {
-        ["Authorization"] = auth_header
+        ["Authorization"] = auth_header_for_go
     }
 })
 
