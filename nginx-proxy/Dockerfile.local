@@ -17,6 +17,7 @@ RUN apk add --no-cache ca-certificates curl perl build-base wget tar yaml-dev gi
 
 # Copy configuration files
 COPY nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
+COPY metrics.conf /usr/local/openresty/nginx/conf/metrics.conf
 # cache_metrics.conf removed - metrics now served by go-proxy-cache service
 COPY providers.json /app/providers.json
 COPY lua /usr/local/openresty/nginx/lua

@@ -75,18 +75,6 @@ services:
     volumes:
       - './secrets:/config:ro'
 
-  rpc-proxy-metrics:
-    image: 'nginx/nginx-prometheus-exporter:1.4'
-    container_name: 'rpc-proxy-metrics'
-    restart: 'always'
-    command: 
-      - '--nginx.scrape-uri=http://rpc-proxy:8080/stub_status'
-      - '--web.listen-address=:8090'
-    ports:
-      - '8090:8090'
-    networks:
-      - 'rpc-network'
-
   keydb:
     image: 'eqalpha/keydb:latest'
     container_name: 'keydb'

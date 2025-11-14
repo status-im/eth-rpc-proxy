@@ -75,19 +75,6 @@ services:
       retries: 3
       start_period: '10s'
 
-  rpc-proxy-metrics:
-    image: 'nginx/nginx-prometheus-exporter:1.4'
-    container_name: 'rpc-proxy-metrics'
-    restart: 'always'
-    command: 
-      - '--nginx.scrape-uri=http://rpc-proxy:8080/stub_status'
-      - '--web.listen-address=:8090'
-    ports:
-      - '8090:8090'
-    networks:
-      - 'rpc-network'
-
-
   cache-service:
     build:
       context: './go-proxy-cache'
