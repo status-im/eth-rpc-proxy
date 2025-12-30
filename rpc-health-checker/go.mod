@@ -7,7 +7,7 @@ toolchain go1.23.9
 require (
 	github.com/go-playground/validator/v10 v10.23.0
 	github.com/prometheus/client_golang v1.20.5
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
