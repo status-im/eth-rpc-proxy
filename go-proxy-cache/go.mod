@@ -7,7 +7,7 @@ toolchain go1.23.11
 require (
 	github.com/allegro/bigcache/v3 v3.1.0
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.8.1
 	github.com/prometheus/client_golang v1.23.0
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/mock v0.6.0
