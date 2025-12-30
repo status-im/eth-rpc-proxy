@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # Go Auth Service
+  - package-ecosystem: "gomod"
+    directory: "/go-auth-service"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  # Go Proxy Cache
+  - package-ecosystem: "gomod"
+    directory: "/go-proxy-cache"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  # RPC Health Checker
+  - package-ecosystem: "gomod"
+    directory: "/rpc-health-checker"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # Note: test-api is excluded as it's only for local testing
+
