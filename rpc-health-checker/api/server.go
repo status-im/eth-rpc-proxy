@@ -91,7 +91,11 @@ func (s *httpServer) loadProviders(w io.Writer, path string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			s.logger.Error("failed to close file", "error", closeErr)
+		}
+	}()
 
 	_, err = io.Copy(w, f)
 	return err

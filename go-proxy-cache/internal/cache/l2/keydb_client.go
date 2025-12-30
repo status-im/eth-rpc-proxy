@@ -69,7 +69,7 @@ func NewRedisKeyDbClient(keydbCfg *config.KeyDBConfig, keydbURL string, logger *
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		client.Close() // Clean up the client
+		_ = client.Close() // Clean up the client
 		return nil, fmt.Errorf("failed to connect to KeyDB at %s: %w", opts.Addr, err)
 	}
 

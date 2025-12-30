@@ -78,17 +78,20 @@ func RecordRPCRequest(metrics RPCRequestMetrics) {
 	errCategory := CategorizeError(metrics.RequestErr, metrics.HTTPStatus, metrics.EVMErrorCode)
 
 	// Determine status code based on error type
-	statusCode := "success" // Default for successful requests
-	if errCategory == HTTPError {
+	var statusCode string
+	switch errCategory {
+	case HTTPError:
 		statusCode = fmt.Sprintf("http_%d", metrics.HTTPStatus)
-	} else if errCategory == EVMError {
+	case EVMError:
 		statusCode = fmt.Sprintf("evm_%d", metrics.EVMErrorCode)
-	} else if errCategory == JSONRPCError {
+	case JSONRPCError:
 		statusCode = "jsonrpc_error"
-	} else if errCategory == NetworkError {
+	case NetworkError:
 		statusCode = "network_error"
-	} else if errCategory == UnknownError {
+	case UnknownError:
 		statusCode = "unknown_error"
+	default:
+		statusCode = "success"
 	}
 
 	rpcRequestsTotal.WithLabelValues(

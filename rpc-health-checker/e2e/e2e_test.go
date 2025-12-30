@@ -240,7 +240,9 @@ func (s *E2ETestSuite) TearDownSuite() {
 	if err := s.providerSetup.Close(); err != nil {
 		s.T().Logf("error stopping mock servers: %v", err)
 	}
-	os.RemoveAll(testTempDir)
+	if err := os.RemoveAll(testTempDir); err != nil {
+		s.T().Logf("error removing temp directory: %v", err)
+	}
 }
 
 func (s *E2ETestSuite) writeJSONFile(path string, data interface{}) {
@@ -352,7 +354,11 @@ func (s *E2ETestSuite) TestE2E() {
 	s.Run("HTTP API returns providers", func() {
 		resp, err := http.Get(fmt.Sprintf("http://localhost:%s/providers", testPort))
 		s.NoError(err)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				s.T().Logf("error closing response body: %v", err)
+			}
+		}()
 
 		s.Equal(http.StatusOK, resp.StatusCode)
 

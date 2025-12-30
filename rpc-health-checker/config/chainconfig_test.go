@@ -32,11 +32,17 @@ func TestLoadChains(t *testing.T) {
 
 	tmpFile, err := os.CreateTemp("", "test-config-*.json")
 	assert.NoError(t, err)
-	defer os.Remove(tmpFile.Name())
+	defer func() {
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			t.Logf("failed to remove temp file: %v", err)
+		}
+	}()
 
 	_, err = tmpFile.WriteString(content)
 	assert.NoError(t, err)
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("failed to close temp file: %v", err)
+	}
 
 	t.Run("successful load", func(t *testing.T) {
 		chains, err := LoadChains(tmpFile.Name())
@@ -57,11 +63,17 @@ func TestLoadChains(t *testing.T) {
 	t.Run("invalid json", func(t *testing.T) {
 		invalidFile, err := os.CreateTemp("", "invalid-*.json")
 		assert.NoError(t, err)
-		defer os.Remove(invalidFile.Name())
+		defer func() {
+			if err := os.Remove(invalidFile.Name()); err != nil {
+				t.Logf("failed to remove temp file: %v", err)
+			}
+		}()
 
 		_, err = invalidFile.WriteString("{invalid}")
 		assert.NoError(t, err)
-		invalidFile.Close()
+		if err := invalidFile.Close(); err != nil {
+			t.Fatalf("failed to close temp file: %v", err)
+		}
 
 		_, err = LoadChains(invalidFile.Name())
 		assert.Error(t, err)
@@ -90,11 +102,17 @@ func TestLoadReferenceChains(t *testing.T) {
 
 	tmpFile, err := os.CreateTemp("", "test-ref-config-*.json")
 	assert.NoError(t, err)
-	defer os.Remove(tmpFile.Name())
+	defer func() {
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			t.Logf("failed to remove temp file: %v", err)
+		}
+	}()
 
 	_, err = tmpFile.WriteString(content)
 	assert.NoError(t, err)
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("failed to close temp file: %v", err)
+	}
 
 	t.Run("successful load", func(t *testing.T) {
 		chains, err := LoadReferenceChains(tmpFile.Name())
@@ -115,11 +133,17 @@ func TestLoadReferenceChains(t *testing.T) {
 	t.Run("invalid json", func(t *testing.T) {
 		invalidFile, err := os.CreateTemp("", "invalid-ref-*.json")
 		assert.NoError(t, err)
-		defer os.Remove(invalidFile.Name())
+		defer func() {
+			if err := os.Remove(invalidFile.Name()); err != nil {
+				t.Logf("failed to remove temp file: %v", err)
+			}
+		}()
 
 		_, err = invalidFile.WriteString("{invalid}")
 		assert.NoError(t, err)
-		invalidFile.Close()
+		if err := invalidFile.Close(); err != nil {
+			t.Fatalf("failed to close temp file: %v", err)
+		}
 
 		_, err = LoadReferenceChains(invalidFile.Name())
 		assert.Error(t, err)
@@ -128,11 +152,17 @@ func TestLoadReferenceChains(t *testing.T) {
 	t.Run("missing required fields", func(t *testing.T) {
 		invalidFile, err := os.CreateTemp("", "missing-fields-*.json")
 		assert.NoError(t, err)
-		defer os.Remove(invalidFile.Name())
+		defer func() {
+			if err := os.Remove(invalidFile.Name()); err != nil {
+				t.Logf("failed to remove temp file: %v", err)
+			}
+		}()
 
 		_, err = invalidFile.WriteString(`{"chains": [{"name": "ethereum"}]}`)
 		assert.NoError(t, err)
-		invalidFile.Close()
+		if err := invalidFile.Close(); err != nil {
+			t.Fatalf("failed to close temp file: %v", err)
+		}
 
 		_, err = LoadReferenceChains(invalidFile.Name())
 		assert.Error(t, err)
@@ -159,11 +189,17 @@ func TestLoadReferenceChains(t *testing.T) {
 
 		tmpFile, err := os.CreateTemp("", "test-ref-upper-*.json")
 		assert.NoError(t, err)
-		defer os.Remove(tmpFile.Name())
+		defer func() {
+			if err := os.Remove(tmpFile.Name()); err != nil {
+				t.Logf("failed to remove temp file: %v", err)
+			}
+		}()
 
 		_, err = tmpFile.WriteString(content)
 		assert.NoError(t, err)
-		tmpFile.Close()
+		if err := tmpFile.Close(); err != nil {
+			t.Fatalf("failed to close temp file: %v", err)
+		}
 
 		chains, err := LoadReferenceChains(tmpFile.Name())
 		assert.NoError(t, err)

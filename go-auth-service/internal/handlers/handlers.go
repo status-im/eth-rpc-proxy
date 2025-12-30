@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -51,7 +52,9 @@ func (h *Handlers) PuzzleHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("failed to encode puzzle response", "error", err)
+	}
 }
 
 // SolveRequest for puzzle solving
@@ -138,7 +141,9 @@ func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 		"request_limit": h.config.RequestsPerToken,
 	}
 
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("failed to encode solve response", "error", err)
+	}
 }
 
 // TestSolveHandler provides a test endpoint that generates a valid solution with HMAC
@@ -176,7 +181,9 @@ func (h *Handlers) TestSolveHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("failed to encode test-solve response", "error", err)
+	}
 }
 
 // VerifyHandler handles JWT token verification for nginx auth_request
@@ -260,5 +267,7 @@ func (h *Handlers) StatusHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("failed to encode status response", "error", err)
+	}
 }
