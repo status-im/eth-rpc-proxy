@@ -68,14 +68,20 @@ func TestReadCheckerConfig(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create temp file: %v", err)
 			}
-			defer os.Remove(tmpFile.Name())
+			defer func() {
+				if err := os.Remove(tmpFile.Name()); err != nil {
+					t.Logf("failed to remove temp file: %v", err)
+				}
+			}()
 
 			if tt.configJSON != "" {
 				if _, err := tmpFile.WriteString(tt.configJSON); err != nil {
 					t.Fatalf("Failed to write test config: %v", err)
 				}
 			}
-			tmpFile.Close()
+			if err := tmpFile.Close(); err != nil {
+				t.Fatalf("Failed to close temp file: %v", err)
+			}
 
 			// Test ReadCheckerConfig
 			config, err := ReadCheckerConfig(tmpFile.Name())

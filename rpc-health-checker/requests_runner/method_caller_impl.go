@@ -103,7 +103,9 @@ func (r *RequestsRunner) CallMethod(
 			ElapsedTime: time.Since(startTime),
 		}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	httpStatus = resp.StatusCode
 

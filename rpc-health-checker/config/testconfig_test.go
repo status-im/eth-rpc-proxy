@@ -25,11 +25,17 @@ func TestReadConfig(t *testing.T) {
 
 	tmpFile, err := os.CreateTemp("", "test-config-*.json")
 	require.NoError(t, err)
-	defer os.Remove(tmpFile.Name())
+	defer func() {
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			t.Logf("failed to remove temp file: %v", err)
+		}
+	}()
 
 	_, err = tmpFile.WriteString(content)
 	require.NoError(t, err)
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("Failed to close temp file: %v", err)
+	}
 
 	// Test reading config
 	configs, err := ReadConfig(tmpFile.Name())

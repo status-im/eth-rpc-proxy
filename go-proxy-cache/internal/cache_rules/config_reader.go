@@ -18,7 +18,7 @@ func LoadCacheRulesConfig(rulesPath string, logger *zap.Logger) (interfaces.Cach
 	if err != nil {
 		return nil, fmt.Errorf("failed to open cache rules file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var config CacheRulesConfig
 	decoder := yaml.NewDecoder(file)

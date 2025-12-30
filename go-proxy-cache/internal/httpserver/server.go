@@ -104,7 +104,7 @@ func (s *Server) parseRequest(r *http.Request, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 
 	return json.Unmarshal(body, v)
 }

@@ -84,14 +84,18 @@ func (suite *RpcProviderTestSuite) SetupSuite() {
 // TearDownSuite is executed after all tests in the suite
 func (suite *RpcProviderTestSuite) TearDownSuite() {
 	// Remove the temporary directory and all its contents
-	os.RemoveAll(suite.tempDir)
+	if err := os.RemoveAll(suite.tempDir); err != nil {
+		suite.T().Logf("failed to remove temp directory: %v", err)
+	}
 }
 
 // SetupTest is executed before each test
 func (suite *RpcProviderTestSuite) SetupTest() {
 	// Clear the file before each test if it exists
 	if _, err := os.Stat(suite.tempFile); err == nil {
-		os.Remove(suite.tempFile)
+		if err := os.Remove(suite.tempFile); err != nil {
+			suite.T().Logf("failed to remove temp file: %v", err)
+		}
 	}
 }
 

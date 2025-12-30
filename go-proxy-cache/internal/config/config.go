@@ -62,7 +62,7 @@ func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var config Config
 	decoder := yaml.NewDecoder(file)

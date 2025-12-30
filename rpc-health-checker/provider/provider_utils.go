@@ -18,7 +18,9 @@ func ReadRpcProviders(filename string) ([]RPCProvider, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	var pf RPCProvidersFile
 	if err := json.NewDecoder(f).Decode(&pf); err != nil {
@@ -49,7 +51,9 @@ func WriteRpcProviders(filename string, providers []RPCProvider) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	encoder := json.NewEncoder(f)
 	encoder.SetIndent("", "  ") // For readability

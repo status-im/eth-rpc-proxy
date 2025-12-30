@@ -36,7 +36,7 @@ cache_rules:
 `
 
 	tmpFile := createTempYAMLFile(t, validYAML)
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	// Test loading the configuration
 	config, err := LoadCacheRulesConfig(tmpFile, logger)
@@ -92,7 +92,7 @@ cache_rules:
 `
 
 	tmpFile := createTempYAMLFile(t, invalidYAML)
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	config, err := LoadCacheRulesConfig(tmpFile, logger)
 
@@ -144,7 +144,7 @@ cache_rules:
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tmpFile := createTempYAMLFile(t, tc.yaml)
-			defer os.Remove(tmpFile)
+			defer func() { _ = os.Remove(tmpFile) }()
 
 			config, err := LoadCacheRulesConfig(tmpFile, logger)
 
@@ -261,7 +261,7 @@ cache_rules:
 `
 
 	tmpFile := createTempYAMLFile(t, complexYAML)
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	config, err := LoadCacheRulesConfig(tmpFile, logger)
 
@@ -288,7 +288,7 @@ func TestLoadCacheRulesConfig_EmptyFile(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 
 	tmpFile := createTempYAMLFile(t, "")
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	config, err := LoadCacheRulesConfig(tmpFile, logger)
 
@@ -313,7 +313,7 @@ cache_rules:
 `
 
 	tmpFile := createTempYAMLFile(t, invalidCacheTypeYAML)
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	config, err := LoadCacheRulesConfig(tmpFile, logger)
 
@@ -338,7 +338,7 @@ cache_rules:
 `
 
 	tmpFile := createTempYAMLFile(t, validYAML)
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	config, err := LoadCacheRulesConfig(tmpFile, logger)
 

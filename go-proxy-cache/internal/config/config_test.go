@@ -51,7 +51,11 @@ multi_cache:
 `
 
 	configFile := createTestConfigFile(t, validConfig)
-	defer os.Remove(configFile)
+	defer func() {
+		if err := os.Remove(configFile); err != nil {
+			t.Logf("failed to remove temp file: %v", err)
+		}
+	}()
 
 	config, err := LoadConfig(configFile, logger)
 	if err != nil {
@@ -98,7 +102,11 @@ keydb:
 `
 
 	configFile := createTestConfigFile(t, minimalConfig)
-	defer os.Remove(configFile)
+	defer func() {
+		if err := os.Remove(configFile); err != nil {
+			t.Logf("failed to remove temp file: %v", err)
+		}
+	}()
 
 	config, err := LoadConfig(configFile, logger)
 	if err != nil {
@@ -139,7 +147,11 @@ bigcache:
 `
 
 	configFile := createTestConfigFile(t, invalidConfig)
-	defer os.Remove(configFile)
+	defer func() {
+		if err := os.Remove(configFile); err != nil {
+			t.Logf("failed to remove temp file: %v", err)
+		}
+	}()
 
 	_, err := LoadConfig(configFile, logger)
 	if err == nil {
