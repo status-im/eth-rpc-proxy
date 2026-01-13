@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/prometheus/client_golang v1.23.2
-	golang.org/x/crypto v0.46.0
+	golang.org/x/crypto v0.47.0
 )
 
 require (
@@ -17,6 +17,6 @@ require (
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 )
