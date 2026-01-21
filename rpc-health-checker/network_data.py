@@ -270,5 +270,71 @@ NETWORK_DATA = [
             GROVE: "https://polygon-amoy-testnet.rpc.grove.city/v1/",
             ALCHEMY: "https://polygon-amoy.g.alchemy.com/v2/"
         }
+    },
+    {
+        "chain": "polygon-zkevm",
+        "network": "mainnet",
+        "chainId": 1101,
+        "providers": {
+            ALCHEMY: "https://polygonzkevm-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "polygon-zkevm",
+        "network": "cardona",
+        "chainId": 2442,
+        "providers": {
+            ALCHEMY: "https://polygonzkevm-cardona.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "ink",
+        "network": "mainnet",
+        "chainId": 57073,
+        "providers": {
+            ALCHEMY: "https://ink-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "ink",
+        "network": "sepolia",
+        "chainId": 763373,
+        "providers": {
+            ALCHEMY: "https://ink-sepolia.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "soneium",
+        "network": "mainnet",
+        "chainId": 1868,
+        "providers": {
+            ALCHEMY: "https://soneium-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "soneium",
+        "network": "minato",
+        "chainId": 1946,
+        "providers": {
+            ALCHEMY: "https://soneium-minato.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "scroll",
+        "network": "mainnet",
+        "chainId": 534352,
+        "providers": {
+            INFURA: "https://scroll-mainnet.infura.io/v3/",
+            ALCHEMY: "https://scroll-mainnet.g.alchemy.com/v2/"
+        }
+    },
+    {
+        "chain": "scroll",
+        "network": "sepolia",
+        "chainId": 534351,
+        "providers": {
+            INFURA: "https://scroll-sepolia.infura.io/v3/",
+            ALCHEMY: "https://scroll-sepolia.g.alchemy.com/v2/"
+        }
     }
-] 
+]
