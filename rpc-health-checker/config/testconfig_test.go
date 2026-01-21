@@ -121,3 +121,83 @@ func TestValidateConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestReadConfigWithSkipChains(t *testing.T) {
+	content := `[
+		{
+			"method": "eth_blockNumber",
+			"params": [],
+			"maxDifference": "10"
+		},
+		{
+			"method": "eth_estimateGas",
+			"params": [{"from": "0x123", "to": "0x456"}],
+			"maxDifference": "100000",
+			"skipChains": [59141, 11155111]
+		}
+	]`
+
+	tmpFile, err := os.CreateTemp("", "test-config-skip-*.json")
+	require.NoError(t, err)
+	defer func() {
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			t.Logf("failed to remove temp file: %v", err)
+		}
+	}()
+
+	_, err = tmpFile.WriteString(content)
+	require.NoError(t, err)
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("Failed to close temp file: %v", err)
+	}
+
+	configs, err := ReadConfig(tmpFile.Name())
+	require.NoError(t, err)
+	require.Len(t, configs, 2)
+
+	// Test first config - no skipChains
+	require.Equal(t, "eth_blockNumber", configs[0].Method)
+	require.Empty(t, configs[0].SkipChains, "SkipChains should be empty when not specified")
+
+	// Test second config - has skipChains
+	require.Equal(t, "eth_estimateGas", configs[1].Method)
+	require.NotNil(t, configs[1].SkipChains)
+	require.True(t, configs[1].SkipChains[59141], "chain 59141 should be in skipChains")
+	require.True(t, configs[1].SkipChains[11155111], "chain 11155111 should be in skipChains")
+	require.False(t, configs[1].SkipChains[1], "chain 1 should not be in skipChains")
+}
+
+func TestReadConfigWithEmptySkipChains(t *testing.T) {
+	// Create temporary test file with empty skipChains
+	content := `[
+		{
+			"method": "eth_getBalance",
+			"params": ["0x123...", "latest"],
+			"maxDifference": "0",
+			"skipChains": []
+		}
+	]`
+
+	tmpFile, err := os.CreateTemp("", "test-config-empty-skip-*.json")
+	require.NoError(t, err)
+	defer func() {
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			t.Logf("failed to remove temp file: %v", err)
+		}
+	}()
+
+	_, err = tmpFile.WriteString(content)
+	require.NoError(t, err)
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("Failed to close temp file: %v", err)
+	}
+
+	// Test reading config
+	configs, err := ReadConfig(tmpFile.Name())
+	require.NoError(t, err)
+	require.Len(t, configs, 1)
+
+	// SkipChains map should be empty but not nil
+	require.NotNil(t, configs[0].SkipChains)
+	require.Len(t, configs[0].SkipChains, 0)
+}

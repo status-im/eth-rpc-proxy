@@ -13,6 +13,7 @@ type EVMMethodTestConfig struct {
 	Method      string
 	Params      []interface{}
 	CompareFunc func(reference, result *big.Int) bool
+	SkipChains  map[int64]bool // Chains to skip test (chainID -> true)
 }
 
 // EVMMethodTestJSON represents the JSON structure for EVM method test configuration
@@ -20,6 +21,7 @@ type EVMMethodTestJSON struct {
 	Method        string        `json:"method"`
 	Params        []interface{} `json:"params"`
 	MaxDifference string        `json:"maxDifference"`
+	SkipChains    []int64       `json:"skipChains,omitempty"` // Chain IDs to skip test
 }
 
 // ReadConfig reads and parses the EVM method test configuration from a JSON file
@@ -51,10 +53,16 @@ func ReadConfig(path string) ([]EVMMethodTestConfig, error) {
 			return diff.Cmp(maxDiff) <= 0
 		}
 
+		skipChainsMap := make(map[int64]bool)
+		for _, chainID := range cfg.SkipChains {
+			skipChainsMap[chainID] = true
+		}
+
 		configs = append(configs, EVMMethodTestConfig{
 			Method:      cfg.Method,
 			Params:      cfg.Params,
 			CompareFunc: compareFunc,
+			SkipChains:  skipChainsMap,
 		})
 	}
 

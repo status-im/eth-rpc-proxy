@@ -228,3 +228,76 @@ func TestChainValidationRunner_ValidateChains(t *testing.T) {
 		assert.Contains(t, chainResults["provider2"].FailedMethods, "eth_blockNumber", "should track failed eth_blockNumber method")
 	})
 }
+
+func TestFilterMethodsForChain(t *testing.T) {
+	t.Run("no skip chains", func(t *testing.T) {
+		configs := []config.EVMMethodTestConfig{
+			{Method: "eth_blockNumber"},
+			{Method: "eth_getBalance"},
+		}
+
+		filtered := filterMethodsForChain(configs, 1)
+		assert.Len(t, filtered, 2, "should return all methods when no skipChains")
+	})
+
+	t.Run("skip specific chain", func(t *testing.T) {
+		configs := []config.EVMMethodTestConfig{
+			{Method: "eth_blockNumber"},
+			{
+				Method: "eth_estimateGas",
+				SkipChains: map[int64]bool{
+					59141: true,
+				},
+			},
+		}
+
+		// Test with chain 59141 (should filter out eth_estimateGas)
+		filtered := filterMethodsForChain(configs, 59141)
+		assert.Len(t, filtered, 1, "should filter out methods for skipped chain")
+		assert.Equal(t, "eth_blockNumber", filtered[0].Method)
+
+		// Test with chain 1 (should return all methods)
+		filtered = filterMethodsForChain(configs, 1)
+		assert.Len(t, filtered, 2, "should return all methods for non-skipped chain")
+	})
+
+	t.Run("multiple skip chains", func(t *testing.T) {
+		configs := []config.EVMMethodTestConfig{
+			{Method: "eth_blockNumber"},
+			{
+				Method: "eth_estimateGas",
+				SkipChains: map[int64]bool{
+					59141:    true,
+					11155111: true,
+				},
+			},
+			{Method: "eth_getBalance"},
+		}
+
+		// Test with chain 59141
+		filtered := filterMethodsForChain(configs, 59141)
+		assert.Len(t, filtered, 2, "should filter out eth_estimateGas for chain 59141")
+		assert.Equal(t, "eth_blockNumber", filtered[0].Method)
+		assert.Equal(t, "eth_getBalance", filtered[1].Method)
+
+		// Test with chain 11155111
+		filtered = filterMethodsForChain(configs, 11155111)
+		assert.Len(t, filtered, 2, "should filter out eth_estimateGas for chain 11155111")
+
+		// Test with chain 1
+		filtered = filterMethodsForChain(configs, 1)
+		assert.Len(t, filtered, 3, "should return all methods for non-skipped chain")
+	})
+
+	t.Run("empty skip chains map", func(t *testing.T) {
+		configs := []config.EVMMethodTestConfig{
+			{
+				Method:     "eth_estimateGas",
+				SkipChains: map[int64]bool{}, // Empty map
+			},
+		}
+
+		filtered := filterMethodsForChain(configs, 59141)
+		assert.Len(t, filtered, 1, "should return method when skipChains is empty map")
+	})
+}
