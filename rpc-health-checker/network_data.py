@@ -3,6 +3,7 @@ GROVE = "grove"
 NODEFLEET = "nodefleet"
 STATUS_NETWORK = "status_network"
 ALCHEMY = "alchemy"
+KATANA = "katana"
 
 NETWORK_DATA = [
     {
@@ -211,6 +212,22 @@ NETWORK_DATA = [
         "chainId": 1660990954,
         "providers": {
             STATUS_NETWORK: "https://public.sepolia.rpc.status.network/"
+        }
+    },
+    {
+        "chain": "katana",
+        "network": "mainnet",
+        "chainId": 747474,
+        "providers": {
+            KATANA: "https://rpc.katana.network/"
+        }
+    },
+    {
+        "chain": "katana",
+        "network": "bokuto",
+        "chainId": 737373,
+        "providers": {
+            KATANA: "https://rpc-bokuto.katanarpc.com/"
         }
     },
     {
