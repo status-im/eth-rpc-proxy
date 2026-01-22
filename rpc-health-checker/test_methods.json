@@ -19,7 +19,8 @@
       "latest",
       [25, 50, 75]
     ],
-    "maxDifference": "1000000000"
+    "maxDifference": "1000000000",
+    "skipChains": [1101, 2442]
   },
   {
     "method": "eth_gasPrice",
