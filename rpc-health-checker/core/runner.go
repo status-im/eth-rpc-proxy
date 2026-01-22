@@ -73,23 +73,33 @@ func (r *ChainValidationRunner) validateChains(ctx context.Context) ([]config.Ch
 	results := make(map[int64]map[string]ProviderValidationResult)
 
 	for chainId, chainCfg := range r.chainConfigs {
-		if refCfg, exists := r.referenceChainConfigs[chainId]; exists {
-			chainResults := ValidateMultipleEVMMethods(
-				ctx,
-				r.methodConfigs,
-				r.caller,
-				chainCfg.Providers,
-				refCfg.Provider,
-				r.timeout,
+		refCfg, exists := r.referenceChainConfigs[chainId]
+		if !exists {
+			r.logger.Warn("reference provider not found for chain, skipping validation",
+				slog.Int64("chain_id", chainId),
 			)
-			results[chainId] = chainResults
+			continue
+		}
 
-			if validProviders := r.getValidProviders(chainCfg, chainResults); len(validProviders) > 0 {
-				// Create a copy of the original chain config and update providers
-				validChain := chainCfg
-				validChain.Providers = validProviders
-				validChains = append(validChains, validChain)
-			}
+		filteredMethods := filterMethodsForChain(r.methodConfigs, chainId)
+
+		chainResults := ValidateMultipleEVMMethods(
+			ctx,
+			filteredMethods,
+			r.caller,
+			chainCfg.Providers,
+			refCfg.Provider,
+			r.timeout,
+		)
+		results[chainId] = chainResults
+
+		validProviders := r.getValidProviders(chainCfg, chainResults)
+
+		if len(validProviders) > 0 {
+			// Create a copy of the original chain config and update providers
+			validChain := chainCfg
+			validChain.Providers = validProviders
+			validChains = append(validChains, validChain)
 		}
 	}
 
@@ -125,6 +135,17 @@ func (r *ChainValidationRunner) writeValidChains(validChains []config.ChainConfi
 			fmt.Printf("Failed to write valid providers: %v\n", err)
 		}
 	}
+}
+
+// filterMethodsForChain filters out methods that should be skipped for a specific chain
+func filterMethodsForChain(configs []config.EVMMethodTestConfig, chainId int64) []config.EVMMethodTestConfig {
+	var filtered []config.EVMMethodTestConfig
+	for _, cfg := range configs {
+		if cfg.SkipChains == nil || !cfg.SkipChains[chainId] {
+			filtered = append(filtered, cfg)
+		}
+	}
+	return filtered
 }
 
 func loadChainsToMap(filePath string) (map[int64]config.ChainConfig, error) {

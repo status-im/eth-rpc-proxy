@@ -43,6 +43,7 @@
         "value": "0x0"
       }
     ],
-    "maxDifference": "100000"
+    "maxDifference": "100000",
+    "skipChains": [59141]
   }
 ]
