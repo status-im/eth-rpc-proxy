@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/status-im/eth-rpc-proxy/config"
@@ -93,6 +94,8 @@ func (r *ChainValidationRunner) validateChains(ctx context.Context) ([]config.Ch
 		)
 		results[chainId] = chainResults
 
+		r.logValidationErrors(chainId, chainResults)
+
 		validProviders := r.getValidProviders(chainCfg, chainResults)
 
 		if len(validProviders) > 0 {
@@ -104,6 +107,70 @@ func (r *ChainValidationRunner) validateChains(ctx context.Context) ([]config.Ch
 	}
 
 	return validChains, results
+}
+
+// logValidationErrors logs chain validation errors in a compact format
+func (r *ChainValidationRunner) logValidationErrors(chainId int64, results map[string]ProviderValidationResult) {
+	type methodError struct {
+		Method    string `json:"method"`
+		ErrorType string `json:"error_type"`
+		Error     string `json:"error"`
+	}
+	
+	failures := make(map[string][]methodError)
+	for providerName, result := range results {
+		if !result.Valid && len(result.FailedMethods) > 0 {
+			var methods []methodError
+			for method, failedResult := range result.FailedMethods {
+				errStr := extractErrorType(failedResult.Result.Error)
+				errMsg := ""
+				if failedResult.Result.Error != nil {
+					errMsg = failedResult.Result.Error.Error()
+				}
+				methods = append(methods, methodError{
+					Method:    method,
+					ErrorType: errStr,
+					Error:     errMsg,
+				})
+			}
+			failures[providerName] = methods
+		}
+	}
+
+	if len(failures) > 0 {
+		r.logger.Error("chain validation errors",
+			slog.Int64("chain_id", chainId),
+			slog.Any("failures", failures),
+		)
+	}
+}
+
+// extractErrorType extracts a short error type from the error message
+func extractErrorType(err error) string {
+	if err == nil {
+		return "unknown"
+	}
+	errMsg := err.Error()
+
+	// Check for HTTP status code errors: "unexpected status code: 401"
+	if strings.Contains(errMsg, "unexpected status code:") {
+		parts := strings.Split(errMsg, ":")
+		if len(parts) >= 2 {
+			return "http_" + strings.TrimSpace(parts[len(parts)-1])
+		}
+	}
+
+	// Check for JSON-RPC errors
+	if strings.Contains(errMsg, "JSON-RPC error") {
+		return "jsonrpc_error"
+	}
+
+	// Check for network errors
+	if strings.Contains(errMsg, "request failed") {
+		return "network_error"
+	}
+
+	return "error"
 }
 
 // getValidProviders filters and returns valid providers from validation results

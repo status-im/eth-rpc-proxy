@@ -23,14 +23,30 @@ type BigCache struct {
 	cache            *bigcache.BigCache
 	logger           *zap.Logger
 	metricsScheduler *scheduler.Scheduler
+	maxEntrySize     int
 }
 
 // NewBigCache creates a new BigCache instance
 func NewBigCache(bigcacheCfg *config.BigCacheConfig, logger *zap.Logger) (interfaces.Cache, error) {
+	// Apply defaults for missing/invalid values
+	shards := bigcacheCfg.Shards
+	if shards == 0 {
+		shards = 256 // Default: power of 2
+	}
+	maxEntrySize := bigcacheCfg.MaxEntrySize
+	if maxEntrySize == 0 {
+		maxEntrySize = 1048576 // 1MB default
+	}
+	size := bigcacheCfg.Size
+	if size == 0 {
+		size = 100 // 100MB default
+	}
+
 	config := bigcache.DefaultConfig(10 * time.Minute) // Default eviction time
-	config.HardMaxCacheSize = bigcacheCfg.Size         // Size in MB
+	config.HardMaxCacheSize = size                     // Size in MB
 	config.Verbose = false
-	config.MaxEntrySize = 1024 * 1024 // 1MB max entry size
+	config.MaxEntrySize = maxEntrySize // Use configured max entry size
+	config.Shards = shards             // Use configured number of shards
 
 	cache, err := bigcache.New(context.Background(), config)
 	if err != nil {
@@ -38,8 +54,9 @@ func NewBigCache(bigcacheCfg *config.BigCacheConfig, logger *zap.Logger) (interf
 	}
 
 	bc := &BigCache{
-		cache:  cache,
-		logger: logger,
+		cache:        cache,
+		logger:       logger,
+		maxEntrySize: maxEntrySize,
 	}
 
 	// Start periodic metrics collection
@@ -109,6 +126,16 @@ func (bc *BigCache) Set(key string, val []byte, ttl models.TTL) {
 	if err != nil {
 		bc.logger.Error("Failed to marshal cache entry", zap.String("key", key), zap.Error(err))
 		metrics.RecordCacheError("l1", "encode")
+		return
+	}
+
+	// Check if entry size exceeds the configured maximum
+	if len(data) > bc.maxEntrySize {
+		bc.logger.Warn("Cache entry too large, skipping L1 cache",
+			zap.String("key", key),
+			zap.Int("size", len(data)),
+			zap.Int("max_size", bc.maxEntrySize))
+		metrics.RecordCacheError("l1", "entry_too_large")
 		return
 	}
 

@@ -1,7 +1,9 @@
 # BigCache Configuration (L1 Cache)
 bigcache:
   enabled: true
-  size: 100  # Size in MB
+  size: 1000          # Size in MB
+  max_entry_size: 1048576  # Max entry size in bytes (1MB)
+  shards: 256         # Number of shards (must be power of 2)
 
 # KeyDB Configuration (L2 Cache)
 keydb:

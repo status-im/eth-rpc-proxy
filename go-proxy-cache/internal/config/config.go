@@ -11,8 +11,10 @@ import (
 
 // BigCacheConfig represents BigCache (L1) configuration
 type BigCacheConfig struct {
-	Enabled bool `yaml:"enabled"`
-	Size    int  `yaml:"size"` // Size in MB
+	Enabled      bool `yaml:"enabled"`
+	Size         int  `yaml:"size"`           // Size in MB
+	MaxEntrySize int  `yaml:"max_entry_size"` // Max entry size in bytes
+	Shards       int  `yaml:"shards"`         // Number of shards (must be power of 2)
 }
 
 // KeyDBConfig represents KeyDB (L2) cache configuration
@@ -80,6 +82,12 @@ func (c *Config) applyDefaults() {
 	// BigCache defaults
 	if c.BigCache.Size == 0 {
 		c.BigCache.Size = 100 // 100MB default
+	}
+	if c.BigCache.MaxEntrySize == 0 {
+		c.BigCache.MaxEntrySize = 1048576 // 1MB default
+	}
+	if c.BigCache.Shards == 0 {
+		c.BigCache.Shards = 256 // Reduced from default 1024 to increase shard size
 	}
 
 	// KeyDB connection defaults
