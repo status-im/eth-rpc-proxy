@@ -39,8 +39,8 @@ if cached_result then
         ngx.header["X-RateLimit-Limit"] = tostring(requests_per_token)
         ngx.header["X-RateLimit-Remaining"] = "0"
         ngx.header["X-Cache-Status"] = "HIT"
-        ngx.status = 429
-        ngx.exit(429)
+        ngx.status = 401
+        ngx.exit(401)
     end
     
     -- Increment usage counter  
@@ -107,8 +107,8 @@ elseif res.status == 429 then
     ngx.header["X-RateLimit-Limit"] = tostring(requests_per_token)
     ngx.header["X-RateLimit-Remaining"] = "0"
     ngx.header["X-Cache-Status"] = "MISS"
-    ngx.status = 429
-    ngx.exit(429)
+    ngx.status = 401
+    ngx.exit(401)
     
 else
     -- Token is invalid
