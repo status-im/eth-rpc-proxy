@@ -8,4 +8,6 @@ import "go-proxy-cache/internal/models"
 type CacheRulesClassifier interface {
 	// GetTtl analyzes the request and returns cache information including TTL and cache type
 	GetTtl(chain, network string, request *models.JSONRPCRequest) models.CacheInfo
+	// ShouldSkipNullCache returns true if null results should not be cached for this method
+	ShouldSkipNullCache(method string) bool
 }

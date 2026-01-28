@@ -18,6 +18,12 @@ ttl_defaults:
     short: 5s
     minimal: 0s
 
+skip_null_cache:
+  - eth_getTransactionReceipt
+  - eth_getTransactionByHash
+  - eth_getBlockByHash
+  - eth_getBlockByNumber
+
 # Cache rules mapping JSON-RPC methods to cache types
 cache_rules:
   # Permanent cache - blockchain data that never changes

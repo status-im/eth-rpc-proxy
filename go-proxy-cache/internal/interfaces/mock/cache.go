@@ -20,7 +20,6 @@ import (
 type MockCache struct {
 	ctrl     *gomock.Controller
 	recorder *MockCacheMockRecorder
-	isgomock struct{}
 }
 
 // MockCacheMockRecorder is the mock recorder for MockCache.
@@ -98,7 +97,6 @@ func (mr *MockCacheMockRecorder) Set(key, val, ttl any) *gomock.Call {
 type MockLevelAwareCache struct {
 	ctrl     *gomock.Controller
 	recorder *MockLevelAwareCacheMockRecorder
-	isgomock struct{}
 }
 
 // MockLevelAwareCacheMockRecorder is the mock recorder for MockLevelAwareCache.
