@@ -20,7 +20,6 @@ import (
 type MockCacheRulesClassifier struct {
 	ctrl     *gomock.Controller
 	recorder *MockCacheRulesClassifierMockRecorder
-	isgomock struct{}
 }
 
 // MockCacheRulesClassifierMockRecorder is the mock recorder for MockCacheRulesClassifier.
@@ -52,4 +51,18 @@ func (m *MockCacheRulesClassifier) GetTtl(chain, network string, request *models
 func (mr *MockCacheRulesClassifierMockRecorder) GetTtl(chain, network, request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTtl", reflect.TypeOf((*MockCacheRulesClassifier)(nil).GetTtl), chain, network, request)
+}
+
+// ShouldSkipNullCache mocks base method.
+func (m *MockCacheRulesClassifier) ShouldSkipNullCache(method string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ShouldSkipNullCache", method)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// ShouldSkipNullCache indicates an expected call of ShouldSkipNullCache.
+func (mr *MockCacheRulesClassifierMockRecorder) ShouldSkipNullCache(method any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldSkipNullCache", reflect.TypeOf((*MockCacheRulesClassifier)(nil).ShouldSkipNullCache), method)
 }

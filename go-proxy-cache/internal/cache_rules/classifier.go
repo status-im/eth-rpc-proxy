@@ -42,3 +42,8 @@ func (c *Classifier) GetTtl(chain, network string, request *models.JSONRPCReques
 
 	return models.CacheInfo{TTL: ttl, CacheType: cacheType}
 }
+
+// ShouldSkipNullCache implements CacheRulesClassifier interface
+func (c *Classifier) ShouldSkipNullCache(method string) bool {
+	return c.configTTL.ShouldSkipNullCache(method)
+}

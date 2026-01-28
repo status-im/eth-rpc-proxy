@@ -50,3 +50,25 @@ func FixResponseID(cachedResponse string, requestID interface{}) string {
 
 	return cachedResponse
 }
+
+// IsNullResult checks if the JSON-RPC response has a null result
+// This is used to skip caching null results for methods like eth_getTransactionReceipt
+// where null indicates a pending/non-existent transaction that may appear later
+func IsNullResult(responseData string) bool {
+	if responseData == "" {
+		return false
+	}
+
+	var response map[string]interface{}
+	if err := json.Unmarshal([]byte(responseData), &response); err != nil {
+		return false
+	}
+
+	// Check if result field exists and is null
+	result, exists := response["result"]
+	if !exists {
+		return false
+	}
+
+	return result == nil
+}

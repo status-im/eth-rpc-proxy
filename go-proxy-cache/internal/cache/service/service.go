@@ -145,6 +145,15 @@ func (s *CacheService) Set(chain, network, rawBody, responseData string, customT
 		return fmt.Errorf("invalid JSON-RPC request: %w", err)
 	}
 
+	// Skip caching null results for methods configured in skip_null_cache
+	if s.cacheClassifier.ShouldSkipNullCache(request.Method) && utils.IsNullResult(responseData) {
+		s.logger.Debug("Skipping cache for null result",
+			zap.String("method", request.Method),
+			zap.String("chain", chain),
+			zap.String("network", network))
+		return nil
+	}
+
 	// Build cache key
 	key, err := s.keyBuilder.Build(chain, network, request)
 	if err != nil {

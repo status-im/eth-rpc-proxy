@@ -12,8 +12,9 @@ import (
 
 // CacheConfig implements the CacheRulesConfig interface
 type CacheConfig struct {
-	config *CacheRulesConfig
-	logger *zap.Logger
+	config           *CacheRulesConfig
+	logger           *zap.Logger
+	skipNullCacheSet map[string]struct{} // precomputed set for O(1) lookups
 }
 
 // Ensure CacheConfig implements the CacheRulesConfig interface
@@ -24,9 +25,16 @@ func NewCacheConfig(config *CacheRulesConfig, logger *zap.Logger) *CacheConfig {
 	if config == nil {
 		panic("config cannot be nil")
 	}
+
+	skipNullCacheSet := make(map[string]struct{}, len(config.SkipNullCache))
+	for _, method := range config.SkipNullCache {
+		skipNullCacheSet[method] = struct{}{}
+	}
+
 	return &CacheConfig{
-		config: config,
-		logger: logger,
+		config:           config,
+		logger:           logger,
+		skipNullCacheSet: skipNullCacheSet,
 	}
 }
 
@@ -123,4 +131,14 @@ func (cr *CacheConfig) GetCacheTypeForMethod(method string) models.CacheType {
 			zap.String("method", method))
 	}
 	return models.CacheTypeNone
+}
+
+// ShouldSkipNullCache returns true if null results should not be cached for this method
+func (cr *CacheConfig) ShouldSkipNullCache(method string) bool {
+	if method == "" {
+		return false
+	}
+
+	_, exists := cr.skipNullCacheSet[method]
+	return exists
 }

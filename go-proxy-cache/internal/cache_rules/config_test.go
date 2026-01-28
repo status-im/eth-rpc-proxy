@@ -402,3 +402,99 @@ func BenchmarkGetCacheTypeForMethod(b *testing.B) {
 		cacheConfig.GetCacheTypeForMethod("eth_getBalance")
 	}
 }
+
+func TestShouldSkipNullCache(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+
+	tests := []struct {
+		name        string
+		config      *CacheRulesConfig
+		method      string
+		expected    bool
+		description string
+	}{
+		{
+			name: "method in skip_null_cache list",
+			config: &CacheRulesConfig{
+				SkipNullCache: []string{
+					"eth_getTransactionReceipt",
+					"eth_getTransactionByHash",
+					"eth_getBlockByHash",
+					"eth_getBlockByNumber",
+				},
+			},
+			method:      "eth_getTransactionReceipt",
+			expected:    true,
+			description: "should return true when method is in skip_null_cache list",
+		},
+		{
+			name: "method not in skip_null_cache list",
+			config: &CacheRulesConfig{
+				SkipNullCache: []string{
+					"eth_getTransactionReceipt",
+					"eth_getTransactionByHash",
+				},
+			},
+			method:      "eth_getBalance",
+			expected:    false,
+			description: "should return false when method is not in skip_null_cache list",
+		},
+		{
+			name: "empty skip_null_cache list",
+			config: &CacheRulesConfig{
+				SkipNullCache: []string{},
+			},
+			method:      "eth_getTransactionReceipt",
+			expected:    false,
+			description: "should return false when skip_null_cache list is empty",
+		},
+		{
+			name: "nil skip_null_cache list",
+			config: &CacheRulesConfig{
+				SkipNullCache: nil,
+			},
+			method:      "eth_getTransactionReceipt",
+			expected:    false,
+			description: "should return false when skip_null_cache list is nil",
+		},
+		{
+			name: "empty method",
+			config: &CacheRulesConfig{
+				SkipNullCache: []string{
+					"eth_getTransactionReceipt",
+				},
+			},
+			method:      "",
+			expected:    false,
+			description: "should return false for empty method",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cacheConfig := NewCacheConfig(tt.config, logger)
+			result := cacheConfig.ShouldSkipNullCache(tt.method)
+			if result != tt.expected {
+				t.Errorf("%s: expected %v, got %v", tt.description, tt.expected, result)
+			}
+		})
+	}
+}
+
+func BenchmarkShouldSkipNullCache(b *testing.B) {
+	logger := zap.NewNop()
+	config := &CacheRulesConfig{
+		SkipNullCache: []string{
+			"eth_getTransactionReceipt",
+			"eth_getTransactionByHash",
+			"eth_getBlockByHash",
+			"eth_getBlockByNumber",
+		},
+	}
+	cacheConfig := NewCacheConfig(config, logger)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		cacheConfig.ShouldSkipNullCache("eth_getTransactionReceipt")
+	}
+}

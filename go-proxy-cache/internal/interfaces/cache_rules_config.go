@@ -16,4 +16,6 @@ type CacheRulesConfig interface {
 	GetCacheTypeForMethod(method string) models.CacheType
 	// GetAllMethods returns all configured RPC methods
 	GetAllMethods() []string
+	// ShouldSkipNullCache returns true if null results should not be cached for this method
+	ShouldSkipNullCache(method string) bool
 }
