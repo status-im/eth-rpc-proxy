@@ -12,10 +12,12 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 
+	"github.com/status-im/proxy-common/models"
+
 	"go-proxy-cache/internal/cache"
 	"go-proxy-cache/internal/cache/service"
 	"go-proxy-cache/internal/interfaces/mock"
-	"go-proxy-cache/internal/models"
+	localModels "go-proxy-cache/internal/models"
 	"go-proxy-cache/internal/utils"
 )
 
@@ -67,7 +69,7 @@ func setupMockCacheClassifier(ctrl *gomock.Controller) *mock.MockCacheRulesClass
 
 	// Set up common expectations
 	mockClassifier.EXPECT().GetTtl(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-		func(chain, network string, request *models.JSONRPCRequest) models.CacheInfo {
+		func(chain, network string, request *localModels.JSONRPCRequest) models.CacheInfo {
 			switch request.Method {
 			case "eth_getBlockByHash":
 				return models.CacheInfo{TTL: 86400 * time.Second, CacheType: "permanent"}

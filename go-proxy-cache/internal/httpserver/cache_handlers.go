@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"go-proxy-cache/internal/models"
+	"github.com/status-im/proxy-common/models"
 )
 
 // handleGet handles GET cache requests

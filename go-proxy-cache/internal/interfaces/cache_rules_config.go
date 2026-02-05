@@ -3,7 +3,7 @@ package interfaces
 import (
 	"time"
 
-	"go-proxy-cache/internal/models"
+	"github.com/status-im/proxy-common/models"
 )
 
 //go:generate mockgen -package=mock -source=cache_rules_config.go -destination=mock/cache_rules_config.go

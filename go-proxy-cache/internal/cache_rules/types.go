@@ -3,7 +3,7 @@ package cache_rules
 import (
 	"time"
 
-	"go-proxy-cache/internal/models"
+	"github.com/status-im/proxy-common/models"
 )
 
 // TTLDefaults represents TTL settings for different cache types

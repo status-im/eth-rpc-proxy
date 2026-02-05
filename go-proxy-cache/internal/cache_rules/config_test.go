@@ -7,8 +7,9 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 
+	"github.com/status-im/proxy-common/models"
+
 	"go-proxy-cache/internal/interfaces"
-	"go-proxy-cache/internal/models"
 )
 
 func TestNewCacheConfig(t *testing.T) {

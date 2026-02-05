@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 
-	"go-proxy-cache/internal/models"
+	"github.com/status-im/proxy-common/models"
 )
 
 func TestLoadCacheRulesConfig_Success(t *testing.T) {

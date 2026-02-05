@@ -6,8 +6,9 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/status-im/proxy-common/models"
+
 	"go-proxy-cache/internal/interfaces"
-	"go-proxy-cache/internal/models"
 )
 
 // CacheConfig implements the CacheRulesConfig interface

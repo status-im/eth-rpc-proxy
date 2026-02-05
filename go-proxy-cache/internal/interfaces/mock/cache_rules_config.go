@@ -10,10 +10,10 @@
 package mock
 
 import (
-	models "go-proxy-cache/internal/models"
 	reflect "reflect"
 	time "time"
 
+	models "github.com/status-im/proxy-common/models"
 	gomock "go.uber.org/mock/gomock"
 )
 

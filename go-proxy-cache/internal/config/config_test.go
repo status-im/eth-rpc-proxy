@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/status-im/proxy-common/cache"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -198,11 +199,11 @@ func TestConfig_ApplyDefaults(t *testing.T) {
 
 func TestConfig_PartialDefaults(t *testing.T) {
 	config := &Config{
-		BigCache: BigCacheConfig{
+		BigCache: cache.BigCacheConfig{
 			Size: 250, // Custom value
 		},
-		KeyDB: KeyDBConfig{
-			Connection: ConnectionConfig{
+		KeyDB: cache.KeyDBConfig{
+			Connection: cache.ConnectionConfig{
 				ConnectTimeout: 2000 * time.Millisecond, // Custom value
 				// SendTimeout and ReadTimeout should get defaults
 			},

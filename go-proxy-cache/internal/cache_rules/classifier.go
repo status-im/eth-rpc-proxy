@@ -3,8 +3,10 @@ package cache_rules
 import (
 	"go.uber.org/zap"
 
+	"github.com/status-im/proxy-common/models"
+
 	"go-proxy-cache/internal/interfaces"
-	"go-proxy-cache/internal/models"
+	localModels "go-proxy-cache/internal/models"
 )
 
 // Classifier implements the CacheRulesClassifier interface
@@ -25,7 +27,7 @@ func NewClassifier(logger *zap.Logger, configTTL interfaces.CacheRulesConfig) *C
 }
 
 // GetTtl implements CacheRulesClassifier interface
-func (c *Classifier) GetTtl(chain, network string, request *models.JSONRPCRequest) models.CacheInfo {
+func (c *Classifier) GetTtl(chain, network string, request *localModels.JSONRPCRequest) models.CacheInfo {
 	if request == nil || request.Method == "" {
 		return models.CacheInfo{TTL: 0, CacheType: "none"}
 	}
