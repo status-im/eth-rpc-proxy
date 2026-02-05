@@ -6,28 +6,30 @@ import (
 
 	"go.uber.org/zap"
 
+	proxyCache "github.com/status-im/proxy-common/cache"
+	"github.com/status-im/proxy-common/cache/multi"
+	"github.com/status-im/proxy-common/models"
+
 	"go-proxy-cache/internal/cache"
-	"go-proxy-cache/internal/cache/multi"
 	"go-proxy-cache/internal/interfaces"
 	"go-proxy-cache/internal/metrics"
-	"go-proxy-cache/internal/models"
 	"go-proxy-cache/internal/utils"
 )
 
 // CacheService handles cache operations with business logic
 type CacheService struct {
-	multiCache      interfaces.LevelAwareCache
+	multiCache      proxyCache.LevelAwareCache
 	keyBuilder      interfaces.KeyBuilder
 	cacheClassifier interfaces.CacheRulesClassifier
 	logger          *zap.Logger
-	l1Cache         interfaces.Cache // Keep reference to L1 cache for metrics
+	l1Cache         proxyCache.Cache // Keep reference to L1 cache for metrics
 }
 
 // NewCacheService creates a new cache service instance with MultiCache
-func NewCacheService(l1Cache, l2Cache interfaces.Cache, cacheClassifier interfaces.CacheRulesClassifier, enablePropagation bool, logger *zap.Logger) *CacheService {
+func NewCacheService(l1Cache, l2Cache proxyCache.Cache, cacheClassifier interfaces.CacheRulesClassifier, enablePropagation bool, logger *zap.Logger) *CacheService {
 	// Create MultiCache with L1 and L2 caches
-	caches := []interfaces.Cache{l1Cache, l2Cache}
-	multiCache := multi.NewMultiCache(caches, logger, enablePropagation)
+	caches := []proxyCache.Cache{l1Cache, l2Cache}
+	multiCache := multi.NewMultiCache(caches, enablePropagation)
 
 	service := &CacheService{
 		multiCache:      multiCache,

@@ -100,8 +100,8 @@ services:
 
   cache-service:
     build:
-      context: './go-proxy-cache'
-      dockerfile: Dockerfile
+      context: '.'
+      dockerfile: go-proxy-cache/Dockerfile
     container_name: 'cache-service'
     restart: 'always'
     environment:

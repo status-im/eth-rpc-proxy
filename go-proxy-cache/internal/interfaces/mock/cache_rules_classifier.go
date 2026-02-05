@@ -10,9 +10,10 @@
 package mock
 
 import (
-	models "go-proxy-cache/internal/models"
+	models0 "go-proxy-cache/internal/models"
 	reflect "reflect"
 
+	models "github.com/status-im/proxy-common/models"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -40,7 +41,7 @@ func (m *MockCacheRulesClassifier) EXPECT() *MockCacheRulesClassifierMockRecorde
 }
 
 // GetTtl mocks base method.
-func (m *MockCacheRulesClassifier) GetTtl(chain, network string, request *models.JSONRPCRequest) models.CacheInfo {
+func (m *MockCacheRulesClassifier) GetTtl(chain, network string, request *models0.JSONRPCRequest) models.CacheInfo {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTtl", chain, network, request)
 	ret0, _ := ret[0].(models.CacheInfo)

@@ -7,14 +7,17 @@ RUN apk add --no-cache git
 # Set working directory
 WORKDIR /app
 
+# Copy proxy-common first (dependency for replace directive)
+COPY proxy-common /proxy-common
+
 # Copy go mod files
-COPY go.mod go.sum ./
+COPY go-proxy-cache/go.mod go-proxy-cache/go.sum ./
 
 # Download dependencies
 RUN go mod download
 
 # Copy source code
-COPY . .
+COPY go-proxy-cache/ .
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o rpc-cache ./cmd/rpc-cache
@@ -35,7 +38,7 @@ COPY --from=builder /app/rpc-cache .
 RUN mkdir -p /app
 
 # Copy config files
-COPY cache_config.yaml cache_rules.yaml /app/
+COPY go-proxy-cache/cache_config.yaml go-proxy-cache/cache_rules.yaml /app/
 
 # Expose port
 EXPOSE 8080

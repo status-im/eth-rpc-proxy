@@ -8,9 +8,11 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 
+	"github.com/status-im/proxy-common/models"
+
 	"go-proxy-cache/internal/interfaces"
 	"go-proxy-cache/internal/interfaces/mock"
-	"go-proxy-cache/internal/models"
+	localModels "go-proxy-cache/internal/models"
 )
 
 func TestNewClassifier(t *testing.T) {
@@ -86,7 +88,7 @@ func TestGetTtl_EmptyMethod(t *testing.T) {
 	mockConfig := mock.NewMockCacheRulesConfig(ctrl)
 	classifier := NewClassifier(logger, mockConfig)
 
-	request := &models.JSONRPCRequest{
+	request := &localModels.JSONRPCRequest{
 		Method: "",
 		ID:     1,
 	}
@@ -107,7 +109,7 @@ func TestGetTtl_CacheTypeNone(t *testing.T) {
 	mockConfig := mock.NewMockCacheRulesConfig(ctrl)
 	classifier := NewClassifier(logger, mockConfig)
 
-	request := &models.JSONRPCRequest{
+	request := &localModels.JSONRPCRequest{
 		Method: "eth_sendTransaction",
 		ID:     1,
 	}
@@ -133,7 +135,7 @@ func TestGetTtl_ZeroTTL(t *testing.T) {
 	mockConfig := mock.NewMockCacheRulesConfig(ctrl)
 	classifier := NewClassifier(logger, mockConfig)
 
-	request := &models.JSONRPCRequest{
+	request := &localModels.JSONRPCRequest{
 		Method: "eth_getBalance",
 		ID:     1,
 	}
@@ -165,7 +167,7 @@ func TestGetTtl_ValidCaching(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		request     *models.JSONRPCRequest
+		request     *localModels.JSONRPCRequest
 		chain       string
 		network     string
 		cacheType   models.CacheType
@@ -175,7 +177,7 @@ func TestGetTtl_ValidCaching(t *testing.T) {
 	}{
 		{
 			name: "permanent cache type",
-			request: &models.JSONRPCRequest{
+			request: &localModels.JSONRPCRequest{
 				Method: "eth_getBlockByHash",
 				ID:     1,
 			},
@@ -191,7 +193,7 @@ func TestGetTtl_ValidCaching(t *testing.T) {
 		},
 		{
 			name: "short cache type",
-			request: &models.JSONRPCRequest{
+			request: &localModels.JSONRPCRequest{
 				Method: "eth_getBalance",
 				ID:     2,
 			},
@@ -207,7 +209,7 @@ func TestGetTtl_ValidCaching(t *testing.T) {
 		},
 		{
 			name: "minimal cache type",
-			request: &models.JSONRPCRequest{
+			request: &localModels.JSONRPCRequest{
 				Method: "eth_call",
 				ID:     3,
 			},
@@ -291,7 +293,7 @@ func TestGetTtl_DifferentChainNetworkCombinations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			request := &models.JSONRPCRequest{
+			request := &localModels.JSONRPCRequest{
 				Method: "eth_getBalance",
 				ID:     1,
 			}
@@ -329,12 +331,12 @@ func TestGetTtl_RequestWithDifferentFields(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		request     *models.JSONRPCRequest
+		request     *localModels.JSONRPCRequest
 		description string
 	}{
 		{
 			name: "request with string ID",
-			request: &models.JSONRPCRequest{
+			request: &localModels.JSONRPCRequest{
 				Method:  "eth_getBalance",
 				ID:      "test-id",
 				Jsonrpc: "2.0",
@@ -343,7 +345,7 @@ func TestGetTtl_RequestWithDifferentFields(t *testing.T) {
 		},
 		{
 			name: "request with int ID",
-			request: &models.JSONRPCRequest{
+			request: &localModels.JSONRPCRequest{
 				Method:  "eth_getBalance",
 				ID:      123,
 				Jsonrpc: "2.0",
@@ -352,7 +354,7 @@ func TestGetTtl_RequestWithDifferentFields(t *testing.T) {
 		},
 		{
 			name: "request with params",
-			request: &models.JSONRPCRequest{
+			request: &localModels.JSONRPCRequest{
 				Method:  "eth_getBalance",
 				ID:      1,
 				Params:  []interface{}{"0x123", "latest"},
@@ -362,7 +364,7 @@ func TestGetTtl_RequestWithDifferentFields(t *testing.T) {
 		},
 		{
 			name: "request without jsonrpc field",
-			request: &models.JSONRPCRequest{
+			request: &localModels.JSONRPCRequest{
 				Method: "eth_getBalance",
 				ID:     1,
 			},
@@ -399,7 +401,7 @@ func TestGetTtl_NilConfig(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	classifier := NewClassifier(logger, nil)
 
-	request := &models.JSONRPCRequest{
+	request := &localModels.JSONRPCRequest{
 		Method: "eth_getBalance",
 		ID:     1,
 	}
@@ -436,7 +438,7 @@ func BenchmarkGetTtl(b *testing.B) {
 	mockConfig := mock.NewMockCacheRulesConfig(ctrl)
 	classifier := NewClassifier(logger, mockConfig)
 
-	request := &models.JSONRPCRequest{
+	request := &localModels.JSONRPCRequest{
 		Method: "eth_getBalance",
 		ID:     1,
 	}
@@ -480,7 +482,7 @@ func BenchmarkGetTtl_EmptyMethod(b *testing.B) {
 	mockConfig := mock.NewMockCacheRulesConfig(ctrl)
 	classifier := NewClassifier(logger, mockConfig)
 
-	request := &models.JSONRPCRequest{
+	request := &localModels.JSONRPCRequest{
 		Method: "",
 		ID:     1,
 	}

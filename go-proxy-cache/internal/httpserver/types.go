@@ -1,6 +1,6 @@
 package httpserver
 
-import "go-proxy-cache/internal/models"
+import "github.com/status-im/proxy-common/models"
 
 // CacheRequest represents a cache operation request
 type CacheRequest struct {

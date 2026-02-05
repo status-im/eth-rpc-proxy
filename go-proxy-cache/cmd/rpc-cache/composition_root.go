@@ -2,14 +2,17 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"go.uber.org/zap"
 
+	proxyCache "github.com/status-im/proxy-common/cache"
+	"github.com/status-im/proxy-common/cache/l1"
+	"github.com/status-im/proxy-common/cache/l2"
+	"github.com/status-im/proxy-common/cache/noop"
+
 	"go-proxy-cache/internal/cache"
-	"go-proxy-cache/internal/cache/l1"
-	"go-proxy-cache/internal/cache/l2"
-	"go-proxy-cache/internal/cache/noop"
 	"go-proxy-cache/internal/cache/service"
 	"go-proxy-cache/internal/cache_rules"
 	"go-proxy-cache/internal/config"
@@ -32,8 +35,8 @@ type CompositionRoot struct {
 	CacheRules interfaces.CacheRulesClassifier
 
 	// Cache components
-	L1Cache    interfaces.Cache
-	L2Cache    interfaces.Cache
+	L1Cache    proxyCache.Cache
+	L2Cache    proxyCache.Cache
 	KeyBuilder interfaces.KeyBuilder
 
 	// Services
@@ -162,7 +165,11 @@ func (r *CompositionRoot) initCacheComponents() error {
 // initL1Cache initializes the L1 cache (BigCache)
 func (r *CompositionRoot) initL1Cache() error {
 	if r.Config.BigCache.Enabled {
-		l1Cache, err := l1.NewBigCache(&r.Config.BigCache, r.Logger)
+		l1Cache, err := l1.NewBigCache(
+			&r.Config.BigCache,
+			l1.WithLogger(NewZapLogger(r.Logger)),
+			l1.WithMetrics(NewPrometheusMetrics()),
+		)
 		if err != nil {
 			return err
 		}
@@ -181,7 +188,11 @@ func (r *CompositionRoot) initL2Cache() error {
 		keydbURL := GetKeyDBURL(r.Logger)
 
 		// Create KeyDB client
-		keydbClient, err := l2.NewRedisKeyDbClient(&r.Config.KeyDB, keydbURL, r.Logger)
+		keydbClient, err := l2.NewRedisKeyDbClient(
+			&r.Config.KeyDB,
+			keydbURL,
+			l2.WithClientLogger(NewZapLogger(r.Logger)),
+		)
 		if err != nil {
 			r.Logger.Warn("Failed to connect to KeyDB, falling back to no L2 cache",
 				zap.String("keydb_url", keydbURL),
@@ -191,7 +202,12 @@ func (r *CompositionRoot) initL2Cache() error {
 		}
 
 		// Create L2 cache with the client
-		r.L2Cache = l2.NewKeyDBCache(&r.Config.KeyDB, keydbClient, r.Logger)
+		r.L2Cache = l2.NewKeyDBCache(
+			&r.Config.KeyDB,
+			keydbClient,
+			l2.WithLogger(NewZapLogger(r.Logger)),
+			l2.WithMetrics(NewPrometheusMetrics()),
+		)
 		r.Logger.Info("KeyDB (L2) initialized", zap.String("keydb_url", keydbURL))
 	} else {
 		r.L2Cache = noop.NewNoOpCache()
@@ -243,8 +259,8 @@ func (r *CompositionRoot) Cleanup() error {
 
 	// Close L1 cache
 	if r.L1Cache != nil {
-		if l1BigCache, ok := r.L1Cache.(*l1.BigCache); ok {
-			if err := l1BigCache.Close(); err != nil {
+		if closer, ok := r.L1Cache.(io.Closer); ok {
+			if err := closer.Close(); err != nil {
 				errors = append(errors, fmt.Errorf("failed to close L1 cache: %w", err))
 			}
 		}
@@ -252,8 +268,8 @@ func (r *CompositionRoot) Cleanup() error {
 
 	// Close L2 cache
 	if r.L2Cache != nil {
-		if l2KeyDBCache, ok := r.L2Cache.(*l2.KeyDBCache); ok {
-			if err := l2KeyDBCache.Close(); err != nil {
+		if closer, ok := r.L2Cache.(io.Closer); ok {
+			if err := closer.Close(); err != nil {
 				errors = append(errors, fmt.Errorf("failed to close L2 cache: %w", err))
 			}
 		}
