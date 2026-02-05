@@ -1,8 +1,8 @@
 version: 2
 updates:
-  # Go Auth Service
+  # Proxy Common (Auth Service)
   - package-ecosystem: "gomod"
-    directory: "/go-auth-service"
+    directory: "/proxy-common"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
