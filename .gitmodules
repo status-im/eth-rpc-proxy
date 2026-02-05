@@ -1,0 +1,3 @@
+[submodule "proxy-common"]
+	path = proxy-common
+	url = git@github.com:status-im/proxy-common.git

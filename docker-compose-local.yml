@@ -40,13 +40,13 @@ services:
     volumes:
       - './secrets/default_providers.json:/app/providers.json:ro'
       - './secrets/.htpasswd:/etc/nginx/.htpasswd:ro'
-      - './go-auth-service/auth_config.json:/app/auth_config.json:ro'
+      - './secrets/auth_config.json:/app/auth_config.json:ro'
       - 'cache_socket:/tmp'
 
   auth-service:
     build:
-      context: './go-auth-service'
-      dockerfile: Dockerfile
+      context: './proxy-common'
+      dockerfile: auth/Dockerfile
     container_name: 'auth-service'
     restart: 'always'
     environment:
@@ -57,7 +57,7 @@ services:
     networks:
       - 'rpc-network'
     volumes:
-      - './go-auth-service/auth_config.json:/app/config.json:ro'
+      - './secrets/auth_config.json:/app/config.json:ro'
 
   health-checker:
     build:
