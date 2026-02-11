@@ -18,7 +18,6 @@ import (
 	"go-proxy-cache/internal/config"
 	"go-proxy-cache/internal/httpserver"
 	"go-proxy-cache/internal/interfaces"
-	"go-proxy-cache/internal/metrics"
 )
 
 // CompositionRoot holds all application dependencies and provides a centralized
@@ -38,6 +37,7 @@ type CompositionRoot struct {
 	L1Cache    proxyCache.Cache
 	L2Cache    proxyCache.Cache
 	KeyBuilder interfaces.KeyBuilder
+	Metrics    *PrometheusMetrics
 
 	// Services
 	CacheService  *service.CacheService
@@ -138,8 +138,11 @@ func (r *CompositionRoot) loadCacheRules() error {
 	// Create classifier from the loaded config
 	r.CacheRules = cache_rules.NewClassifier(r.Logger, cacheRules)
 
-	// Initialize metrics allowed methods from cache rules
-	r.initMetrics(cacheRules)
+	// Initialize metrics with allowed methods
+	r.Metrics = NewPrometheusMetrics()
+	methods := cacheRules.GetAllMethods()
+	r.Metrics.InitializeAllowedMethods(methods)
+	r.Logger.Info("Metrics initialized", zap.Int("allowed_methods_count", len(methods)), zap.Strings("methods", methods))
 
 	return nil
 }
@@ -168,7 +171,7 @@ func (r *CompositionRoot) initL1Cache() error {
 		l1Cache, err := l1.NewBigCache(
 			&r.Config.BigCache,
 			l1.WithLogger(NewZapLogger(r.Logger)),
-			l1.WithMetrics(NewPrometheusMetrics()),
+			l1.WithMetrics(r.Metrics),
 		)
 		if err != nil {
 			return err
@@ -206,7 +209,7 @@ func (r *CompositionRoot) initL2Cache() error {
 			&r.Config.KeyDB,
 			keydbClient,
 			l2.WithLogger(NewZapLogger(r.Logger)),
-			l2.WithMetrics(NewPrometheusMetrics()),
+			l2.WithMetrics(r.Metrics),
 		)
 		r.Logger.Info("KeyDB (L2) initialized", zap.String("keydb_url", keydbURL))
 	} else {
@@ -225,6 +228,7 @@ func (r *CompositionRoot) initServices() error {
 		r.CacheRules,
 		r.Config.MultiCache.EnablePropagation,
 		r.Logger,
+		r.Metrics,
 	)
 
 	return nil
@@ -290,13 +294,6 @@ func (r *CompositionRoot) GetSocketPath() string {
 		socketPath = "/tmp/cache.sock"
 	}
 	return socketPath
-}
-
-// initMetrics initializes metrics system with allowed methods from cache rules
-func (r *CompositionRoot) initMetrics(cacheRulesConfig interfaces.CacheRulesConfig) {
-	methods := cacheRulesConfig.GetAllMethods()
-	metrics.InitializeAllowedMethods(methods)
-	r.Logger.Info("Metrics initialized", zap.Int("allowed_methods_count", len(methods)), zap.Strings("methods", methods))
 }
 
 // GetMetricsPort returns the port for the metrics HTTP server

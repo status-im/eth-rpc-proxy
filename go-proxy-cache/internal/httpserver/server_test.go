@@ -19,6 +19,8 @@ import (
 	"go-proxy-cache/internal/interfaces/mock"
 	localModels "go-proxy-cache/internal/models"
 	"go-proxy-cache/internal/utils"
+
+	cachemock "github.com/status-im/proxy-common/cache/mock"
 )
 
 // Note: Metrics are now package-level variables in the metrics package
@@ -102,8 +104,15 @@ func setupCacheService(ctrl *gomock.Controller, logger *zap.Logger) (*service.Ca
 	l2Cache := newMockCache()
 	cacheClassifier := setupMockCacheClassifier(ctrl)
 
+	mockMetrics := cachemock.NewMockMetricsRecorder(ctrl)
+	mockMetrics.EXPECT().TimeCacheOperation(gomock.Any(), gomock.Any()).Return(func() {}).AnyTimes()
+	mockMetrics.EXPECT().RecordCacheMiss(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	mockMetrics.EXPECT().RecordCacheHit(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	mockMetrics.EXPECT().RecordCacheSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	mockMetrics.EXPECT().RecordCacheBytesRead(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
 	// Create cache service with mocked dependencies
-	cacheService := service.NewCacheService(l1Cache, l2Cache, cacheClassifier, false, logger)
+	cacheService := service.NewCacheService(l1Cache, l2Cache, cacheClassifier, false, logger, mockMetrics)
 
 	return cacheService, l1Cache, l2Cache
 }
@@ -439,11 +448,11 @@ func TestServer_HandleSet_SkipNullCache(t *testing.T) {
 	server := NewServer(cacheService, logger)
 
 	tests := []struct {
-		name             string
-		requestBody      CacheRequest
-		expectedStatus   int
-		expectCached     bool
-		description      string
+		name           string
+		requestBody    CacheRequest
+		expectedStatus int
+		expectCached   bool
+		description    string
 	}{
 		{
 			name: "skip-listed method with null result should not cache",
