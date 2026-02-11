@@ -40,8 +40,6 @@ services:
     environment:
       CONFIG_FILE: '/app/config.json'
       PORT: '8081'
-    ports:
-      - '8081:8081'
     networks:
       - 'rpc-network'
     volumes:
