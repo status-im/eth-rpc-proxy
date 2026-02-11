@@ -12,7 +12,6 @@ import (
 
 	"go-proxy-cache/internal/cache"
 	"go-proxy-cache/internal/interfaces"
-	"go-proxy-cache/internal/metrics"
 	"go-proxy-cache/internal/utils"
 )
 
@@ -23,10 +22,11 @@ type CacheService struct {
 	cacheClassifier interfaces.CacheRulesClassifier
 	logger          *zap.Logger
 	l1Cache         proxyCache.Cache // Keep reference to L1 cache for metrics
+	metrics         proxyCache.MetricsRecorder
 }
 
 // NewCacheService creates a new cache service instance with MultiCache
-func NewCacheService(l1Cache, l2Cache proxyCache.Cache, cacheClassifier interfaces.CacheRulesClassifier, enablePropagation bool, logger *zap.Logger) *CacheService {
+func NewCacheService(l1Cache, l2Cache proxyCache.Cache, cacheClassifier interfaces.CacheRulesClassifier, enablePropagation bool, logger *zap.Logger, metrics proxyCache.MetricsRecorder) *CacheService {
 	// Create MultiCache with L1 and L2 caches
 	caches := []proxyCache.Cache{l1Cache, l2Cache}
 	multiCache := multi.NewMultiCache(caches, enablePropagation)
@@ -37,6 +37,7 @@ func NewCacheService(l1Cache, l2Cache proxyCache.Cache, cacheClassifier interfac
 		cacheClassifier: cacheClassifier,
 		logger:          logger,
 		l1Cache:         l1Cache,
+		metrics:         metrics,
 	}
 
 	return service
@@ -86,7 +87,7 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 	}
 
 	// Start timing cache get operation
-	timer := metrics.TimeCacheGetOperation("multi")
+	timer := s.metrics.TimeCacheOperation("get", "multi")
 	defer timer()
 
 	// Try MultiCache with level information
@@ -104,10 +105,10 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 		}
 		// Calculate item age for TTL effectiveness analysis
 		itemAge := time.Duration(time.Now().Unix()-result.Entry.CreatedAt) * time.Second
-		metrics.RecordCacheHit(cacheType, level, chain, network, request.Method, itemAge)
+		s.metrics.RecordCacheHit(cacheType, level, chain, network, request.Method, itemAge)
 
 		// Record bytes read
-		metrics.RecordCacheBytesRead(level, cacheType, chain, network, len(result.Entry.Data))
+		s.metrics.RecordCacheBytesRead(level, cacheType, chain, network, len(result.Entry.Data))
 
 		// Fix response ID to match current request
 		fixedData := utils.FixResponseID(string(result.Entry.Data), request.ID)
@@ -125,7 +126,7 @@ func (s *CacheService) Get(chain, network, rawBody string) (*GetResponse, error)
 	}
 
 	// Record cache miss
-	metrics.RecordCacheMiss(cacheType, chain, network, request.Method)
+	s.metrics.RecordCacheMiss(cacheType, chain, network, request.Method)
 
 	return &GetResponse{
 		Found:      false,
@@ -184,7 +185,7 @@ func (s *CacheService) Set(chain, network, rawBody, responseData string, customT
 	ttlStruct := models.TTL{Fresh: ttl, Stale: staleTTL}
 
 	// Time the set operation
-	timer := metrics.TimeCacheOperation("set", "multi")
+	timer := s.metrics.TimeCacheOperation("set", "multi")
 	s.multiCache.Set(key, []byte(responseData), ttlStruct)
 	timer()
 
@@ -194,8 +195,8 @@ func (s *CacheService) Set(chain, network, rawBody, responseData string, customT
 	dataSize := len(responseData)
 
 	// Record for both L1 and L2 (since MultiCache writes to both)
-	metrics.RecordCacheSet("l1", cacheType, chain, network, dataSize)
-	metrics.RecordCacheSet("l2", cacheType, chain, network, dataSize)
+	s.metrics.RecordCacheSet("l1", cacheType, chain, network, dataSize)
+	s.metrics.RecordCacheSet("l2", cacheType, chain, network, dataSize)
 
 	return nil
 }
