@@ -5,6 +5,7 @@
       "network": "mainnet",
       "chainId": 1,
       "provider": {
+          "type": "infura",
           "name": "infura",
           "url": "https://mainnet.infura.io/v3",
           "authType": "token-auth",
@@ -16,6 +17,7 @@
       "network": "mainnet",
       "chainId": 137,
       "provider": {
+          "type": "alchemy",
           "name": "alchemy",
           "url": "https://polygon-mainnet.g.alchemy.com/v2",
           "authType": "token-auth",

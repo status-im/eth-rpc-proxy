@@ -41,8 +41,20 @@ func TestEVMMethodWithCaller(
 		return map[string]CheckResult{}
 	}
 
+	selfProviders, otherProviders := provider.SplitByReferenceType(providers, referenceProvider.Type)
+
+	checkResults := make(map[string]CheckResult)
+
+	for _, p := range selfProviders {
+		checkResults[p.Name] = CheckResult{Valid: true}
+	}
+
+	if len(otherProviders) == 0 {
+		return checkResults
+	}
+
 	// Combine reference provider with test providers
-	allProviders := append([]provider.RPCProvider{referenceProvider}, providers...)
+	allProviders := append([]provider.RPCProvider{referenceProvider}, otherProviders...)
 
 	// Execute the EVM method in parallel using ParallelCallEVMMethods
 	results := requestsrunner.ParallelCallEVMMethods(ctx, allProviders, config.Method, config.Params, timeout, caller)
@@ -64,8 +76,7 @@ func TestEVMMethodWithCaller(
 	}
 
 	// Compare each provider's result to reference
-	checkResults := make(map[string]CheckResult)
-	for _, provider := range providers {
+	for _, provider := range otherProviders {
 		result, exists := results[provider.Name]
 		if !exists {
 			checkResults[provider.Name] = CheckResult{

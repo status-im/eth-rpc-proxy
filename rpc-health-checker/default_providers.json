@@ -6,18 +6,21 @@
       "chainId": 1,
       "providers": [
         {
+          "type": "infura",
           "name": "InfuraMainnet",
           "url": "https://mainnet.infura.io/v3",
           "authType": "token-auth",
           "authToken": "111"
         },
         {
+          "type": "alchemy",
           "name": "AlchemyMainnet",
           "url": "https://eth-mainnet.alchemyapi.io/v2",
           "authType": "token-auth",
           "authToken": "222"
         },
         {
+          "type": "example",
           "name": "Example",
           "url": "https://another-provider.example,io/v2",
           "authType": "no-auth"
@@ -30,12 +33,14 @@
       "chainId": 11155111,
       "providers": [
         {
+          "type": "infura",
           "name": "InfuraSepolia",
           "url": "https://sepolia.infura.io/v3",
           "authType": "token-auth",
           "authToken": "111"
         },
         {
+          "type": "alchemy",
           "name": "AlchemySepolia",
           "url": "https://eth-sepolia.alchemyapi.io/v2",
           "authType": "token-auth",

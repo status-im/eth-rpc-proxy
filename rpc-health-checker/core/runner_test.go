@@ -229,6 +229,67 @@ func TestChainValidationRunner_ValidateChains(t *testing.T) {
 	})
 }
 
+func TestChainValidationRunner_SelfCheckAutoSucceeds(t *testing.T) {
+	chainCfgs := map[int64]config.ChainConfig{
+		1: {
+			Providers: []provider.RPCProvider{
+				{Type: "infura", Name: "InfuraProvider"},
+				{Type: "alchemy", Name: "AlchemyProvider"},
+			},
+		},
+	}
+
+	referenceCfgs := map[int64]config.ReferenceChainConfig{
+		1: {
+			Provider: provider.RPCProvider{Type: "infura", Name: "reference"},
+		},
+	}
+
+	methodConfigs := []config.EVMMethodTestConfig{
+		{
+			Method: "eth_blockNumber",
+			CompareFunc: func(ref, res *big.Int) bool {
+				return ref.Cmp(res) == 0
+			},
+		},
+	}
+
+	// Only the reference and alchemy provider need mock results.
+	// InfuraProvider shares the reference type and must NOT be called.
+	mockCaller := &MockEVMMethodCaller{
+		results: map[string]requestsrunner.ProviderResult{
+			"reference": {
+				Success:  true,
+				Response: []byte(`{"jsonrpc":"2.0","id":1,"result":"0x1234"}`),
+			},
+			"AlchemyProvider": {
+				Success:  true,
+				Response: []byte(`{"jsonrpc":"2.0","id":1,"result":"0x1234"}`),
+			},
+		},
+	}
+
+	runner := NewChainValidationRunner(
+		chainCfgs,
+		referenceCfgs,
+		methodConfigs,
+		mockCaller,
+		10*time.Second,
+		"",
+		"",
+	)
+
+	validChains, results := runner.validateChains(context.Background())
+
+	chainResults := results[1]
+	assert.True(t, chainResults["InfuraProvider"].Valid, "infura provider should auto-succeed without HTTP call")
+	assert.Contains(t, chainResults["InfuraProvider"].SucceedMethods, "eth_blockNumber", "auto-succeeded provider should have SucceedMethods populated")
+	assert.Empty(t, chainResults["InfuraProvider"].FailedMethods)
+	assert.True(t, chainResults["AlchemyProvider"].Valid, "alchemy provider should succeed via normal validation")
+	assert.Len(t, validChains, 1)
+	assert.Len(t, validChains[0].Providers, 2, "both providers should be in valid chains")
+}
+
 func TestFilterMethodsForChain(t *testing.T) {
 	t.Run("no skip chains", func(t *testing.T) {
 		configs := []config.EVMMethodTestConfig{
