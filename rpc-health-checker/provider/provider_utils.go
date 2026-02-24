@@ -36,6 +36,17 @@ func ReadRpcProviders(filename string) ([]RPCProvider, error) {
 	return pf.Providers, nil
 }
 
+func SplitByReferenceType(providers []RPCProvider, referenceType string) (sameType, other []RPCProvider) {
+	for _, p := range providers {
+		if referenceType != "" && p.Type == referenceType {
+			sameType = append(sameType, p)
+		} else {
+			other = append(other, p)
+		}
+	}
+	return
+}
+
 // WriteRpcProviders writes the list of providers to a JSON file with validation.
 func WriteRpcProviders(filename string, providers []RPCProvider) error {
 	// Validate providers before writing

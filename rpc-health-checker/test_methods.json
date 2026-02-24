@@ -5,46 +5,11 @@
     "maxDifference": "4"
   },
   {
-    "method": "eth_getBalance",
-    "params": [
-      "0x9B27B66D4de4e839326b98108d978526a18E95a3",
-      "latest"
-    ],
-    "maxDifference": "0"
-  },
-  {
-    "method": "eth_feeHistory",
-    "params": [
-      "0x4",
-      "latest",
-      [25, 50, 75]
-    ],
-    "maxDifference": "1000000000",
-    "skipChains": [1101, 2442]
-  },
-  {
-    "method": "eth_gasPrice",
-    "params": [],
-    "maxDifference": "1000000000"
-  },
-  {
     "method": "eth_getTransactionCount",
     "params": [
       "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
       "latest"
     ],
     "maxDifference": "0"
-  },
-  {
-    "method": "eth_estimateGas",
-    "params": [
-      {
-        "from":  "0x9B27B66D4de4e839326b98108d978526a18E95a3",
-        "to": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-        "value": "0x0"
-      }
-    ],
-    "maxDifference": "100000",
-    "skipChains": [59141]
   }
 ]
