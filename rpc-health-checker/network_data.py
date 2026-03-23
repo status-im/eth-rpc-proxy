@@ -2,6 +2,7 @@ INFURA = "infura"
 GROVE = "grove"
 NODEFLEET = "nodefleet"
 STATUS_NETWORK = "status_network"
+STATUS_NETWORK_HOODI = "status_network_hoodi"
 ALCHEMY = "alchemy"
 KATANA = "katana"
 
@@ -211,7 +212,15 @@ NETWORK_DATA = [
         "network": "sepolia",
         "chainId": 1660990954,
         "providers": {
-            STATUS_NETWORK: "https://public.sepolia.rpc.status.network/"
+            STATUS_NETWORK: "https://public.sepolia.rpc.status.network/",
+        }
+    },
+    {
+        "chain": "status",
+        "network": "hoodi",
+        "chainId": 374,
+        "providers": {
+            STATUS_NETWORK_HOODI: "https://rpc.status-network-testnet-hoodi.gateway.fm/"
         }
     },
     {
