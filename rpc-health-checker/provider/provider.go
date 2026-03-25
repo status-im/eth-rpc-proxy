@@ -4,22 +4,24 @@ package provider
 type RPCProviderAuthType string
 
 const (
-	NoAuth    RPCProviderAuthType = "no-auth"    // No authentication
-	BasicAuth RPCProviderAuthType = "basic-auth" // HTTP Header "Authorization: Basic base64(username:password)"
-	TokenAuth RPCProviderAuthType = "token-auth" // URL Token-based authentication "https://api.example.com/YOUR_TOKEN"
+	NoAuth       RPCProviderAuthType = "no-auth"        // No authentication
+	BasicAuth    RPCProviderAuthType = "basic-auth"      // HTTP Header "Authorization: Basic base64(username:password)"
+	TokenAuth    RPCProviderAuthType = "token-auth"      // URL Token-based authentication "https://api.example.com/YOUR_TOKEN"
+	KeyQueryAuth RPCProviderAuthType = "key-query-auth"  // Query parameter authentication "https://api.example.com/?key=YOUR_TOKEN"
 )
 
 // RPCProvider represents the configuration of an RPC provider with various options
 type RPCProvider struct {
-	Type         string              `json:"type" validate:"required,min=1"`                                          // Provider type (infura, alchemy, etc)
-	Name         string              `json:"name" validate:"required,min=1"`                                          // Provider name for identification
-	URL          string              `json:"url" validate:"required,url"`                                             // URL of the current provider
-	AuthType     RPCProviderAuthType `json:"authType" validate:"required,oneof=no-auth basic-auth token-auth"`        // Authentication type
-	AuthLogin    string              `json:"authLogin" validate:"required_if=AuthType basic-auth,omitempty,min=1"`    // Login for BasicAuth
-	AuthPassword string              `json:"authPassword" validate:"required_if=AuthType basic-auth,omitempty,min=1"` // Password for BasicAuth
-	AuthToken    string              `json:"authToken" validate:"required_if=AuthType token-auth,omitempty,min=1"`    // Token for TokenAuth
-	ChainID      int64               `json:"chainId" validate:"required,gt=0"`                                        // Chain ID of the network
-	ChainName    string              `json:"chainName,omitempty"`                                                     // Chain name for metrics
+	Type          string              `json:"type" validate:"required,min=1"`                                                          // Provider type (infura, alchemy, etc)
+	Name          string              `json:"name" validate:"required,min=1"`                                                          // Provider name for identification
+	URL           string              `json:"url" validate:"required,url"`                                                             // URL of the current provider
+	AuthType      RPCProviderAuthType `json:"authType" validate:"required,oneof=no-auth basic-auth token-auth key-query-auth"`         // Authentication type
+	AuthLogin     string              `json:"authLogin" validate:"required_if=AuthType basic-auth,omitempty,min=1"`                    // Login for BasicAuth
+	AuthPassword  string              `json:"authPassword" validate:"required_if=AuthType basic-auth,omitempty,min=1"`                 // Password for BasicAuth
+	AuthToken     string              `json:"authToken" validate:"required_if=AuthType token-auth,required_if=AuthType key-query-auth,omitempty,min=1"` // Token for TokenAuth and KeyQueryAuth
+	KeyQueryParam string              `json:"keyQueryParam,omitempty" validate:"required_if=AuthType key-query-auth,omitempty,min=1"`  // Query parameter name for KeyQueryAuth
+	ChainID       int64               `json:"chainId" validate:"required,gt=0"`                                                        // Chain ID of the network
+	ChainName     string              `json:"chainName,omitempty"`                                                                     // Chain name for metrics
 }
 
 // method unmarshal json and validate field "Enabled" exists

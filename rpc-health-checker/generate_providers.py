@@ -4,7 +4,14 @@ from collections import defaultdict
 from network_data import NETWORK_DATA
 
 def parse_provider_spec(provider_spec):
-    """Parse provider specification into provider type and auth details."""
+    """Parse provider specification into provider type and auth details.
+    
+    Formats:
+        provider                     -> no-auth
+        provider:token               -> token-auth (token appended to URL path)
+        provider:?param=token        -> key-query-auth (token added as ?param=token query)
+        provider:username:password   -> basic-auth
+    """
     parts = provider_spec.split(":", 2)
 
     if len(parts) == 1:
@@ -13,28 +20,40 @@ def parse_provider_spec(provider_spec):
             "auth_type": "no-auth",
             "auth_token": "",
             "auth_login": "",
-            "auth_password": ""
+            "auth_password": "",
+            "key_query_param": ""
         }
 
     provider_type = parts[0]
 
     if len(parts) == 2:
-        # Token auth format: provider:token
+        token_part = parts[1]
+        if token_part.startswith("?") and "=" in token_part:
+            param_name, _, token_value = token_part[1:].partition("=")
+            return {
+                "type": provider_type,
+                "auth_type": "key-query-auth",
+                "auth_token": token_value,
+                "auth_login": "",
+                "auth_password": "",
+                "key_query_param": param_name
+            }
         return {
             "type": provider_type,
             "auth_type": "token-auth",
-            "auth_token": parts[1],
+            "auth_token": token_part,
             "auth_login": "",
-            "auth_password": ""
+            "auth_password": "",
+            "key_query_param": ""
         }
     else:
-        # Basic auth format: provider:username:password
         return {
             "type": provider_type,
             "auth_type": "basic-auth",
             "auth_token": "",
             "auth_login": parts[1],
-            "auth_password": parts[2]
+            "auth_password": parts[2],
+            "key_query_param": ""
         }
 
 def create_provider_entry(p_type, provider_spec, network_data, count=None):
@@ -43,7 +62,8 @@ def create_provider_entry(p_type, provider_spec, network_data, count=None):
     chain_name = network_data["chain"].capitalize()
     network_name = network_data["network"].capitalize()
     name = f"{base_name} {chain_name} {network_name}"
-    return {
+
+    entry = {
         "type": p_type,
         "name": name,
         "url": network_data["providers"][p_type],
@@ -51,8 +71,13 @@ def create_provider_entry(p_type, provider_spec, network_data, count=None):
         "authToken": provider_spec["auth_token"],
         "authLogin": provider_spec["auth_login"],
         "authPassword": provider_spec["auth_password"],
-        "chainId": network_data["chainId"]
+        "chainId": network_data["chainId"],
     }
+
+    if provider_spec["key_query_param"]:
+        entry["keyQueryParam"] = provider_spec["key_query_param"]
+
+    return entry
 
 def create_chain_entry(network_data):
     """Create a base chain entry with consistent format."""
@@ -147,7 +172,7 @@ def main():
     
     parser = argparse.ArgumentParser(description="Generate providers.json configuration")
     parser.add_argument("--providers", nargs="+", required=True,
-                        help=f"Provider specification formats: provider (no auth), provider:token (token auth), or provider:username:password (basic auth). Supported providers: {', '.join(supported_providers)}")
+                        help=f"Provider specification formats: provider (no auth), provider:token (token auth), provider:?param=token (query param auth), or provider:username:password (basic auth). Supported providers: {', '.join(supported_providers)}")
     parser.add_argument("--networks", nargs="+", required=True,
                         choices=supported_networks,
                         help="Networks to generate configs for")

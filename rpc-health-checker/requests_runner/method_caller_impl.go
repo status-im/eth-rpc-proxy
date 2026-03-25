@@ -91,6 +91,10 @@ func (r *RequestsRunner) CallMethod(
 		req.SetBasicAuth(provider.AuthLogin, provider.AuthPassword)
 	case rpcprovider.TokenAuth:
 		req.URL.Path = strings.TrimRight(req.URL.Path, "/") + fmt.Sprintf("/%s", provider.AuthToken)
+	case rpcprovider.KeyQueryAuth:
+		q := req.URL.Query()
+		q.Set(provider.KeyQueryParam, provider.AuthToken)
+		req.URL.RawQuery = q.Encode()
 	}
 
 	// Make the request
