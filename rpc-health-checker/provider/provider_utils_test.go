@@ -17,6 +17,7 @@ type RpcProviderTestSuite struct {
 	validJSON           string
 	invalidJSON         string
 	invalidAuthTypeJSON string
+	invalidKeyQueryJSON string
 }
 
 // SetupSuite is executed before running all tests in the suite
@@ -79,6 +80,17 @@ func (suite *RpcProviderTestSuite) SetupSuite() {
 			"authType": "invalid-auth"
 		}]
 	}`
+
+	suite.invalidKeyQueryJSON = `{
+		"providers": [{
+			"type": "status_network_hoodi",
+			"name": "StatusHoodi",
+			"url": "https://rpc.status-network-testnet-hoodi.gateway.fm/",
+			"authType": "key-query-auth",
+			"authToken": "test-token",
+			"chainId": 374
+		}]
+	}`
 }
 
 // TearDownSuite is executed after all tests in the suite
@@ -126,6 +138,33 @@ func (suite *RpcProviderTestSuite) TestReadRpcProvidersSuccess() {
 	suite.Equal("infura-token", first.AuthToken, "First provider AuthToken mismatch")
 }
 
+func (suite *RpcProviderTestSuite) TestReadRpcProvidersKeyQueryAuthSuccess() {
+	keyQueryJSON := `{
+  "providers": [
+    {
+      "type": "status_network_hoodi",
+      "name": "StatusHoodi",
+      "url": "https://rpc.status-network-testnet-hoodi.gateway.fm/",
+      "authType": "key-query-auth",
+      "authToken": "test-token",
+      "keyQueryParam": "api_key",
+      "chainId": 374
+    }
+  ]
+}`
+	err := os.WriteFile(suite.tempFile, []byte(keyQueryJSON), 0644)
+	suite.Require().NoError(err, "Failed to write key-query auth JSON to temp file")
+
+	providers, err := ReadRpcProviders(suite.tempFile)
+	suite.Require().NoError(err, "ReadRpcProviders() returned an error")
+	suite.Require().Len(providers, 1)
+
+	p := providers[0]
+	suite.Equal(KeyQueryAuth, p.AuthType)
+	suite.Equal("api_key", p.KeyQueryParam)
+	suite.Equal("test-token", p.AuthToken)
+}
+
 // TestReadRpcProvidersFileNotFound checks that the function returns an error for a non-existent file
 func (suite *RpcProviderTestSuite) TestReadRpcProvidersFileNotFound() {
 	_, err := ReadRpcProviders(filepath.Join(suite.tempDir, "non_existent.json"))
@@ -151,6 +190,14 @@ func (suite *RpcProviderTestSuite) TestInvalidAuthTypeJSON() {
 	// Attempt to read providers from the file
 	_, err = ReadRpcProviders(suite.tempFile)
 	suite.Error(err, "Expected JSON parse error")
+}
+
+func (suite *RpcProviderTestSuite) TestInvalidKeyQueryAuthJSON() {
+	err := os.WriteFile(suite.tempFile, []byte(suite.invalidKeyQueryJSON), 0644)
+	suite.Require().NoError(err, "Failed to write invalid key-query auth JSON to temp file")
+
+	_, err = ReadRpcProviders(suite.tempFile)
+	suite.Error(err, "Expected validation error for missing keyQueryParam")
 }
 
 // TestWriteRpcProvidersAndReadBack checks that writing and subsequent reading of providers works correctly

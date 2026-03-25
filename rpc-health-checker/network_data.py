@@ -15,8 +15,8 @@ NETWORK_DATA = [
             INFURA: "https://mainnet.infura.io/v3/",
             GROVE: "https://eth.rpc.grove.city/v1/",
             NODEFLEET: "https://eth-mainnet.alphafleet.io/",
-            ALCHEMY: "https://eth-mainnet.g.alchemy.com/v2/"
-        }
+            ALCHEMY: "https://eth-mainnet.g.alchemy.com/v2/",
+        },
     },
     {
         "chain": "ethereum",

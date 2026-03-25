@@ -476,6 +476,37 @@ func TestCallEVMMethod(t *testing.T) {
 			wantResult:  "0x1",
 		},
 		{
+			name: "Successful KeyQueryAuth request",
+			provider: provider.RPCProvider{
+				Name:          "test",
+				URL:           "", // Will be set to test server URL
+				AuthType:      provider.KeyQueryAuth,
+				AuthToken:     "test-token",
+				KeyQueryParam: "api_key",
+			},
+			method: "eth_chainId",
+			params: []interface{}{},
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "test-token", r.URL.Query().Get("api_key"))
+				assert.Empty(t, r.Header.Get("Authorization"))
+
+				var req map[string]interface{}
+				err := json.NewDecoder(r.Body).Decode(&req)
+				assert.NoError(t, err)
+				assert.Equal(t, "2.0", req["jsonrpc"])
+				assert.Equal(t, "eth_chainId", req["method"])
+				assert.Equal(t, []interface{}{}, req["params"])
+				assert.Equal(t, float64(1), req["id"])
+
+				w.WriteHeader(http.StatusOK)
+				if _, err := w.Write([]byte(`{"jsonrpc":"2.0","result":"0x1"}`)); err != nil {
+					t.Errorf("failed to write response: %v", err)
+				}
+			},
+			wantSuccess: true,
+			wantResult:  "0x1",
+		},
+		{
 			name: "Server error response",
 			provider: provider.RPCProvider{
 				Name:     "test",
