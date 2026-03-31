@@ -30,6 +30,15 @@ NETWORK_DATA = [
         }
     },
     {
+        "chain": "ethereum",
+        "network": "hoodi",
+        "chainId": 560048,
+        "providers": {
+            INFURA: "https://hoodi.infura.io/v3/",
+            ALCHEMY: "https://eth-hoodi.g.alchemy.com/v2/"
+        }
+    },
+    {
         "chain": "optimism",
         "network": "mainnet",
         "chainId": 10,
