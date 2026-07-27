@@ -2,7 +2,8 @@
   {
     "method": "eth_blockNumber",
     "params": [],
-    "maxDifference": "4"
+    "maxDifference": "4",
+    "skipChains": [4663, 46630]
   },
   {
     "method": "eth_getTransactionCount",

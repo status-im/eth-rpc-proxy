@@ -19,24 +19,24 @@ Run the complete system:
    
    # Generate default_providers.json with different authentication methods
    python3 rpc-health-checker/generate_providers.py \
-     --providers infura:YOUR_INFURA_TOKEN grove:YOUR_GROVE_TOKEN alchemy:YOUR_ALCHEMY_TOKEN status_network \
-     --networks mainnet sepolia \
-     --chains ethereum optimism arbitrum base status \
+     --providers infura:YOUR_INFURA_TOKEN grove:YOUR_GROVE_TOKEN alchemy:YOUR_ALCHEMY_TOKEN status_network robinhood \
+     --networks mainnet sepolia testnet \
+     --chains ethereum optimism arbitrum base status robinhood \
      --output secrets/default_providers.json
    
    # Or use mix of token, basic auth, and no-auth providers
    python3 rpc-health-checker/generate_providers.py \
-     --providers infura:YOUR_INFURA_TOKEN grove:username:password alchemy:YOUR_ALCHEMY_TOKEN status_network \
-     --networks mainnet sepolia \
-     --chains ethereum optimism arbitrum base status \
+     --providers infura:YOUR_INFURA_TOKEN grove:username:password alchemy:YOUR_ALCHEMY_TOKEN status_network robinhood \
+     --networks mainnet sepolia testnet \
+     --chains ethereum optimism arbitrum base status robinhood \
      --output secrets/default_providers.json
      
    # Generate reference_providers.json with single provider per chain
    python3 rpc-health-checker/generate_providers.py \
      --single-provider \
-     --providers infura:YOUR_INFURA_TOKEN_REFERENCE alchemy:YOUR_ALCHEMY_TOKEN status_network \
-     --networks mainnet sepolia \
-     --chains ethereum optimism arbitrum base status \
+     --providers infura:YOUR_INFURA_TOKEN_REFERENCE alchemy:YOUR_ALCHEMY_TOKEN status_network robinhood \
+     --networks mainnet sepolia testnet \
+     --chains ethereum optimism arbitrum base status robinhood \
      --output secrets/reference_providers.json
     ``` 
    Please replace:
