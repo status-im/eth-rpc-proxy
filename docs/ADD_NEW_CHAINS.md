@@ -6,23 +6,23 @@ This guide explains how to add new blockchain networks to the eth-rpc-proxy syst
 
 The eth-rpc-proxy system supports multiple blockchain networks and provides fallback functionality between different RPC providers. When adding a new chain, you need to:
 
-1. Update the `generate_providers.py` script with the new chain information
+1. Update `network_data.py` with the new chain information
 2. Generate the updated providers configuration files
 3. Test the proxy with the new chains
 
 ```mermaid
 flowchart TD
-    A[Add endpoints to generate_providers.py] --> B[Generate default_providers.json and reference_providers.json]
+    A[Add endpoints to network_data.py] --> B[Generate default_providers.json and reference_providers.json]
     B --> C[Run proxy locally and test with Curl]
 ```
 
-## Step 1: Update the `generate_providers.py` Script
+## Step 1: Update `network_data.py`
 
-The `generate_providers.py` script contains a `NETWORK_DATA` array that defines all supported chains. To add a new chain:
+The `NETWORK_DATA` array in `rpc-health-checker/network_data.py` is the canonical source of supported chains. To add a new chain:
 
-1. Open `rpc-health-checker/generate_providers.py`
+1. Open `rpc-health-checker/network_data.py`
 2. Add new entries to the `NETWORK_DATA` array for your chain (both mainnet and testnet if applicable)
-3. The script will automatically generate the choices for both `--chains` and `--networks` parameters from the `NETWORK_DATA` array, and will update the help text for `--providers` to include all supported provider types
+3. `generate_providers.py` will automatically generate the choices for both `--chains` and `--networks` from `NETWORK_DATA`, and will update the help text for `--providers` to include all supported provider types
 
 Example of adding a new chain:
 
@@ -67,17 +67,18 @@ python3 rpc-health-checker/generate_providers.py \
                nodefleet:STATUS_USER:STATUS_PASSWORD \
                infura:INFURA_TOKEN \
                status_network \
-   --networks mainnet sepolia \
-   --chains ethereum optimism arbitrum base status NEW_CHAIN_HERE \
+               robinhood \
+   --networks mainnet sepolia testnet \
+   --chains ethereum optimism arbitrum base status robinhood NEW_CHAIN_HERE \
    --output secrets/default_providers.json
 
 
 # reference_providers.json 
 python3 rpc-health-checker/generate_providers.py \
    --single-provider \
-   --providers infura:INFURA_REF_TOKEN status_network \
-   --networks mainnet sepolia \
-   --chains ethereum optimism arbitrum base status NEW_CHAIN_HERE \
+   --providers infura:INFURA_REF_TOKEN status_network robinhood \
+   --networks mainnet sepolia testnet \
+   --chains ethereum optimism arbitrum base status robinhood NEW_CHAIN_HERE \
    --output secrets/reference_providers.json
 ```
 
@@ -131,4 +132,3 @@ curl -X POST http://localhost:8080/NEW_CHAIN/mainnet \
 ```
 
 Make sure to replace `your_username` and `your_password` with the credentials you set up in the `.htpasswd` file.
-

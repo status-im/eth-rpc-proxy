@@ -5,6 +5,7 @@ STATUS_NETWORK = "status_network"
 STATUS_NETWORK_HOODI = "status_network_hoodi"
 ALCHEMY = "alchemy"
 KATANA = "katana"
+ROBINHOOD = "robinhood"
 
 NETWORK_DATA = [
     {
@@ -354,5 +355,25 @@ NETWORK_DATA = [
             INFURA: "https://scroll-sepolia.infura.io/v3/",
             ALCHEMY: "https://scroll-sepolia.g.alchemy.com/v2/"
         }
-    }
+    },
+    {
+        "chain": "robinhood",
+        "network": "mainnet",
+        "chainId": 4663,
+        "providers": {
+            INFURA: "https://robinhood-mainnet.infura.io/v3/",
+            ALCHEMY: "https://robinhood-mainnet.g.alchemy.com/v2/",
+            ROBINHOOD: "https://rpc.mainnet.chain.robinhood.com/",
+        }
+    },
+    {
+        "chain": "robinhood",
+        "network": "testnet",
+        "chainId": 46630,
+        "providers": {
+            INFURA: "https://robinhood-testnet.infura.io/v3/",
+            ALCHEMY: "https://robinhood-testnet.g.alchemy.com/v2/",
+            ROBINHOOD: "https://rpc.testnet.chain.robinhood.com/",
+        }
+    },
 ]
