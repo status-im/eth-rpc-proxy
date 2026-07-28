@@ -39,6 +39,7 @@ Run the complete system:
      --chains ethereum optimism arbitrum base status robinhood \
      --output secrets/reference_providers.json
     ``` 
+
    Please replace:
    - `YOUR_INFURA_TOKEN` and `YOUR_INFURA_TOKEN_REFERENCE` with your Infura API tokens
    - `YOUR_GROVE_TOKEN` with your Grove API token, or use `username:password` for basic auth

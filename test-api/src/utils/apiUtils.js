@@ -78,7 +78,7 @@ export const AVAILABLE_NETWORKS = [
   { value: 'bsc/testnet', label: 'BSC Testnet', chainId: 97 },
   { value: 'polygon/mainnet', label: 'Polygon Mainnet', chainId: 137 },
   { value: 'polygon/amoy', label: 'Polygon Amoy', chainId: 80002 },
-  { value: 'robinhood/mainnet', label: 'Robinhood Chain', chainId: 4663 },
+  { value: 'robinhood/mainnet', label: 'Robinhood Chain Mainnet', chainId: 4663 },
   { value: 'robinhood/testnet', label: 'Robinhood Chain Testnet', chainId: 46630 }
 ];
 
