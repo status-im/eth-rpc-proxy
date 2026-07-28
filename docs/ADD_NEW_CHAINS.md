@@ -74,8 +74,6 @@ python3 rpc-health-checker/generate_providers.py \
 
 
 # reference_providers.json
-# Note: Robinhood has no Infura endpoint — Alchemy must be listed so it can
-# become the reference for robinhood/* (first matching provider type wins).
 python3 rpc-health-checker/generate_providers.py \
    --single-provider \
    --providers infura:INFURA_REF_TOKEN alchemy:ALCHEMY_TOKEN status_network robinhood \
