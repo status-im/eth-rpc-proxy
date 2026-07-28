@@ -38,6 +38,8 @@ Run the complete system:
      --networks mainnet sepolia testnet \
      --chains ethereum optimism arbitrum base status robinhood \
      --output secrets/reference_providers.json
+    # Robinhood has no Infura endpoint; Alchemy must be present so it becomes
+    # the reference for robinhood/* (first matching provider type wins).
     ``` 
    Please replace:
    - `YOUR_INFURA_TOKEN` and `YOUR_INFURA_TOKEN_REFERENCE` with your Infura API tokens

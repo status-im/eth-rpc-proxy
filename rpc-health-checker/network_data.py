@@ -361,7 +361,6 @@ NETWORK_DATA = [
         "network": "mainnet",
         "chainId": 4663,
         "providers": {
-            INFURA: "https://robinhood-mainnet.infura.io/v3/",
             ALCHEMY: "https://robinhood-mainnet.g.alchemy.com/v2/",
             ROBINHOOD: "https://rpc.mainnet.chain.robinhood.com/",
         }
@@ -371,7 +370,6 @@ NETWORK_DATA = [
         "network": "testnet",
         "chainId": 46630,
         "providers": {
-            INFURA: "https://robinhood-testnet.infura.io/v3/",
             ALCHEMY: "https://robinhood-testnet.g.alchemy.com/v2/",
             ROBINHOOD: "https://rpc.testnet.chain.robinhood.com/",
         }
