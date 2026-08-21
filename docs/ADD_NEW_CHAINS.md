@@ -66,19 +66,18 @@ python3 rpc-health-checker/generate_providers.py \
                alchemy:ALCHEMY_TOKEN \
                nodefleet:STATUS_USER:STATUS_PASSWORD \
                infura:INFURA_TOKEN \
-               status_network \
                robinhood \
    --networks mainnet sepolia testnet \
-   --chains ethereum optimism arbitrum base status robinhood NEW_CHAIN_HERE \
+   --chains ethereum optimism arbitrum base robinhood NEW_CHAIN_HERE \
    --output secrets/default_providers.json
 
 
 # reference_providers.json
 python3 rpc-health-checker/generate_providers.py \
    --single-provider \
-   --providers infura:INFURA_REF_TOKEN alchemy:ALCHEMY_TOKEN status_network robinhood \
+   --providers infura:INFURA_REF_TOKEN alchemy:ALCHEMY_TOKEN robinhood \
    --networks mainnet sepolia testnet \
-   --chains ethereum optimism arbitrum base status robinhood NEW_CHAIN_HERE \
+   --chains ethereum optimism arbitrum base robinhood NEW_CHAIN_HERE \
    --output secrets/reference_providers.json
 ```
 

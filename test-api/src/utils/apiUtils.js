@@ -73,7 +73,6 @@ export const AVAILABLE_NETWORKS = [
   { value: 'abstract/testnet', label: 'Abstract Testnet', chainId: 11124 },
   { value: 'unichain/mainnet', label: 'Unichain Mainnet', chainId: 130 },
   { value: 'unichain/sepolia', label: 'Unichain Sepolia', chainId: 1301 },
-  { value: 'status/sepolia', label: 'Status Sepolia', chainId: 1660990954 },
   { value: 'bsc/mainnet', label: 'BSC Mainnet', chainId: 56 },
   { value: 'bsc/testnet', label: 'BSC Testnet', chainId: 97 },
   { value: 'polygon/mainnet', label: 'Polygon Mainnet', chainId: 137 },

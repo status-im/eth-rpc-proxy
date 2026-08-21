@@ -19,24 +19,24 @@ Run the complete system:
    
    # Generate default_providers.json with different authentication methods
    python3 rpc-health-checker/generate_providers.py \
-     --providers infura:YOUR_INFURA_TOKEN grove:YOUR_GROVE_TOKEN alchemy:YOUR_ALCHEMY_TOKEN status_network robinhood \
+     --providers infura:YOUR_INFURA_TOKEN grove:YOUR_GROVE_TOKEN alchemy:YOUR_ALCHEMY_TOKEN robinhood \
      --networks mainnet sepolia testnet \
-     --chains ethereum optimism arbitrum base status robinhood \
+     --chains ethereum optimism arbitrum base robinhood \
      --output secrets/default_providers.json
    
    # Or use mix of token, basic auth, and no-auth providers
    python3 rpc-health-checker/generate_providers.py \
-     --providers infura:YOUR_INFURA_TOKEN grove:username:password alchemy:YOUR_ALCHEMY_TOKEN status_network robinhood \
+     --providers infura:YOUR_INFURA_TOKEN grove:username:password alchemy:YOUR_ALCHEMY_TOKEN robinhood \
      --networks mainnet sepolia testnet \
-     --chains ethereum optimism arbitrum base status robinhood \
+     --chains ethereum optimism arbitrum base robinhood \
      --output secrets/default_providers.json
      
    # Generate reference_providers.json with single provider per chain
    python3 rpc-health-checker/generate_providers.py \
      --single-provider \
-     --providers infura:YOUR_INFURA_TOKEN_REFERENCE alchemy:YOUR_ALCHEMY_TOKEN status_network robinhood \
+     --providers infura:YOUR_INFURA_TOKEN_REFERENCE alchemy:YOUR_ALCHEMY_TOKEN robinhood \
      --networks mainnet sepolia testnet \
-     --chains ethereum optimism arbitrum base status robinhood \
+     --chains ethereum optimism arbitrum base robinhood \
      --output secrets/reference_providers.json
     ``` 
 
@@ -47,10 +47,10 @@ Run the complete system:
    - Other provider credentials as needed
 
    **Note**: `--providers` accepts multiple providers with different authentication methods:
-   - No auth format: just provider name (e.g., `status_network`)
+   - No auth format: just provider name (e.g., `robinhood`)
    - Token auth format: `provider:token` (e.g., `infura:abc123`, `alchemy:xyz789`)
    - Basic auth format: `provider:username:password` (e.g., `grove:user:pass`)
-   - Example: `--providers infura:TOKEN1 grove:user:pass status_network nodefleet:TOKEN2 alchemy:TOKEN3`
+   - Example: `--providers infura:TOKEN1 grove:user:pass robinhood nodefleet:TOKEN2 alchemy:TOKEN3`
 
 2. Create .htpasswd file for nginx proxy authentication:
    ```bash
@@ -67,8 +67,8 @@ Run the complete system:
     -H "Content-Type: application/json" \
     -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 
-    # For Status Network Sepolia using specific provider type
-    curl -u dev:<password> -X POST http://localhost:8080/status/sepolia/status_network \
+    # For Robinhood Chain mainnet using specific provider type
+    curl -u dev:<password> -X POST http://localhost:8080/robinhood/mainnet/robinhood \
     -H "Content-Type: application/json" \
     -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 
@@ -89,7 +89,7 @@ The services will be accessible under:
   - Example paths: 
     - `/ethereum/mainnet` - tries all available providers until success
     - `/ethereum/mainnet/infura` - tries all available Infura providers until success
-    - `/status/sepolia/status_network` - tries all available Status Network providers until success
+    - `/robinhood/mainnet/robinhood` - tries all available Robinhood providers until success
 - KeyDB: Persistent L3 cache service (Redis-compatible)
   - Provides distributed caching across proxy instances
 - Prometheus: http://localhost:9090

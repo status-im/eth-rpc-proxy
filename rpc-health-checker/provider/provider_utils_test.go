@@ -52,7 +52,7 @@ func (suite *RpcProviderTestSuite) SetupSuite() {
       "chainId": 1
     },
     {
-      "type": "status_network",
+      "type": "robinhood",
       "name": "Example",
       "url": "https://another-provider.example.io/v2",
       "authType": "no-auth",
@@ -83,12 +83,12 @@ func (suite *RpcProviderTestSuite) SetupSuite() {
 
 	suite.invalidKeyQueryJSON = `{
 		"providers": [{
-			"type": "status_network_hoodi",
-			"name": "StatusHoodi",
-			"url": "https://rpc.status-network-testnet-hoodi.gateway.fm/",
+			"type": "alchemy",
+			"name": "AlchemyHoodi",
+			"url": "https://eth-hoodi.g.alchemy.com/v2/",
 			"authType": "key-query-auth",
 			"authToken": "test-token",
-			"chainId": 374
+			"chainId": 560048
 		}]
 	}`
 }
@@ -142,13 +142,13 @@ func (suite *RpcProviderTestSuite) TestReadRpcProvidersKeyQueryAuthSuccess() {
 	keyQueryJSON := `{
   "providers": [
     {
-      "type": "status_network_hoodi",
-      "name": "StatusHoodi",
-      "url": "https://rpc.status-network-testnet-hoodi.gateway.fm/",
+      "type": "alchemy",
+      "name": "AlchemyHoodi",
+      "url": "https://eth-hoodi.g.alchemy.com/v2/",
       "authType": "key-query-auth",
       "authToken": "test-token",
       "keyQueryParam": "api_key",
-      "chainId": 374
+      "chainId": 560048
     }
   ]
 }`
