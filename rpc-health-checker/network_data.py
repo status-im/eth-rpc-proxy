@@ -1,8 +1,6 @@
 INFURA = "infura"
 GROVE = "grove"
 NODEFLEET = "nodefleet"
-STATUS_NETWORK = "status_network"
-STATUS_NETWORK_HOODI = "status_network_hoodi"
 ALCHEMY = "alchemy"
 KATANA = "katana"
 ROBINHOOD = "robinhood"
@@ -215,22 +213,6 @@ NETWORK_DATA = [
         "providers": {
             INFURA: "https://unichain-sepolia.infura.io/v3/",
             ALCHEMY: "https://unichain-sepolia.g.alchemy.com/v2/"
-        }
-    },
-    {
-        "chain": "status",
-        "network": "sepolia",
-        "chainId": 1660990954,
-        "providers": {
-            STATUS_NETWORK: "https://public.sepolia.rpc.status.network/",
-        }
-    },
-    {
-        "chain": "status",
-        "network": "hoodi",
-        "chainId": 374,
-        "providers": {
-            STATUS_NETWORK_HOODI: "https://rpc.status-network-testnet-hoodi.gateway.fm/"
         }
     },
     {
