@@ -2,42 +2,36 @@ local json = require("cjson")
 local http = require("resty.http")
 local cache = require("cache.cache")
 local request_utils = require("utils.request_utils")
+local route = require("utils.route")
+
+-- Answers a request that cannot be served
+local function fail(failure)
+    if failure.log then
+        ngx.log(ngx.ERR, failure.log)
+    end
+    ngx.status = failure.status
+    ngx.say(failure.message)
+end
 
 -- Read request body once and reuse it throughout the handler
 ngx.req.read_body()
 local body_data = ngx.req.get_body_data() or ""
 
--- Extract and validate path parameters
-local chain, network, provider_type, err = request_utils.parse_url_path(ngx.var.uri)
-if err then
-    ngx.log(ngx.ERR, err)
-    ngx.status = 400
-    ngx.say(err)
-    return
+-- Route by the path to the providers stored for its chain/network
+local target, route_failure = route.target(ngx.var.uri)
+if not target then
+    return fail(route_failure)
 end
+local provider_type = target.provider_type
 
--- Get providers for the requested chain/network
-local chain_network_key = request_utils.get_chain_network_key(chain, network)
-local providers_str = ngx.shared.providers:get(chain_network_key)
-
-if not providers_str then
-    ngx.log(ngx.ERR, "No providers found for ", chain_network_key)
-    ngx.status = 404
-    ngx.say("No providers available for this chain/network")
-    return
-end
-
--- Safely decode providers JSON with error handling
-local ok, providers = pcall(json.decode, providers_str)
-if not ok then
-    ngx.log(ngx.ERR, "Invalid providers JSON for ", chain_network_key, ": ", providers)
-    ngx.status = 500
-    ngx.say("Internal server error: invalid providers configuration")
-    return
+local providers
+providers, route_failure = route.providers(ngx.shared.providers:get(target.key), target.key)
+if not providers then
+    return fail(route_failure)
 end
 
 -- Check cache with unified function (handles all cache operations)
-local cache_info = cache.check_cache(chain, network, body_data)
+local cache_info = cache.check_cache(target.chain, target.network, body_data)
 if cache_info.cached_response then
     ngx.header["Content-Type"] = "application/json"
     if cache_info.cache_status then
@@ -50,26 +44,15 @@ if cache_info.cached_response then
     return
 end
 
-if #providers == 0 then
-    ngx.log(ngx.ERR, "No providers found for ", chain_network_key)
-    ngx.status = 404
-    ngx.say("No providers available for this chain/network")
-    return
-end
-
--- Filter providers by provider_type if specified
-local providers_to_try, tried_specific_provider = request_utils.filter_providers(providers, provider_type)
-
-if #providers_to_try == 0 then
-    ngx.log(ngx.ERR, "No providers found for provider_type: ", provider_type or "none")
-    ngx.status = 404
-    ngx.say("No providers available for this provider type")
-    return
+local candidates
+candidates, route_failure = route.candidates(providers, provider_type, target.key)
+if not candidates then
+    return fail(route_failure)
 end
 
 local success = false
 
-for _, provider in ipairs(providers_to_try) do
+for _, provider in ipairs(candidates.providers) do
     local httpc = http.new()
 
     -- Setup authentication and headers using request_utils
@@ -139,11 +122,5 @@ for _, provider in ipairs(providers_to_try) do
 end
 
 if not success then
-    if provider_type and provider_type ~= "" and not tried_specific_provider then
-        ngx.status = 404
-        ngx.say("Provider not found: " .. provider_type)
-    else
-        ngx.status = 502
-        ngx.say("All providers failed")
-    end
+    fail(route.exhausted(provider_type, candidates.tried_specific))
 end
