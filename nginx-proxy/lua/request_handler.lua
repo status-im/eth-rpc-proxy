@@ -2,6 +2,7 @@ local json = require("cjson")
 local http = require("resty.http")
 local cache = require("cache.cache")
 local request_utils = require("utils.request_utils")
+local request_body = require("utils.request_body")
 local route = require("utils.route")
 
 -- Answers a request that cannot be served
@@ -15,7 +16,20 @@ end
 
 -- Read request body once and reuse it throughout the handler
 ngx.req.read_body()
-local body_data = ngx.req.get_body_data() or ""
+local wire_body = ngx.req.get_body_data() or ""
+local body_data, decode_status, decode_err = request_body.decode(wire_body, ngx.var.http_content_encoding)
+if not body_data then
+    ngx.log(ngx.WARN, decode_err)
+    ngx.status = decode_status
+    ngx.say(decode_err)
+    return
+end
+if body_data ~= wire_body then
+    local stats = ngx.shared.stats
+    stats:incr("requests_gzip", 1, 0)
+    stats:incr("request_bytes_gzip_wire", #wire_body, 0)
+    stats:incr("request_bytes_gzip_decoded", #body_data, 0)
+end
 
 -- Route by the path to the providers stored for its chain/network
 local target, route_failure = route.target(ngx.var.uri)
