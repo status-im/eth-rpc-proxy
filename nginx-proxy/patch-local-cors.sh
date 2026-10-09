@@ -21,15 +21,15 @@ generate_cors_config() {
 ${indent}# CORS headers for regular requests
 ${indent}add_header 'Access-Control-Allow-Origin' '${origin}' always;
 ${indent}add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
-${indent}add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,If-None-Match,Accept-Encoding' always;
-${indent}add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range,X-Proxy-Cache,X-Response-Size,ETag,Content-Encoding,Vary' always;
+${indent}add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Encoding,Range,Authorization,If-None-Match,Accept-Encoding' always;
+${indent}add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range,X-Proxy-Cache,X-Response-Size,ETag,Content-Encoding,Accept-Encoding,Vary' always;
 
 ${indent}# Handle OPTIONS method
 ${indent}if (\$request_method = 'OPTIONS') {
 ${indent}    add_header 'Access-Control-Allow-Origin' '${origin}' always;
 ${indent}    add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
-${indent}    add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,If-None-Match,Accept-Encoding' always;
-${indent}    add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range,X-Proxy-Cache,X-Response-Size,ETag,Content-Encoding,Vary' always;
+${indent}    add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Encoding,Range,Authorization,If-None-Match,Accept-Encoding' always;
+${indent}    add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range,X-Proxy-Cache,X-Response-Size,ETag,Content-Encoding,Accept-Encoding,Vary' always;
 ${indent}    add_header 'Access-Control-Max-Age' 1728000;
 ${indent}    add_header 'Content-Type' 'text/plain; charset=utf-8';
 ${indent}    return 204;
