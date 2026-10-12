@@ -1,5 +1,5 @@
 local http = require("resty.http")
-local json = require("cjson")
+local provider_config = require("providers.provider_config")
 local resolver_utils = require("utils.resolver_utils")
 
 local M = {}
@@ -86,23 +86,35 @@ function M.reload_providers(premature, url, fallbackLocalConfig)
         config = file_config
     end
 
-    -- Parse and transform provider configuration
-    local parsed_config, parse_err = json.decode(config)
-    if not parsed_config then
+    local entries, parse_err = provider_config.parse(config)
+    if not entries then
         ngx.log(ngx.ERR, "Failed to parse provider config: ", parse_err)
         return
     end
 
-    -- Clear existing providers
-    ngx.shared.providers:flush_all()
-
-    -- Store providers by chain/network
-    for _, chain in ipairs(parsed_config.chains or {}) do
-        local key = chain.name .. ":" .. chain.network
-        ngx.shared.providers:set(key, json.encode(chain.providers))
-        ngx.log(ngx.INFO, "Loaded providers for ", key, " (", #chain.providers, " providers)")
+    -- Other workers serve requests throughout, so every chain that stays
+    -- configured is overwritten in place and only dropped chains are deleted:
+    -- a chain must never be missing while it is still configured. Dropped
+    -- chains go first to make room, and a write never evicts another chain.
+    local providers = ngx.shared.providers
+    for _, key in ipairs(provider_config.stale(providers:get_keys(0), entries)) do
+        providers:delete(key)
+    end
+    local failed = 0
+    for key, stored in pairs(entries) do
+        local ok, set_err = providers:safe_set(key, stored)
+        if ok then
+            ngx.log(ngx.INFO, "Loaded providers for ", key)
+        else
+            failed = failed + 1
+            ngx.log(ngx.ERR, "Failed to store providers for ", key, ": ", set_err)
+        end
     end
 
+    if failed > 0 then
+        ngx.log(ngx.ERR, "Providers reloaded with ", failed, " chains not stored")
+        return
+    end
     ngx.log(ngx.INFO, "Providers reloaded and stored by chain/network")
 end
 

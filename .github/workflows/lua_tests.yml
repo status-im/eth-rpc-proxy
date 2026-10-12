@@ -28,13 +28,14 @@ jobs:
     - name: Install Lua and LuaRocks
       run: |
         sudo apt-get update
-        sudo apt-get install -y lua5.4 lua5.4-dev luarocks libyaml-dev
+        sudo apt-get install -y lua5.4 lua5.4-dev luarocks libyaml-dev zlib1g-dev
 
     - name: Install Lua dependencies
       run: |
         sudo luarocks install busted
         sudo luarocks install lyaml
         sudo luarocks install lua-cjson
+        sudo luarocks install lua-zlib
 
     - name: Run Lua tests
       run: |

@@ -191,6 +191,23 @@ curl -X POST http://localhost:8080/ethereum/mainnet/infura \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ```
 
+### Compressed Request Bodies
+
+A request body may be sent gzip-compressed with `Content-Encoding: gzip`. The proxy decodes it before caching and
+forwards the plain body to providers, so large `eth_call` multicalls cost a fraction of their size on the way in.
+Every response carries `Accept-Encoding: gzip` (RFC 7694), which tells a client it may start compressing.
+
+- Any other `Content-Encoding` is rejected with `415 Unsupported Media Type`.
+- A body that is not valid gzip, is truncated, or has data after the gzip stream is rejected with `400`.
+- A body that decodes to more than 10 MB is rejected with `413`, the same limit as for a plain body.
+
+```bash
+gzip -c request.json | curl -X POST http://localhost:8080/ethereum/mainnet \
+  -H "Content-Type: application/json" -H "Content-Encoding: gzip" --data-binary @-
+```
+
+`/metrics` reports `rpc_proxy_gzip_requests_total` and `rpc_proxy_gzip_request_bytes_total{form="wire"|"decoded"}`.
+
 ## Authentication
 
 The proxy supports hybrid authentication:
