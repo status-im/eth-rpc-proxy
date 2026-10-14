@@ -1,5 +1,33 @@
 # Nginx RPC Proxy
 
+## Provider request metrics
+
+`/metrics` exposes `rpc_proxy_upstream_requests_total{provider_name,chain_id}`.
+It counts each outbound RPC attempt, including failed connections and attempts
+to another provider after an HTTP or JSON-RPC error. Cache hits, authentication
+requests and health-checker validation calls do not increment it. A JSON-RPC
+batch sent in one HTTP request counts as one attempt.
+
+Counters are shared across nginx workers and reset when shared memory is lost
+(for example, on a container restart). Provider names and chain IDs come from
+the provider configuration; legacy entries fall back to the provider type and
+`unknown` chain ID. URLs and credentials are never exported as labels.
+
+Prometheus scrapes this endpoint using the `rpc-proxy-metrics` job in
+`prometheus.yml`. The provisioned RPC dashboard includes **Upstream Requests by
+Provider (Selected Period)**. Select a calendar month or the last 30 days to
+view totals with this instant query:
+
+```promql
+sum by (provider_name) (
+  increase(rpc_proxy_upstream_requests_total[$__range])
+)
+```
+
+History starts after deployment and requires Prometheus retention covering the
+selected period. `increase` accounts for observed counter resets and estimates
+counts between scrapes; these are monitoring totals, not exact billing records.
+
 A reverse proxy for handling RPC requests with provider failover, configuration reloading, and JWT-based authentication.
 
 ## How It Works

@@ -4,6 +4,7 @@ local cache = require("cache.cache")
 local request_utils = require("utils.request_utils")
 local request_body = require("utils.request_body")
 local route = require("utils.route")
+local upstream_metrics = require("utils.upstream_metrics")
 
 -- Answers a request that cannot be served
 local function fail(failure)
@@ -75,6 +76,7 @@ for _, provider in ipairs(candidates.providers) do
     }
     local request_url, request_headers = request_utils.setup_auth(provider, provider.url, base_headers)
 
+    upstream_metrics.record(provider)
     local res, err = httpc:request_uri(request_url, {
         method = ngx.req.get_method(),
         body = body_data,

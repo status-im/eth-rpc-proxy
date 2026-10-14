@@ -1127,6 +1127,53 @@
           "refId": "F"
         }
       ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "id": 16,
+      "description": "Outbound RPC attempts during the selected time range. Includes retries and failed attempts; excludes cache hits and health-checker requests.",
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (provider_name) (increase(rpc_proxy_upstream_requests_total[$__range]))",
+          "legendFormat": "{{provider_name}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Upstream Requests by Provider (Selected Period)",
+      "type": "bargauge"
     }
   ],
   "refresh": "10s",
