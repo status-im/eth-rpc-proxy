@@ -1,32 +1,42 @@
 # Nginx RPC Proxy
 
-## Provider request metrics
+## Client RPC request metrics
 
-`/metrics` exposes `rpc_proxy_upstream_requests_total{provider_name,chain_id}`.
-It counts each outbound RPC attempt, including failed connections and attempts
-to another provider after an HTTP or JSON-RPC error. Cache hits, authentication
-requests and health-checker validation calls do not increment it. A JSON-RPC
-batch sent in one HTTP request counts as one attempt.
+`/metrics` exposes `rpc_proxy_client_requests_total` with labels `chain`,
+`network`, `requested_provider_type` and `rpc_method`. It counts incoming HTTP
+requests that entered the RPC handler after authorization, once in the log phase.
+Cache hits and processing failures count; retries do not add requests. A JSON-RPC
+batch counts once with method `batch`. Auth/service endpoints and rejected
+credentials do not count. Requests nginx rejects before entering the RPC handler
+are outside this counter's boundary.
 
-Counters are shared across nginx workers and reset when shared memory is lost
-(for example, on a container restart). Provider names and chain IDs come from
-the provider configuration; legacy entries fall back to the provider type and
-`unknown` chain ID. URLs and credentials are never exported as labels.
+The route labels describe the client's selection, with provider type `auto` when
+omitted. The complete local `/app/providers.json` configuration supplies the route
+allowlist independently of provider health. It is refreshed on the provider reload
+interval. Unknown routes/types collapse to `unknown` for all three route labels.
+22 explicitly allowed methods are preserved; other calls become `other`, batches
+`batch`, and unclassifiable bodies `invalid`. See
+[the agreed design](../docs/CLIENT_RPC_METRICS.md) for the method list and cardinality.
 
-Prometheus scrapes this endpoint using the `rpc-proxy-metrics` job in
-`prometheus.yml`. The provisioned RPC dashboard includes **Upstream Requests by
-Provider (Selected Period)**. Select a calendar month or the last 30 days to
-view totals with this instant query:
+Counters are shared across workers, initialized to zero for each configured label
+combination, and reset when shared memory is lost. Allocation uses non-evicting
+operations; a metric allocation failure is logged without failing client requests.
+Neither URLs nor credentials are exported as labels.
+
+Prometheus scrapes `/metrics` using the `rpc-proxy-metrics` job. The provisioned
+RPC dashboard includes **Client Requests by Requested Provider (Selected Period)**:
 
 ```promql
-sum by (provider_name) (
-  increase(rpc_proxy_upstream_requests_total[$__range])
+sum by (requested_provider_type) (
+  increase(rpc_proxy_client_requests_total[$__range])
 )
 ```
 
-History starts after deployment and requires Prometheus retention covering the
-selected period. `increase` accounts for observed counter resets and estimates
-counts between scrapes; these are monitoring totals, not exact billing records.
+History starts after deployment. Set Prometheus retention to cover the desired
+month (at least 31 days, preferably longer); the local Compose setup retains 90
+days with a persistent data volume. `increase` handles observed counter resets
+and estimates counts between scrapes; these are monitoring totals, not exact
+billing records.
 
 A reverse proxy for handling RPC requests with provider failover, configuration reloading, and JWT-based authentication.
 

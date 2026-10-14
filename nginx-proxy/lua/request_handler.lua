@@ -4,7 +4,10 @@ local cache = require("cache.cache")
 local request_utils = require("utils.request_utils")
 local request_body = require("utils.request_body")
 local route = require("utils.route")
-local upstream_metrics = require("utils.upstream_metrics")
+local client_metrics = require("utils.client_metrics")
+
+-- This content handler is entered only after authorization succeeds.
+ngx.ctx.client_rpc_authorized = true
 
 -- Answers a request that cannot be served
 local function fail(failure)
@@ -19,6 +22,7 @@ end
 ngx.req.read_body()
 local wire_body = ngx.req.get_body_data() or ""
 local body_data, decode_status, decode_err = request_body.decode(wire_body, ngx.var.http_content_encoding)
+ngx.ctx.client_rpc_method = client_metrics.classify(body_data)
 if not body_data then
     ngx.log(ngx.WARN, decode_err)
     ngx.status = decode_status
@@ -76,7 +80,6 @@ for _, provider in ipairs(candidates.providers) do
     }
     local request_url, request_headers = request_utils.setup_auth(provider, provider.url, base_headers)
 
-    upstream_metrics.record(provider)
     local res, err = httpc:request_uri(request_url, {
         method = ngx.req.get_method(),
         body = body_data,

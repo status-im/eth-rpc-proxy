@@ -16,10 +16,23 @@ end
 -- Read URL from environment variable
 local url = os.getenv("CONFIG_HEALTH_CHECKER_URL")
 local fallback = "/app/providers.json"
+local client_metrics = require("utils.client_metrics")
+
+local function configure_client_metrics()
+    local ok, err = client_metrics.configure_file(fallback)
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to configure client RPC metrics: ", err)
+        if not ngx.shared.client_routes:get("routes") then
+            client_metrics.configure('{"chains":[]}')
+        end
+    end
+end
 
 -- Check worker ID to ensure timers only run in one process
 if ngx.worker.id() == 0 then  -- Only in first worker
     ngx.log(ngx.INFO, "Starting reload_providers in worker: ", ngx.worker.id())
+
+    configure_client_metrics()
 
     -- Perform initial provider loading
     schedule_reload_providers(url, fallback)
@@ -28,6 +41,7 @@ if ngx.worker.id() == 0 then  -- Only in first worker
     local delay = tonumber(os.getenv("RELOAD_INTERVAL")) or 30
     local handler
     handler = function()
+        configure_client_metrics()
         local ok, err = pcall(schedule_reload_providers, url, fallback)
         if not ok then
             ngx.log(ngx.ERR, "Failed to execute schedule_reload_providers: ", err)

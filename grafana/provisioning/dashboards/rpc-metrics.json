@@ -1151,7 +1151,7 @@
         "y": 60
       },
       "id": 16,
-      "description": "Outbound RPC attempts during the selected time range. Includes retries and failed attempts; excludes cache hits and health-checker requests.",
+      "description": "Authorized incoming RPC HTTP requests, including cache hits and processing failures. Batch counts once; provider type is the client selection, with auto when omitted.",
       "options": {
         "orientation": "horizontal",
         "displayMode": "basic",
@@ -1165,14 +1165,14 @@
       },
       "targets": [
         {
-          "expr": "sum by (provider_name) (increase(rpc_proxy_upstream_requests_total[$__range]))",
-          "legendFormat": "{{provider_name}}",
+          "expr": "sum by (requested_provider_type) (increase(rpc_proxy_client_requests_total[$__range]))",
+          "legendFormat": "{{requested_provider_type}}",
           "refId": "A",
           "instant": true,
           "range": false
         }
       ],
-      "title": "Upstream Requests by Provider (Selected Period)",
+      "title": "Client Requests by Requested Provider (Selected Period)",
       "type": "bargauge"
     }
   ],

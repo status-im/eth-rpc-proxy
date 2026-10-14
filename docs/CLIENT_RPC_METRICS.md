@@ -1,0 +1,74 @@
+# Client RPC request counter
+
+Design decisions agreed during review and implemented by the nginx/Lua proxy.
+
+## Agreed semantics
+
+- Count incoming RPC HTTP requests after authorization, including cache hits and
+  requests that subsequently fail processing.
+- One HTTP request increments the counter once. A JSON-RPC batch also counts once.
+- Labels: `chain`, `network`, `requested_provider_type`, `rpc_method`.
+- The requested provider type comes from the client route, with `auto` when omitted.
+  It does not describe the provider that eventually serves the request.
+- For an unconfigured route or unsupported requested provider type, all three route
+  labels become `unknown`. Temporary provider health must not redefine a configured
+  route as unknown.
+- RPC method values use a fixed allowlist independent of cache configuration:
+  `eth_getBlockByHash`, `eth_getBlockByNumber`, `eth_getTransactionByHash`,
+  `eth_getTransactionReceipt`, `eth_getLogs`, `eth_blockNumber`, `eth_gasPrice`,
+  `eth_getBalance`, `eth_getCode`, `eth_getStorageAt`, `eth_getTransactionCount`,
+  `eth_call`, `eth_estimateGas`, `eth_sendRawTransaction`, `eth_sendTransaction`,
+  `web3_clientVersion`, `web3_sha3`, `net_version`, `net_listening`, `net_peerCount`,
+  `eth_chainId`, `eth_syncing`.
+- Other single-call methods map to `other`; batches map to `batch`; bodies that
+  cannot be classified as a call or batch map to `invalid`.
+- Cache counters describe cache lookups and their results. They must not be added
+  to this counter to calculate client demand.
+
+## Cardinality estimate
+
+The local `secrets/default_providers.json` contains 37 chain/network routes and
+64 configured route/provider-type combinations. Adding `auto` for each route and
+one global `unknown` combination gives 102 route label combinations.
+
+22 allowed methods plus `other`, `batch`, and `invalid` give 25 method values:
+**102 × 25 = 2,550 possible series per independently scraped proxy instance**.
+All configured combinations are preinitialized to zero. Deployment target labels distinguish
+instances; configuration changes can create additional historical series.
+
+## Collection and lifecycle
+
+The metric is named `rpc_proxy_client_requests_total` and replaces the earlier
+outbound-attempt counter and dashboard panel. The nginx RPC content handler marks
+a request as admitted only after authorization. The log phase increments it once,
+using the decoded body's method category, or `invalid` when decoding failed.
+Requests rejected before entry into the content handler remain outside this
+boundary; body read failures after entry are counted as `invalid`.
+
+The complete local `/app/providers.json` file supplies the route/type allowlist.
+It is refreshed by worker 0 on the provider reload interval, separately from the
+health-filtered provider list. The allowlist is published atomically and existing
+counters are preserved. A failed refresh retains the previous allowlist. At
+startup without a readable configuration, only the global unknown category is
+initialized and an error is logged.
+
+Worker-shared counters use non-evicting initialization and are preinitialized to
+zero. They reset when shared memory is lost. Historical label combinations can
+remain after configuration changes, so the estimate above describes a fixed
+configuration, not a permanent lifetime cap.
+
+Prometheus provides monitoring estimates with `increase`, not an exact durable
+request ledger. Restarts between scrapes can lose increments. Local Prometheus
+retains 90 days on a persistent volume; deployment infrastructure must configure
+retention separately for monthly reports.
+
+## Verification
+
+- Lua tests exercise the RPC handler and metric endpoint: cache hits, failover,
+  batches, gzip decode errors, post-admission body failures, unknown routes,
+  provider health changes, method bounds, zero initialization and allocation errors.
+- Status Proxy Admin adds an opt-in `metrics` suite that compares before/after
+  `/metrics` snapshots around real requests. Run against one isolated instance
+  with no other client traffic for exact delta assertions.
+- Admin Stats displays server counter-lifetime totals and exposed series count;
+  Grafana provides selected-period totals.
