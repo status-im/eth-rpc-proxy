@@ -20,7 +20,7 @@ for _, method in ipairs({ "other", "batch", "invalid" }) do categories[#categori
 
 local counters = {
     { name = "rpc_proxy_client_requests_total", prefix = "",
-        help = "Authorized client RPC HTTP requests, including cache hits and processing failures" },
+        help = "Authorized client RPC HTTP requests after body read, including cache hits and processing failures" },
     { name = "rpc_proxy_client_request_bytes_total", prefix = "request_bytes:",
         help = "Incoming client RPC HTTP bytes including request line, headers and encoded body" },
     { name = "rpc_proxy_client_response_bytes_total", prefix = "response_bytes:",
@@ -105,7 +105,7 @@ local function record(uri, method)
     increment(counters[3], key, tonumber(ngx.var.bytes_sent) or 0)
 end
 
--- Called by the RPC content handler after nginx authorization and before body I/O.
+-- Called by the RPC handler after authorization and successful HTTP body reading.
 function M.begin_request()
     ngx.ctx.client_rpc_admitted = true
     ngx.ctx.client_rpc_method = "invalid"

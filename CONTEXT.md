@@ -5,7 +5,7 @@ Glossary for how this proxy names and relates chains, networks, and RPC provider
 ## Language
 
 **Client RPC request**:
-One incoming HTTP request to the proxy's RPC interface that has passed authorization, including requests served from cache and requests that later fail processing. A batch is one Client RPC request, independently of the number of calls it contains or attempts to contact providers.
+One incoming HTTP request to the proxy's RPC interface that has passed authorization and whose HTTP body has been read successfully, including requests served from cache and requests that later fail processing. HTTP body read errors, timeouts and disconnects during reading are excluded. A batch is one Client RPC request, independently of the number of calls it contains or attempts to contact providers.
 _Avoid_: Upstream request, provider attempt, health-check request
 
 **RPC method category**:

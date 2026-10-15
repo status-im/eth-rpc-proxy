@@ -6,11 +6,12 @@
 `rpc_proxy_client_request_bytes_total` and `rpc_proxy_client_response_bytes_total`
 with labels `chain`, `network`, `requested_provider_type` and `rpc_method`.
 The request counter counts incoming HTTP
-requests that entered the RPC handler after authorization, once in the log phase.
+requests after authorization and successful HTTP body reading, once in the log phase.
 Cache hits and processing failures count; retries do not add requests. A JSON-RPC
 batch counts once with method `batch`. Auth/service endpoints and rejected
-credentials do not count. Requests nginx rejects before entering the RPC handler
-are outside this counter's boundary.
+credentials do not count. HTTP body read errors, timeouts and disconnects before
+the body is received are excluded from all three counters. Fully received bodies
+that fail decoding still count as `invalid`.
 
 The route labels describe the client's selection, with provider type `auto` when
 omitted. The complete local `/app/providers.json` configuration supplies the route

@@ -6,9 +6,6 @@ local request_body = require("utils.request_body")
 local route = require("utils.route")
 local client_metrics = require("utils.client_metrics")
 
--- This content handler is entered only after authorization succeeds.
-client_metrics.begin_request()
-
 -- Answers a request that cannot be served
 local function fail(failure)
     if failure.log then
@@ -20,6 +17,8 @@ end
 
 -- Read request body once and reuse it throughout the handler
 ngx.req.read_body()
+-- Count only after authorization and successful HTTP body reading.
+client_metrics.begin_request()
 local wire_body = ngx.req.get_body_data() or ""
 local body_data, decode_status, decode_err = request_body.decode(wire_body, ngx.var.http_content_encoding)
 client_metrics.observe_body(body_data)

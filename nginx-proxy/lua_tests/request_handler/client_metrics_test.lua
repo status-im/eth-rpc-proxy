@@ -241,11 +241,14 @@ describe("client RPC request metrics", function()
         assert.are.equal(5, count("ethereum", "mainnet", "auto", "invalid"))
     end)
 
-    it("counts a body rejected after authorization in the log phase", function()
+    it("does not count requests or bytes when reading the HTTP body fails", function()
+        ngx.var.request_length = "240"
+        ngx.var.bytes_sent = "420"
         ngx.req.read_body = function() error("nginx stopped reading oversized body") end
         assert.has_error(function() dofile("lua/request_handler.lua") end)
         metrics.finish()
-        assert.are.equal(1, count("ethereum", "mainnet", "auto", "invalid"))
+        assert.are.equal(0, total())
+        for _, value in pairs(counters) do assert.are.equal(0, value) end
     end)
 
     it("does not count auth rejection, service endpoints or subrequests", function()

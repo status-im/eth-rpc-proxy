@@ -4,8 +4,8 @@ Design decisions agreed during review and implemented by the nginx/Lua proxy.
 
 ## Agreed semantics
 
-- Count incoming RPC HTTP requests after authorization, including cache hits and
-  requests that subsequently fail processing.
+- Count incoming RPC HTTP requests after authorization and successful HTTP body
+  reading, including cache hits and requests that subsequently fail processing.
 - One HTTP request increments the counter once. A JSON-RPC batch also counts once.
 - `rpc_proxy_client_request_bytes_total` and `rpc_proxy_client_response_bytes_total`
   sum HTTP bytes for the same admitted requests and labels. Sizes are counter
@@ -48,12 +48,16 @@ instances; configuration changes can create additional historical series.
 
 The metric is named `rpc_proxy_client_requests_total` and replaces the earlier
 outbound-attempt counter and dashboard panel. After authorization, the nginx RPC
-content handler calls `client_metrics.begin_request()` before body I/O and
-`client_metrics.observe_body()` after decoding. Request-local state is private to
-the metrics module. The log phase calls `finish()` to increment once and clear
+location uses `lua_need_request_body on` to read the HTTP body before entering
+the content handler. The handler calls `client_metrics.begin_request()` after
+`ngx.req.read_body()` and `client_metrics.observe_body()` after decoding.
+Request-local state is private to the metrics module. The log phase calls
+`finish()` to increment once and clear
 that state, using the body's method category or `invalid` when decoding failed.
-Requests rejected before entry into the content handler remain outside this
-boundary; body read failures after entry are counted as `invalid`.
+Requests rejected before admission, including errors, timeouts or disconnects
+while reading the HTTP body, remain outside all three counters. A fully received
+body rejected during decoding (for example invalid gzip) still counts as `invalid`.
+Disconnects after a successful body read remain counted.
 
 The log phase reads nginx's existing `request_length` and `bytes_sent` values.
 Byte accounting performs two additional shared-memory increments, without reading,
@@ -87,7 +91,7 @@ provide sufficient retention for monthly reports.
 ## Verification
 
 - Lua tests exercise the RPC handler and metric endpoint: cache hits, failover,
-  batches, gzip decode errors, post-admission body failures, unknown routes,
+  batches, gzip decode errors, exclusion of HTTP body read failures, unknown routes,
   provider health changes, method bounds, zero initialization and allocation errors.
 - Status Proxy Admin adds an opt-in `metrics` suite that compares before/after
   `/metrics` snapshots around real requests. Run against one isolated instance
