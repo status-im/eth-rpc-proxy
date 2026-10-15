@@ -2,8 +2,10 @@
 
 ## Client RPC request metrics
 
-`/metrics` exposes `rpc_proxy_client_requests_total` with labels `chain`,
-`network`, `requested_provider_type` and `rpc_method`. It counts incoming HTTP
+`/metrics` exposes `rpc_proxy_client_requests_total`,
+`rpc_proxy_client_request_bytes_total` and `rpc_proxy_client_response_bytes_total`
+with labels `chain`, `network`, `requested_provider_type` and `rpc_method`.
+The request counter counts incoming HTTP
 requests that entered the RPC handler after authorization, once in the log phase.
 Cache hits and processing failures count; retries do not add requests. A JSON-RPC
 batch counts once with method `batch`. Auth/service endpoints and rejected
@@ -26,11 +28,17 @@ combination, and reset when shared memory is lost. Allocation uses non-evicting
 operations; a metric allocation failure is logged without failing client requests.
 Neither URLs nor credentials are exported as labels.
 
+Byte counters include HTTP headers and encoded body bytes between the client and
+proxy, without TCP/TLS overhead or upstream traffic. They use nginx's existing
+`request_length` and `bytes_sent` values in the log phase: two extra shared-memory
+increments, no extra body reads or parsing. Byte sizes are values, not labels.
+
 Prometheus scrapes `/metrics` using the `rpc-proxy-metrics` job. The provisioned
-RPC dashboard includes **Client Requests by Requested Provider (Selected Period)**:
+RPC dashboard's **Client Requests** section shows counts and request/response bytes
+primarily by chain/network, with a separate requested-provider view. For example:
 
 ```promql
-sum by (requested_provider_type) (
+sum by (chain, network) (
   increase(rpc_proxy_client_requests_total[$__range])
 )
 ```

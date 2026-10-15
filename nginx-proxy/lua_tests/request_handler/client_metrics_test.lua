@@ -52,7 +52,9 @@ describe("client RPC request metrics", function()
 
     local function total()
         local sum = 0
-        for _, value in pairs(counters) do sum = sum + value end
+        for key, value in pairs(counters) do
+            if key:sub(1, 1) == "[" then sum = sum + value end
+        end
         return sum
     end
 
@@ -122,6 +124,38 @@ describe("client RPC request metrics", function()
         assert.are.equal(1, total())
     end)
 
+    it("exports HTTP request and response bytes with the same bounded labels", function()
+        ngx.var.request_length = "240"
+        ngx.var.bytes_sent = "420"
+        record_body(body)
+        local labels = '{chain="ethereum",network="mainnet",requested_provider_type="auto",rpc_method="eth_chainId"}'
+        local output = metrics.render()
+        assert.truthy(output:find("rpc_proxy_client_requests_total" .. labels .. " 1", 1, true))
+        assert.truthy(output:find("rpc_proxy_client_request_bytes_total" .. labels .. " 240", 1, true))
+        assert.truthy(output:find("rpc_proxy_client_response_bytes_total" .. labels .. " 420", 1, true))
+        assert.truthy(output:find("# TYPE rpc_proxy_client_request_bytes_total counter", 1, true))
+    end)
+
+    it("counts encoded HTTP bytes once for cache hits, gzip and failover", function()
+        ngx.var.request_length = "240"
+        ngx.var.bytes_sent = "420"
+        cached = '{}'
+        run()
+        cached = nil
+        responses[1] = { status = 429, body = '{}', headers = {} }
+        responses[2] = { status = 200, body = '{"result":1}', headers = {} }
+        run()
+        cached = '{}'
+        package.loaded["utils.request_body"].decode = function()
+            return '{"method":"eth_chainId","params":["' .. string.rep("x", 10000) .. '"]}'
+        end
+        run()
+        local key = json.encode({ "ethereum", "mainnet", "auto", "eth_chainId" })
+        assert.are.equal(3, counters[key])
+        assert.are.equal(720, counters["request_bytes:" .. key])
+        assert.are.equal(1260, counters["response_bytes:" .. key])
+    end)
+
     it("counts HTTP failover once", function()
         responses[1] = { status = 429, body = '{}', headers = {} }
         responses[2] = { status = 200, body = '{"result":1}', headers = {} }
@@ -159,7 +193,7 @@ describe("client RPC request metrics", function()
         end
         assert.are.equal(3, count("unknown", "unknown", "unknown", "eth_chainId"))
         assert.are.equal(3, total())
-        assert.are.equal(100, #ngx.shared.client_metrics:get_keys(0))
+        assert.are.equal(300, #ngx.shared.client_metrics:get_keys(0))
     end)
 
     it("keeps configured labels when health removes every provider", function()
@@ -194,7 +228,7 @@ describe("client RPC request metrics", function()
             run()
         end
         assert.are.equal(100, count("ethereum", "mainnet", "auto", "other"))
-        assert.are.equal(100, #ngx.shared.client_metrics:get_keys(0))
+        assert.are.equal(300, #ngx.shared.client_metrics:get_keys(0))
     end)
 
     it("classifies malformed bodies and decoding failures as invalid", function()
@@ -215,22 +249,30 @@ describe("client RPC request metrics", function()
     end)
 
     it("does not count auth rejection, service endpoints or subrequests", function()
+        ngx.var.request_length = "240"
+        ngx.var.bytes_sent = "420"
         for _, uri in ipairs({ "/ethereum/mainnet", "/auth/verify", "/metrics", "/_auth_token" }) do
             ngx.ctx = {}; ngx.var.uri = uri
             metrics.finish()
         end
         assert.are.equal(0, total())
+        for _, value in pairs(counters) do assert.are.equal(0, value) end
     end)
 
     it("does not count a completed request twice", function()
+        ngx.var.request_length = "240"
+        ngx.var.bytes_sent = "420"
         cached = '{}'
         run()
         metrics.finish()
         assert.are.equal(1, total())
+        local key = json.encode({ "ethereum", "mainnet", "auto", "eth_chainId" })
+        assert.are.equal(240, counters["request_bytes:" .. key])
+        assert.are.equal(420, counters["response_bytes:" .. key])
     end)
 
     it("preinitializes zeros and preserves counters on configuration refresh", function()
-        assert.are.equal(100, #ngx.shared.client_metrics:get_keys(0))
+        assert.are.equal(300, #ngx.shared.client_metrics:get_keys(0))
         record("/ethereum/mainnet", "eth_chainId")
         assert(configure({
             { name = "ethereum", network = "mainnet", providers = providers }
@@ -263,7 +305,9 @@ describe("client RPC request metrics", function()
         counters[key] = nil
         record("/ethereum/mainnet", "net_version")
         local logged_error
-        ngx.log = function(_, _, err) logged_error = err end
+        ngx.log = function(_, ...)
+            local args = { ... }; logged_error = args[#args]
+        end
         ngx.shared.client_metrics.safe_add = function() return nil, "no memory" end
         cached = '{}'
         run()
@@ -305,7 +349,7 @@ describe("client RPC request metrics", function()
         counters = {}
         ngx.shared.client_metrics = dict(counters)
         assert(metrics.configure(nil))
-        assert.are.equal(25, #ngx.shared.client_metrics:get_keys(0))
+        assert.are.equal(75, #ngx.shared.client_metrics:get_keys(0))
         record("/ethereum/mainnet", "eth_chainId")
         assert.are.equal(1, count("unknown", "unknown", "unknown", "eth_chainId"))
     end)

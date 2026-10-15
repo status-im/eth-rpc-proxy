@@ -7,6 +7,11 @@ Design decisions agreed during review and implemented by the nginx/Lua proxy.
 - Count incoming RPC HTTP requests after authorization, including cache hits and
   requests that subsequently fail processing.
 - One HTTP request increments the counter once. A JSON-RPC batch also counts once.
+- `rpc_proxy_client_request_bytes_total` and `rpc_proxy_client_response_bytes_total`
+  sum HTTP bytes for the same admitted requests and labels. Sizes are counter
+  values, never labels. Request bytes include the request line, headers and encoded
+  body; response bytes include headers and encoded body sent to the client.
+  TCP/TLS overhead and upstream-provider traffic are not included.
 - Labels: `chain`, `network`, `requested_provider_type`, `rpc_method`.
 - The requested provider type comes from the client route, with `auto` when omitted.
   It does not describe the provider that eventually serves the request.
@@ -33,7 +38,9 @@ The local `secrets/default_providers.json` contains 37 chain/network routes and
 one global `unknown` combination gives 102 route label combinations.
 
 22 allowed methods plus `other`, `batch`, and `invalid` give 25 method values:
-**102 × 25 = 2,550 possible series per independently scraped proxy instance**.
+**102 × 25 = 2,550 possible series per counter per scraped proxy instance**.
+Three counters (requests, request bytes, response bytes) give **7,650 series**
+for that fixed configuration; adding byte counters does not add label values.
 All configured combinations are preinitialized to zero. Deployment target labels distinguish
 instances; configuration changes can create additional historical series.
 
@@ -47,6 +54,11 @@ the metrics module. The log phase calls `finish()` to increment once and clear
 that state, using the body's method category or `invalid` when decoding failed.
 Requests rejected before entry into the content handler remain outside this
 boundary; body read failures after entry are counted as `invalid`.
+
+The log phase reads nginx's existing `request_length` and `bytes_sent` values.
+Byte accounting performs two additional shared-memory increments, without reading,
+copying, decompressing or parsing bodies again. Request counter keys are preserved
+across nginx reloads; byte counters have separate prefixed keys in the same dict.
 
 The complete local `/app/providers.json` file supplies the route/type allowlist.
 `provider_loader.load_configured_routes()` reuses the existing file reader and
@@ -81,4 +93,6 @@ provide sufficient retention for monthly reports.
   `/metrics` snapshots around real requests. Run against one isolated instance
   with no other client traffic for exact delta assertions.
 - Admin Stats displays server counter-lifetime totals and exposed series count;
-  Grafana provides selected-period totals.
+  Grafana's **Client Requests** section provides a primary chain/network table of
+  request counts and request/response bytes for the selected period, plus the
+  existing requested-provider view. All four labels remain available for queries.
