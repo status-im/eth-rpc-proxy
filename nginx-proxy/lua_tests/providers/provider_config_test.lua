@@ -102,7 +102,7 @@ describe("provider_config", function()
         end)
 
         it("uses the same validation as the routing configuration", function()
-            for _, text in ipairs({ 'broken', '[1]', '{"chains":{"foo":1}}',
+            for _, text in ipairs({ 'broken', '[1]', '[]', ' \n []', '{"chains":false}', '{"chains":{"foo":1}}',
                 '{"chains":[1]}', '{"chains":[{"name":"","network":"mainnet","providers":[]}]}' }) do
                 local entries, parse_err = provider_config.parse(text)
                 local routes, route_err = provider_config.configured_routes(text)
@@ -110,7 +110,13 @@ describe("provider_config", function()
                 assert.is_nil(routes)
                 assert.are.equal(parse_err, route_err)
             end
-            assert.are.same({}, provider_config.configured_routes('{}'))
+        end)
+
+        it("accepts intentional empty configurations for both projections", function()
+            for _, text in ipairs({ '{}', '{"chains":[]}' }) do
+                assert.are.same({}, provider_config.parse(text))
+                assert.are.same({}, provider_config.configured_routes(text))
+            end
         end)
     end)
 

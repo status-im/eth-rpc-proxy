@@ -111,6 +111,34 @@ describe("provider_loader", function()
         assert.truthy(err:find("chain 1", 1, true))
     end)
 
+    it("retains configured metric routes and providers after invalid empty-shaped config loads", function()
+        local metrics = require("utils.client_metrics")
+        local counters = observed_dict({})
+        function counters:safe_add(key, value)
+            if self.data[key] ~= nil then return nil, "exists" end
+            return self:safe_set(key, value)
+        end
+        ngx.shared.client_metrics = counters
+        ngx.shared.client_routes = observed_dict({})
+        ngx.shared.providers = observed_dict({})
+        write_config({ chain("ethereum", "mainnet", { "https://a" }) })
+        reload()
+        assert(metrics.configure(assert(provider_loader.load_configured_routes(config_file))))
+        local previous = ngx.shared.client_routes:get("routes")
+
+        for _, text in ipairs({ '[]', '{"chains":false}' }) do
+            local file = assert(io.open(config_file, "w"))
+            file:write(text); file:close()
+            local routes, err = provider_loader.load_configured_routes(config_file)
+            assert.is_nil(routes, text)
+            assert.truthy(err, text)
+            assert(metrics.configure(routes))
+            assert.are.equal(previous, ngx.shared.client_routes:get("routes"))
+            reload()
+            assert.are.same({ "https://a" }, urls_of(ngx.shared.providers, "ethereum:mainnet"))
+        end
+    end)
+
     it("never leaves a chain that stays configured without providers", function()
         local dict = observed_dict({ "ethereum:mainnet", "base:mainnet" })
         ngx.shared.providers = dict

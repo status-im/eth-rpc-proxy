@@ -8,10 +8,12 @@ local function decode_chains(text)
     if not ok then
         return nil, "not JSON: " .. tostring(config)
     end
-    if type(config) ~= "table" or config[1] ~= nil then
+    -- cjson represents an empty array and an empty object as the same table.
+    if type(config) ~= "table" or not text:match("^%s*{") then
         return nil, "not a JSON object"
     end
-    local chains = config.chains or {}
+    local chains = config.chains
+    if chains == nil then chains = {} end
     -- A JSON object decodes to a table too, one that ipairs sees as empty
     if type(chains) ~= "table" or (#chains == 0 and next(chains) ~= nil) then
         return nil, "chains is not a list"
