@@ -40,26 +40,32 @@ instances; configuration changes can create additional historical series.
 ## Collection and lifecycle
 
 The metric is named `rpc_proxy_client_requests_total` and replaces the earlier
-outbound-attempt counter and dashboard panel. The nginx RPC content handler marks
-a request as admitted only after authorization. The log phase increments it once,
-using the decoded body's method category, or `invalid` when decoding failed.
+outbound-attempt counter and dashboard panel. After authorization, the nginx RPC
+content handler calls `client_metrics.begin_request()` before body I/O and
+`client_metrics.observe_body()` after decoding. Request-local state is private to
+the metrics module. The log phase calls `finish()` to increment once and clear
+that state, using the body's method category or `invalid` when decoding failed.
 Requests rejected before entry into the content handler remain outside this
 boundary; body read failures after entry are counted as `invalid`.
 
 The complete local `/app/providers.json` file supplies the route/type allowlist.
-It is refreshed by worker 0 on the provider reload interval, separately from the
-health-filtered provider list. The allowlist is published atomically and existing
-counters are preserved. A failed refresh retains the previous allowlist. At
-startup without a readable configuration, only the global unknown category is
-initialized and an error is logged.
+`provider_loader.load_configured_routes()` reuses the existing file reader and
+`provider_config.configured_routes()` shares decoding and validation with the
+routing configuration parser. It returns only chain, network and provider types,
+without credentials. Worker 0 passes this ready index to `client_metrics.configure()`
+on the reload interval, separately from the health-filtered provider list. The
+metrics module preinitializes counters and publishes the allowlist atomically.
+Existing counters are preserved. Passing no index after a failed load retains the
+previous allowlist. At startup without a readable configuration, only the global
+unknown category is initialized and an error is logged.
 
 Worker-shared counters use non-evicting initialization and are preinitialized to
 zero. If a worker receives a request before a counter is initialized, it uses
 `safe_add` and retries the increment once; another worker winning initialization
 does not lose either increment. Allocation failures are logged without failing
 client requests. Counters reset when shared memory is lost. Historical label
-combinations can remain after configuration changes, so the estimate above describes a fixed
-configuration, not a permanent lifetime cap.
+combinations can remain after configuration changes, so the estimate above
+describes a fixed configuration, not a permanent lifetime cap.
 
 Prometheus provides monitoring estimates with `increase`, not an exact durable
 request ledger. Restarts between scrapes can lose increments. Existing Prometheus

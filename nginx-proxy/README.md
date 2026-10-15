@@ -12,8 +12,10 @@ are outside this counter's boundary.
 
 The route labels describe the client's selection, with provider type `auto` when
 omitted. The complete local `/app/providers.json` configuration supplies the route
-allowlist independently of provider health. It is refreshed on the provider reload
-interval. Unknown routes/types collapse to `unknown` for all three route labels.
+allowlist independently of provider health. The existing provider loader and
+config module read and validate it; metrics accept the ready route index. It is
+refreshed on the provider reload interval. Unknown routes/types collapse to
+`unknown` for all three route labels.
 22 explicitly allowed methods are preserved; other calls become `other`. Bodies
 starting with `[` after whitespace become `batch` without JSON validation;
 other unclassifiable bodies become `invalid`. See

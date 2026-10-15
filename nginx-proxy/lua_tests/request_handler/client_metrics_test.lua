@@ -1,6 +1,23 @@
 describe("client RPC request metrics", function()
     local json = require("cjson")
     local metrics = require("utils.client_metrics")
+    local provider_config = require("providers.provider_config")
+
+    local function configure(chains)
+        local routes = assert(provider_config.configured_routes(json.encode({ chains = chains })))
+        return metrics.configure(routes)
+    end
+
+    local function record_body(body)
+        metrics.begin_request()
+        metrics.observe_body(body)
+        metrics.finish()
+    end
+
+    local function record(uri, method)
+        ngx.var.uri = uri
+        record_body(json.encode({ method = method }))
+    end
     local saved_ngx, saved_modules, counters, routes, responses, calls, cached, body
     local providers = {
         { name = "Alchemy", type = "alchemy", chainId = 1, url = "https://alchemy" },
@@ -62,9 +79,9 @@ describe("client RPC request metrics", function()
                 stats = { incr = function() end }
             }
         }
-        assert(metrics.configure(json.encode({ chains = {
+        assert(configure({
             { name = "ethereum", network = "mainnet", providers = providers }
-        } })))
+        }))
         package.loaded["resty.http"] = { new = function()
             return { request_uri = function(_, url)
                 calls[#calls + 1] = url
@@ -163,10 +180,11 @@ describe("client RPC request metrics", function()
 
     it("classifies array-shaped bodies as batch without validating their contents", function()
         for _, batch in ipairs({ '[]', '[1]', ' \n\t[broken', '[{"method":"eth_call"}]' }) do
-            assert.are.equal("batch", metrics.classify(batch))
+            record_body(batch)
         end
         -- The metric must not parse large batch contents just to categorize them.
-        assert.are.equal("batch", metrics.classify("[" .. string.rep("x", 10 * 1024 * 1024 - 1)))
+        record_body("[" .. string.rep("x", 10 * 1024 * 1024 - 1))
+        assert.are.equal(5, count("ethereum", "mainnet", "auto", "batch"))
     end)
 
     it("bounds unknown method names", function()
@@ -181,12 +199,12 @@ describe("client RPC request metrics", function()
 
     it("classifies malformed bodies and decoding failures as invalid", function()
         for _, invalid in ipairs({ 'broken', '{}', 'null', '{"method":2}' }) do
-            assert.are.equal("invalid", metrics.classify(invalid))
+            record_body(invalid)
         end
         package.loaded["utils.request_body"].decode = function() return nil, 400, "bad gzip" end
         run()
         assert.are.equal(400, ngx.status)
-        assert.are.equal(1, count("ethereum", "mainnet", "auto", "invalid"))
+        assert.are.equal(5, count("ethereum", "mainnet", "auto", "invalid"))
     end)
 
     it("counts a body rejected after authorization in the log phase", function()
@@ -213,10 +231,10 @@ describe("client RPC request metrics", function()
 
     it("preinitializes zeros and preserves counters on configuration refresh", function()
         assert.are.equal(100, #ngx.shared.client_metrics:get_keys(0))
-        metrics.record("/ethereum/mainnet", "eth_chainId")
-        assert(metrics.configure(json.encode({ chains = {
+        record("/ethereum/mainnet", "eth_chainId")
+        assert(configure({
             { name = "ethereum", network = "mainnet", providers = providers }
-        } })))
+        }))
         assert.are.equal(1, total())
     end)
 
@@ -224,7 +242,7 @@ describe("client RPC request metrics", function()
         routes.routes = nil
         counters = {}
         ngx.shared.client_metrics = dict(counters)
-        metrics.record("/ethereum/mainnet", "eth_chainId")
+        record("/ethereum/mainnet", "eth_chainId")
         assert.are.equal(1, count("unknown", "unknown", "unknown", "eth_chainId"))
     end)
 
@@ -236,14 +254,14 @@ describe("client RPC request metrics", function()
             counters[added_key] = 1
             return nil, "exists"
         end
-        metrics.record("/ethereum/mainnet", "eth_chainId")
+        record("/ethereum/mainnet", "eth_chainId")
         assert.are.equal(2, count("ethereum", "mainnet", "auto", "eth_chainId"))
     end)
 
     it("logs allocation failure without dropping existing counters or failing the request", function()
         local key = json.encode({ "ethereum", "mainnet", "auto", "eth_chainId" })
         counters[key] = nil
-        metrics.record("/ethereum/mainnet", "net_version")
+        record("/ethereum/mainnet", "net_version")
         local logged_error
         ngx.log = function(_, _, err) logged_error = err end
         ngx.shared.client_metrics.safe_add = function() return nil, "no memory" end
@@ -258,28 +276,44 @@ describe("client RPC request metrics", function()
     it("does not evict existing counters or replace routes on allocation failure", function()
         local previous = routes.routes
         ngx.shared.client_metrics.safe_add = function() return nil, "no memory" end
-        assert.is_nil(metrics.configure('{"chains":[]}'))
+        assert.is_nil(metrics.configure({}))
         assert.are.equal(previous, routes.routes)
     end)
 
     it("refreshes configured route labels without losing prior counters", function()
-        metrics.record("/base/mainnet", "eth_chainId")
+        record("/base/mainnet", "eth_chainId")
         assert.are.equal(1, count("unknown", "unknown", "unknown", "eth_chainId"))
-        assert(metrics.configure(json.encode({ chains = {
+        assert(configure({
             { name = "ethereum", network = "mainnet", providers = providers },
             { name = "base", network = "mainnet", providers = {} }
-        } })))
-        metrics.record("/base/mainnet", "eth_chainId")
+        }))
+        record("/base/mainnet", "eth_chainId")
         assert.are.equal(1, count("base", "mainnet", "auto", "eth_chainId"))
         assert.are.equal(1, count("unknown", "unknown", "unknown", "eth_chainId"))
     end)
 
-    it("keeps the previous route allowlist on malformed configuration", function()
+    it("retains the previous route allowlist when configuration loading fails", function()
         local previous = routes.routes
-        for _, config in ipairs({ 'broken', '{"chains":{ "foo":1 }}', '{"chains":[1]}' }) do
-            assert.is_nil(metrics.configure(config))
-            assert.are.equal(previous, routes.routes)
-        end
+        assert(metrics.configure(nil))
+        assert.are.equal(previous, routes.routes)
+        record("/ethereum/mainnet/infura", "eth_chainId")
+        assert.are.equal(1, count("ethereum", "mainnet", "infura", "eth_chainId"))
+    end)
+
+    it("initializes only unknown counters when configuration is unavailable at startup", function()
+        routes.routes = nil
+        counters = {}
+        ngx.shared.client_metrics = dict(counters)
+        assert(metrics.configure(nil))
+        assert.are.equal(25, #ngx.shared.client_metrics:get_keys(0))
+        record("/ethereum/mainnet", "eth_chainId")
+        assert.are.equal(1, count("unknown", "unknown", "unknown", "eth_chainId"))
+    end)
+
+    it("observing a body without admitting a request cannot count service traffic", function()
+        metrics.observe_body(body)
+        metrics.finish()
+        assert.are.equal(0, total())
     end)
 
     it("does not break processing if metrics recording fails", function()
@@ -290,7 +324,7 @@ describe("client RPC request metrics", function()
     end)
 
     it("exports client counters through the nginx metrics endpoint", function()
-        metrics.record("/ethereum/mainnet", "eth_chainId")
+        record("/ethereum/mainnet", "eth_chainId")
         local output = {}
         ngx.print = function(...)
             local parts = { ... }

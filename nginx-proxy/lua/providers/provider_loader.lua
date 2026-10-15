@@ -64,6 +64,14 @@ local function read_config_from_file(filepath)
     return content, nil
 end
 
+-- Reuse the same file reader and config parser for the complete route index.
+-- This must not depend on providers currently passing health validation.
+function M.load_configured_routes(filepath)
+    local text, err = read_config_from_file(filepath)
+    if not text then return nil, err end
+    return provider_config.configured_routes(text)
+end
+
 -- Main provider reload function
 function M.reload_providers(premature, url, fallbackLocalConfig)
     if premature then

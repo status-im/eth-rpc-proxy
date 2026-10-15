@@ -88,6 +88,29 @@ describe("provider_loader", function()
         provider_loader.reload_providers(false, nil, config_file)
     end
 
+    it("loads configured metric routes independently of the health-filtered provider dictionary", function()
+        ngx.shared.providers = observed_dict({})
+        write_config({ { name = "ethereum", network = "mainnet", providers = {
+            { type = "infura", url = "https://private", authToken = "secret" }
+        } } })
+        assert.are.same({
+            ["ethereum:mainnet"] = { chain = "ethereum", network = "mainnet",
+                types = { auto = true, infura = true } }
+        }, assert(provider_loader.load_configured_routes(config_file)))
+        assert.are.same({}, ngx.shared.providers.data)
+    end)
+
+    it("returns errors for unreadable or malformed configured routes", function()
+        local routes, err = provider_loader.load_configured_routes(config_file .. ".missing")
+        assert.is_nil(routes)
+        assert.truthy(err)
+        local file = assert(io.open(config_file, "w"))
+        file:write('{"chains":[1]}'); file:close()
+        routes, err = provider_loader.load_configured_routes(config_file)
+        assert.is_nil(routes)
+        assert.truthy(err:find("chain 1", 1, true))
+    end)
+
     it("never leaves a chain that stays configured without providers", function()
         local dict = observed_dict({ "ethereum:mainnet", "base:mainnet" })
         ngx.shared.providers = dict

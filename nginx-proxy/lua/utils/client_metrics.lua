@@ -22,7 +22,7 @@ local function escape(value)
     return value:gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n")
 end
 
-function M.classify(body)
+local function classify(body)
     if type(body) ~= "string" then return "invalid" end
     -- This is a metric category, not JSON validation. Avoid parsing batch payloads.
     if body:match("^%s*%[") then return "batch" end
@@ -32,31 +32,13 @@ function M.classify(body)
     return allowed_methods[decoded.method] and decoded.method or "other"
 end
 
--- Use the complete local configuration, never the health-filtered routing list.
--- Publish the allowlist atomically; counters are preinitialized so Prometheus
--- can observe a zero before the first request. safe_add never evicts counters.
-function M.configure(text)
-    local ok, config = pcall(json.decode, text)
-    if not ok or type(config) ~= "table" or type(config.chains) ~= "table"
-        or (#config.chains == 0 and next(config.chains) ~= nil) then
-        return nil, "invalid client metrics route configuration"
-    end
-    local routes = {}
-    for _, chain in ipairs(config.chains) do
-        if type(chain) ~= "table" or type(chain.name) ~= "string" or chain.name == ""
-            or type(chain.network) ~= "string" or chain.network == ""
-            or type(chain.providers) ~= "table" then
-            return nil, "invalid client metrics chain configuration"
-        end
-        local types = { auto = true }
-        for _, provider in ipairs(chain.providers) do
-            if type(provider) == "table" and type(provider.type) == "string" and provider.type ~= "" then
-                types[provider.type] = true
-            end
-        end
-        routes[chain.name .. ":" .. chain.network] = {
-            chain = chain.name, network = chain.network, types = types
-        }
+-- Accept a validated route index from provider_config. Missing configuration
+-- retains the previous allowlist, or initializes only unknown counters at startup.
+-- Preinitialize counters before publishing routes so scrapes can observe zero.
+function M.configure(routes)
+    if not routes then
+        if ngx.shared.client_routes:get("routes") then return true end
+        routes = {}
     end
     local combinations = { { "unknown", "unknown", "unknown" } }
     for _, route in pairs(routes) do
@@ -74,15 +56,7 @@ function M.configure(text)
     return ngx.shared.client_routes:safe_set("routes", json.encode(routes))
 end
 
-function M.configure_file(path)
-    local file, err = io.open(path, "r")
-    if not file then return nil, err end
-    local text = file:read("*all")
-    file:close()
-    return M.configure(text)
-end
-
-function M.record(uri, method)
+local function record(uri, method)
     local chain, network, provider_type = request_utils.parse_url_path(uri)
     local stored = ngx.shared.client_routes:get("routes")
     if stored ~= cached_routes_text then
@@ -113,12 +87,25 @@ function M.record(uri, method)
     end
 end
 
+-- Called by the RPC content handler after nginx authorization and before body I/O.
+function M.begin_request()
+    ngx.ctx.client_rpc_admitted = true
+    ngx.ctx.client_rpc_method = "invalid"
+end
+
+function M.observe_body(body)
+    if ngx.ctx.client_rpc_admitted then
+        ngx.ctx.client_rpc_method = classify(body)
+    end
+end
+
 function M.finish()
-    -- Content handlers run only after nginx authorization. Internal auth
-    -- subrequests and /metrics never set this request-local marker.
-    if ngx.ctx.client_rpc_authorized then
-        M.record(ngx.var.uri, ngx.ctx.client_rpc_method or "invalid")
-        ngx.ctx.client_rpc_authorized = nil
+    -- Internal auth subrequests and /metrics never begin a client RPC request.
+    if ngx.ctx.client_rpc_admitted then
+        local method = ngx.ctx.client_rpc_method
+        ngx.ctx.client_rpc_admitted = nil
+        ngx.ctx.client_rpc_method = nil
+        record(ngx.var.uri, method)
     end
 end
 

@@ -19,12 +19,13 @@ local fallback = "/app/providers.json"
 local client_metrics = require("utils.client_metrics")
 
 local function configure_client_metrics()
-    local ok, err = client_metrics.configure_file(fallback)
+    local routes, load_err = provider_loader.load_configured_routes(fallback)
+    if not routes then
+        ngx.log(ngx.ERR, "Failed to load configured client routes: ", load_err)
+    end
+    local ok, err = client_metrics.configure(routes)
     if not ok then
         ngx.log(ngx.ERR, "Failed to configure client RPC metrics: ", err)
-        if not ngx.shared.client_routes:get("routes") then
-            client_metrics.configure('{"chains":[]}')
-        end
     end
 end
 
