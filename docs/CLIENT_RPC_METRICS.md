@@ -62,9 +62,9 @@ combinations can remain after configuration changes, so the estimate above descr
 configuration, not a permanent lifetime cap.
 
 Prometheus provides monitoring estimates with `increase`, not an exact durable
-request ledger. Restarts between scrapes can lose increments. Local Prometheus
-retains 90 days on a persistent volume; deployment infrastructure must configure
-retention separately for monthly reports.
+request ledger. Restarts between scrapes can lose increments. Existing Prometheus
+retention and storage settings are unchanged; deployment infrastructure must
+provide sufficient retention for monthly reports.
 
 ## Verification
 

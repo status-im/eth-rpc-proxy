@@ -34,8 +34,8 @@ sum by (requested_provider_type) (
 ```
 
 History starts after deployment. Set Prometheus retention to cover the desired
-month (at least 31 days, preferably longer); the local Compose setup retains 90
-days with a persistent data volume. `increase` handles observed counter resets
+month (at least 31 days, preferably longer) in your deployment. This metric does
+not change Prometheus retention or storage. `increase` handles observed counter resets
 and estimates counts between scrapes; these are monitoring totals, not exact
 billing records.
 
