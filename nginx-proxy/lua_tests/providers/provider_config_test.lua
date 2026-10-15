@@ -85,6 +85,41 @@ describe("provider_config", function()
         end)
     end)
 
+    describe("configured_routes", function()
+        it("projects configured routes and provider types without exposing credentials", function()
+            local routes = assert(provider_config.configured_routes(json.encode({ chains = {
+                { name = "ethereum", network = "mainnet", providers = {
+                    { type = "infura", url = "https://private", authToken = "secret" },
+                    { type = "infura" }, { type = "alchemy" }, { url = "https://legacy" }
+                } },
+                { name = "base", network = "mainnet", providers = {} }
+            } })))
+            assert.are.same({
+                ["ethereum:mainnet"] = { chain = "ethereum", network = "mainnet",
+                    types = { auto = true, infura = true, alchemy = true } },
+                ["base:mainnet"] = { chain = "base", network = "mainnet", types = { auto = true } }
+            }, routes)
+        end)
+
+        it("uses the same validation as the routing configuration", function()
+            for _, text in ipairs({ 'broken', '[1]', '[]', ' \n []', '{"chains":false}', '{"chains":{"foo":1}}',
+                '{"chains":[1]}', '{"chains":[{"name":"","network":"mainnet","providers":[]}]}' }) do
+                local entries, parse_err = provider_config.parse(text)
+                local routes, route_err = provider_config.configured_routes(text)
+                assert.is_nil(entries)
+                assert.is_nil(routes)
+                assert.are.equal(parse_err, route_err)
+            end
+        end)
+
+        it("accepts intentional empty configurations for both projections", function()
+            for _, text in ipairs({ '{}', '{"chains":[]}' }) do
+                assert.are.same({}, provider_config.parse(text))
+                assert.are.same({}, provider_config.configured_routes(text))
+            end
+        end)
+    end)
+
     describe("stale", function()
         it("lists the stored keys the new entries no longer have", function()
             local stale = provider_config.stale(

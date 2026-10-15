@@ -138,6 +138,7 @@ services:
       - 'rpc-network'
     volumes:
       - './prometheus.yml:/etc/prometheus/prometheus.yml'
+      - './prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml:ro'
     depends_on:
       - 'health-checker'
       - 'auth-service'

@@ -4,6 +4,22 @@ Glossary for how this proxy names and relates chains, networks, and RPC provider
 
 ## Language
 
+**Client RPC request**:
+One incoming HTTP request to the proxy's RPC interface that has passed authorization and whose HTTP body has been read successfully, including requests served from cache and requests that later fail processing. HTTP body read errors, timeouts and disconnects during reading are excluded. A batch is one Client RPC request, independently of the number of calls it contains or attempts to contact providers.
+_Avoid_: Upstream request, provider attempt, health-check request
+
+**RPC method category**:
+The recognized method of a single RPC call, or `other` for an unrecognized method. A body beginning with `[` after whitespace has category `batch` regardless of its validity; other bodies that cannot be classified as a single call have category `invalid`.
+_Avoid_: HTTP method, first batch method
+
+**Requested provider type**:
+The Provider type explicitly selected by the client in the RPC route. When the client leaves the choice to the proxy, the requested type is `auto`, regardless of which Default provider serves the request.
+_Avoid_: Actual provider, selected backend, provider name
+
+**Unknown RPC route**:
+A client-selected chain/network pair or requested Provider type that is not configured for that route. All such selections form one `unknown` category rather than distinct named routes.
+_Avoid_: Unhealthy provider, temporarily unavailable route
+
 **Chain**:
 The blockchain product slug used in the public URL path `/{chain}/{network}` (e.g. `ethereum`, `robinhood`).
 _Avoid_: Network (when meaning the product), chain name, brand

@@ -1,5 +1,55 @@
 # Nginx RPC Proxy
 
+## Client RPC request metrics
+
+`/metrics` exposes `rpc_proxy_client_requests_total`,
+`rpc_proxy_client_request_bytes_total` and `rpc_proxy_client_response_bytes_total`
+with labels `chain`, `network`, `requested_provider_type` and `rpc_method`.
+The request counter counts incoming HTTP
+requests after authorization and successful HTTP body reading, once in the log phase.
+Cache hits and processing failures count; retries do not add requests. A JSON-RPC
+batch counts once with method `batch`. Auth/service endpoints and rejected
+credentials do not count. HTTP body read errors, timeouts and disconnects before
+the body is received are excluded from all three counters. Fully received bodies
+that fail decoding still count as `invalid`.
+
+The route labels describe the client's selection, with provider type `auto` when
+omitted. The complete local `/app/providers.json` configuration supplies the route
+allowlist independently of provider health. The existing provider loader and
+config module read and validate it; metrics accept the ready route index. It is
+refreshed on the provider reload interval. Unknown routes/types collapse to
+`unknown` for all three route labels.
+22 explicitly allowed methods are preserved; other calls become `other`. Bodies
+starting with `[` after whitespace become `batch` without JSON validation;
+other unclassifiable bodies become `invalid`. See
+[the agreed design](../docs/CLIENT_RPC_METRICS.md) for the method list and cardinality.
+
+Counters are shared across workers, initialized to zero for each configured label
+combination, and reset when shared memory is lost. Allocation uses non-evicting
+operations; a metric allocation failure is logged without failing client requests.
+Neither URLs nor credentials are exported as labels.
+
+Byte counters include HTTP headers and encoded body bytes between the client and
+proxy, without TCP/TLS overhead or upstream traffic. They use nginx's existing
+`request_length` and `bytes_sent` values in the log phase: two extra shared-memory
+increments, no extra body reads or parsing. Byte sizes are values, not labels.
+
+Prometheus scrapes `/metrics` using the `rpc-proxy-metrics` job. The provisioned
+RPC dashboard's **Client Requests** section shows counts and request/response bytes
+primarily by chain/network, with a separate requested-provider view. For example:
+
+```promql
+sum by (chain, network) (
+  increase(rpc_proxy_client_requests_total[$__range])
+)
+```
+
+History starts after deployment. Set Prometheus retention to cover the desired
+month (at least 31 days, preferably longer) in your deployment. This metric does
+not change Prometheus retention or storage. `increase` handles observed counter resets
+and estimates counts between scrapes; these are monitoring totals, not exact
+billing records.
+
 A reverse proxy for handling RPC requests with provider failover, configuration reloading, and JWT-based authentication.
 
 ## How It Works

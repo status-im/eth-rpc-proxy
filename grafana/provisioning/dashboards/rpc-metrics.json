@@ -1127,6 +1127,177 @@
           "refId": "F"
         }
       ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "id": 17,
+      "panels": [],
+      "title": "Client Requests",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request bytes"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Response bytes"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 61
+      },
+      "id": 18,
+      "title": "Client Requests by Chain / Network (Selected Period)",
+      "type": "table",
+      "description": "Authorized incoming requests and HTTP bytes including headers, aggregated by chain/network for the selected period. Body bytes are counted as transferred (compressed when encoded). Provider type and RPC method remain available in the metric labels.",
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Requests"
+          }
+        ],
+        "cellHeight": "sm",
+        "enablePagination": true
+      },
+      "targets": [
+        {
+          "expr": "sum by (chain, network) (increase(rpc_proxy_client_requests_total[$__range]))",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "expr": "sum by (chain, network) (increase(rpc_proxy_client_request_bytes_total[$__range]))",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "expr": "sum by (chain, network) (increase(rpc_proxy_client_response_bytes_total[$__range]))",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "chain": 0,
+              "network": 1,
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #C": 4
+            },
+            "renameByName": {
+              "chain": "Chain",
+              "network": "Network",
+              "Value #A": "Requests",
+              "Value #B": "Request bytes",
+              "Value #C": "Response bytes"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 70
+      },
+      "id": 16,
+      "description": "Authorized incoming RPC HTTP requests, including cache hits and processing failures. Batch counts once; provider type is the client selection, with auto when omitted.",
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (requested_provider_type) (increase(rpc_proxy_client_requests_total[$__range]))",
+          "legendFormat": "{{requested_provider_type}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Client Requests by Requested Provider (Selected Period)",
+      "type": "bargauge"
     }
   ],
   "refresh": "10s",
