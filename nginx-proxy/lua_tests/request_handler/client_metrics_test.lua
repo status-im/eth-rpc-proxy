@@ -161,6 +161,14 @@ describe("client RPC request metrics", function()
         assert.are.equal(1, total())
     end)
 
+    it("classifies array-shaped bodies as batch without validating their contents", function()
+        for _, batch in ipairs({ '[]', '[1]', ' \n\t[broken', '[{"method":"eth_call"}]' }) do
+            assert.are.equal("batch", metrics.classify(batch))
+        end
+        -- The metric must not parse large batch contents just to categorize them.
+        assert.are.equal("batch", metrics.classify("[" .. string.rep("x", 10 * 1024 * 1024 - 1)))
+    end)
+
     it("bounds unknown method names", function()
         for i = 1, 100 do
             body = '{"method":"random_' .. i .. '"}'
@@ -172,7 +180,7 @@ describe("client RPC request metrics", function()
     end)
 
     it("classifies malformed bodies and decoding failures as invalid", function()
-        for _, invalid in ipairs({ 'broken', '{}', '[]', '[1]', 'null', '{"method":2}' }) do
+        for _, invalid in ipairs({ 'broken', '{}', 'null', '{"method":2}' }) do
             assert.are.equal("invalid", metrics.classify(invalid))
         end
         package.loaded["utils.request_body"].decode = function() return nil, 400, "bad gzip" end
@@ -210,6 +218,41 @@ describe("client RPC request metrics", function()
             { name = "ethereum", network = "mainnet", providers = providers }
         } })))
         assert.are.equal(1, total())
+    end)
+
+    it("counts requests served before worker zero initializes metric routes and counters", function()
+        routes.routes = nil
+        counters = {}
+        ngx.shared.client_metrics = dict(counters)
+        metrics.record("/ethereum/mainnet", "eth_chainId")
+        assert.are.equal(1, count("unknown", "unknown", "unknown", "eth_chainId"))
+    end)
+
+    it("preserves both requests when another worker creates a missing counter first", function()
+        local key = json.encode({ "ethereum", "mainnet", "auto", "eth_chainId" })
+        counters[key] = nil
+        ngx.shared.client_metrics.safe_add = function(_, added_key)
+            -- Another worker initialized and incremented between our incr and safe_add.
+            counters[added_key] = 1
+            return nil, "exists"
+        end
+        metrics.record("/ethereum/mainnet", "eth_chainId")
+        assert.are.equal(2, count("ethereum", "mainnet", "auto", "eth_chainId"))
+    end)
+
+    it("logs allocation failure without dropping existing counters or failing the request", function()
+        local key = json.encode({ "ethereum", "mainnet", "auto", "eth_chainId" })
+        counters[key] = nil
+        metrics.record("/ethereum/mainnet", "net_version")
+        local logged_error
+        ngx.log = function(_, _, err) logged_error = err end
+        ngx.shared.client_metrics.safe_add = function() return nil, "no memory" end
+        cached = '{}'
+        run()
+        assert.are.equal("no memory", logged_error)
+        assert.are.equal(1, count("ethereum", "mainnet", "auto", "net_version"))
+        assert.are.equal(0, count("ethereum", "mainnet", "auto", "eth_chainId"))
+        assert.are.equal(0, #calls)
     end)
 
     it("does not evict existing counters or replace routes on allocation failure", function()

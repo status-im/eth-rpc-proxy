@@ -9,7 +9,7 @@ One incoming HTTP request to the proxy's RPC interface that has passed authoriza
 _Avoid_: Upstream request, provider attempt, health-check request
 
 **RPC method category**:
-The recognized method of a single RPC call, or `other` for an unrecognized method. A batch has category `batch`; a body that cannot be classified as a single call or batch has category `invalid`.
+The recognized method of a single RPC call, or `other` for an unrecognized method. A body beginning with `[` after whitespace has category `batch` regardless of its validity; other bodies that cannot be classified as a single call have category `invalid`.
 _Avoid_: HTTP method, first batch method
 
 **Requested provider type**:

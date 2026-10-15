@@ -14,8 +14,9 @@ The route labels describe the client's selection, with provider type `auto` when
 omitted. The complete local `/app/providers.json` configuration supplies the route
 allowlist independently of provider health. It is refreshed on the provider reload
 interval. Unknown routes/types collapse to `unknown` for all three route labels.
-22 explicitly allowed methods are preserved; other calls become `other`, batches
-`batch`, and unclassifiable bodies `invalid`. See
+22 explicitly allowed methods are preserved; other calls become `other`. Bodies
+starting with `[` after whitespace become `batch` without JSON validation;
+other unclassifiable bodies become `invalid`. See
 [the agreed design](../docs/CLIENT_RPC_METRICS.md) for the method list and cardinality.
 
 Counters are shared across workers, initialized to zero for each configured label

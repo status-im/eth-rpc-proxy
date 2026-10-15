@@ -24,17 +24,10 @@ end
 
 function M.classify(body)
     if type(body) ~= "string" then return "invalid" end
+    -- This is a metric category, not JSON validation. Avoid parsing batch payloads.
+    if body:match("^%s*%[") then return "batch" end
     local ok, decoded = pcall(json.decode, body)
     if not ok or type(decoded) ~= "table" then return "invalid" end
-    if body:match("^%s*%[") then
-        if #decoded == 0 then return "invalid" end
-        for _, call in ipairs(decoded) do
-            if type(call) ~= "table" or type(call.method) ~= "string" or call.method == "" then
-                return "invalid"
-            end
-        end
-        return "batch"
-    end
     if type(decoded.method) ~= "string" or decoded.method == "" then return "invalid" end
     return allowed_methods[decoded.method] and decoded.method or "other"
 end
@@ -104,7 +97,17 @@ function M.record(uri, method)
     method = allowed_methods[method] and method
         or (method == "other" or method == "batch") and method or "invalid"
     local key = json.encode({ chain, network, provider_type, method })
-    local value, err = ngx.shared.client_metrics:incr(key, 1)
+    local dict = ngx.shared.client_metrics
+    local value, err = dict:incr(key, 1)
+    if not value and err == "not found" then
+        -- Workers can accept requests before worker 0 finishes initialization.
+        local added, add_err = dict:safe_add(key, 0)
+        if added or add_err == "exists" then
+            value, err = dict:incr(key, 1)
+        else
+            err = add_err
+        end
+    end
     if not value then
         ngx.log(ngx.ERR, "Failed to record client RPC request metric: ", err)
     end

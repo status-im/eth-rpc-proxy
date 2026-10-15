@@ -20,8 +20,9 @@ Design decisions agreed during review and implemented by the nginx/Lua proxy.
   `eth_call`, `eth_estimateGas`, `eth_sendRawTransaction`, `eth_sendTransaction`,
   `web3_clientVersion`, `web3_sha3`, `net_version`, `net_listening`, `net_peerCount`,
   `eth_chainId`, `eth_syncing`.
-- Other single-call methods map to `other`; batches map to `batch`; bodies that
-  cannot be classified as a call or batch map to `invalid`.
+- Other single-call methods map to `other`; bodies whose first non-whitespace
+  character is `[` map to `batch` without JSON validation, including empty or
+  malformed arrays. Other bodies that cannot be classified as a call map to `invalid`.
 - Cache counters describe cache lookups and their results. They must not be added
   to this counter to calculate client demand.
 
@@ -53,8 +54,11 @@ startup without a readable configuration, only the global unknown category is
 initialized and an error is logged.
 
 Worker-shared counters use non-evicting initialization and are preinitialized to
-zero. They reset when shared memory is lost. Historical label combinations can
-remain after configuration changes, so the estimate above describes a fixed
+zero. If a worker receives a request before a counter is initialized, it uses
+`safe_add` and retries the increment once; another worker winning initialization
+does not lose either increment. Allocation failures are logged without failing
+client requests. Counters reset when shared memory is lost. Historical label
+combinations can remain after configuration changes, so the estimate above describes a fixed
 configuration, not a permanent lifetime cap.
 
 Prometheus provides monitoring estimates with `increase`, not an exact durable
