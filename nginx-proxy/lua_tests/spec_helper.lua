@@ -3,6 +3,8 @@
 -- Setup LUA_PATH to include our modules
 local current_dir = debug.getinfo(1, "S").source:sub(2):match("(.*)/")
 local base_dir = current_dir .. "/.."
+-- utils/resolver_utils.lua comes from the puzzle auth module of proxy-common
+local auth_module_dir = base_dir .. "/../proxy-common/auth/nginx/lua"
 
 package.path = package.path .. ";" .. 
   base_dir .. "/lua/?.lua;" ..
@@ -11,6 +13,7 @@ package.path = package.path .. ";" ..
   base_dir .. "/lua/auth/?.lua;" ..
   base_dir .. "/lua/providers/?.lua;" ..
   base_dir .. "/lua/utils/?.lua;" ..
+  auth_module_dir .. "/?.lua;" ..
   current_dir .. "/?.lua;" ..
   current_dir .. "/?/init.lua"
 

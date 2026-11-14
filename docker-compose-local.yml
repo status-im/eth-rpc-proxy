@@ -17,8 +17,8 @@ services:
 
   rpc-proxy:
     build:
-      context: './nginx-proxy'
-      dockerfile: Dockerfile.local
+      context: '.'
+      dockerfile: 'nginx-proxy/Dockerfile.local'
     container_name: 'rpc-proxy'
     restart: 'always'
     environment:
