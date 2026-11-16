@@ -43,6 +43,25 @@ function _M.should_retry(res, decoded)
     return false
 end
 
+-- Whether an answer may be stored in the cache: a 200 whose JSON-RPC reply,
+-- or every reply of a batch, has no error. An error can be the caller's bad
+-- params or a provider's passing trouble; cached, it would be served to
+-- everyone who asks the same for as long as a good answer would be.
+function _M.is_cacheable(res, decoded)
+    if not res or res.status ~= 200 or type(decoded) ~= "table" then
+        return false
+    end
+    if decoded.error ~= nil then
+        return false
+    end
+    for _, reply in ipairs(decoded) do
+        if type(reply) ~= "table" or reply.error ~= nil then
+            return false
+        end
+    end
+    return true
+end
+
 -- Filter providers by provider_type if specified
 function _M.filter_providers(providers, provider_type)
     if not providers or type(providers) ~= "table" then

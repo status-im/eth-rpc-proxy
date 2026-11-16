@@ -93,8 +93,8 @@ for _, provider in ipairs(candidates.providers) do
 
         -- Check if we should retry with next provider using request_utils
         if not request_utils.should_retry(res, decoded) then
-            -- Cache response if cacheable
-            if cache_info.cache_type then
+            -- Cache the response if the method is cached and the answer is not an error
+            if cache_info.cache_type and request_utils.is_cacheable(res, decoded) then
                 cache.save_to_cache(cache_info, res.body)
             end
 
