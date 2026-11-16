@@ -18,7 +18,7 @@ describe("client RPC request metrics", function()
         ngx.var.uri = uri
         record_body(json.encode({ method = method }))
     end
-    local saved_ngx, saved_modules, counters, routes, responses, calls, cached, body
+    local saved_ngx, saved_modules, counters, routes, responses, calls, cached, body, written
     local providers = {
         { name = "Alchemy", type = "alchemy", chainId = 1, url = "https://alchemy" },
         { name = "Infura", type = "infura", chainId = 1, url = "https://infura" }
@@ -64,12 +64,15 @@ describe("client RPC request metrics", function()
         for _, name in ipairs({ "resty.http", "cache.cache", "utils.request_body" }) do
             saved_modules[name] = package.loaded[name]
         end
-        counters, routes, responses, calls, cached = {}, {}, {}, {}, nil
+        counters, routes, responses, calls, cached, written = {}, {}, {}, {}, nil, {}
         body = '{"jsonrpc":"2.0","method":"eth_chainId","id":1}'
         _G.ngx = {
             ERR = "ERR", WARN = "WARN", AF_INET = 2,
             ctx = {}, var = { uri = "/ethereum/mainnet" }, header = {},
-            log = function() end, say = function() end,
+            log = function() end,
+            -- What goes out as the response body: say adds a newline, print does not
+            say = function(text) written[#written + 1] = tostring(text) .. "\n" end,
+            print = function(text) written[#written + 1] = tostring(text) end,
             req = {
                 read_body = function() end,
                 get_body_data = function() return body end,
@@ -115,6 +118,13 @@ describe("client RPC request metrics", function()
         run()
         assert.are.equal(1, count("ethereum", "mainnet", "auto", "eth_chainId"))
         assert.are.equal(1, total())
+    end)
+
+    it("writes a provider's body as is, so it matches the Content-Length passed on with it", function()
+        responses[1] = { status = 200, body = '{"result":1}', headers = { ["Content-Length"] = "12" } }
+        run()
+        assert.are.equal('{"result":1}', table.concat(written))
+        assert.are.equal("12", ngx.header["Content-Length"])
     end)
 
     it("counts a cache hit without contacting a provider", function()

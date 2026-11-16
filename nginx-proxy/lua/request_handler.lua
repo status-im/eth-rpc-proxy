@@ -123,8 +123,10 @@ for _, provider in ipairs(candidates.providers) do
                 ngx.header["X-Cache-Level"] = "MISS"
             end
             
-            -- Set response body
-            ngx.say(res.body)
+            -- The provider's Content-Length is among the headers passed on, so
+            -- write exactly its body: ngx.say would add a newline, a byte past
+            -- the declared length that stays on a keep-alive connection
+            ngx.print(res.body)
             success = true
             break
         else
