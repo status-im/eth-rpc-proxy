@@ -61,6 +61,38 @@ describe("request_utils", function()
         end)
     end)
 
+    describe("is_cacheable", function()
+        it("should cache a successful reply", function()
+            assert.is_true(request_utils.is_cacheable({status = 200}, {jsonrpc = "2.0", id = 1, result = "0x1"}))
+        end)
+
+        it("should cache a batch of successful replies", function()
+            assert.is_true(request_utils.is_cacheable({status = 200}, {{id = 1, result = "0x1"}, {id = 2, result = "0x2"}}))
+        end)
+
+        it("should not cache a JSON-RPC error", function()
+            local decoded = {jsonrpc = "2.0", id = 1, error = {code = -32602, message = "invalid params"}}
+            assert.is_false(request_utils.is_cacheable({status = 200}, decoded))
+        end)
+
+        it("should not cache a batch with an error in it", function()
+            local decoded = {{id = 1, result = "0x1"}, {id = 2, error = {code = -32000, message = "header not found"}}}
+            assert.is_false(request_utils.is_cacheable({status = 200}, decoded))
+        end)
+
+        it("should not cache an answer other than 200", function()
+            for _, status in ipairs({201, 400, 404, 422}) do
+                assert.is_false(request_utils.is_cacheable({status = status}, {result = "0x1"}),
+                                "Should not cache status " .. status)
+            end
+        end)
+
+        it("should not cache a body that is not JSON", function()
+            assert.is_false(request_utils.is_cacheable({status = 200}, nil))
+            assert.is_false(request_utils.is_cacheable(nil, nil))
+        end)
+    end)
+
     describe("filter_providers", function()
         local sample_providers
         
