@@ -1,3 +1,5 @@
+# Build context: the repository root (proxy-common is a submodule there):
+#   docker build -f nginx-proxy/Dockerfile .
 FROM openresty/openresty:alpine
 
 # Install dependencies and configure
@@ -17,11 +19,15 @@ RUN apk add --no-cache ca-certificates curl perl build-base wget tar yaml-dev zl
     luarocks install lua-zlib
 
 # Copy configuration files
-COPY nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
-COPY metrics.conf /usr/local/openresty/nginx/conf/metrics.conf
+COPY nginx-proxy/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
+COPY nginx-proxy/metrics.conf /usr/local/openresty/nginx/conf/metrics.conf
 # cache_metrics.conf removed - metrics now served by go-proxy-cache service
-COPY providers.json /app/providers.json
-COPY lua /usr/local/openresty/nginx/lua
+COPY nginx-proxy/providers.json /app/providers.json
+# Puzzle auth for nginx, shared with nft-proxy and market-proxy; it also
+# brings utils/resolver_utils.lua, which the provider loader uses
+COPY proxy-common/auth/nginx/conf/auth_locations.conf /usr/local/openresty/nginx/conf/auth_locations.conf
+COPY proxy-common/auth/nginx/lua /usr/local/openresty/nginx/lua
+COPY nginx-proxy/lua /usr/local/openresty/nginx/lua
 
 # Specify the port to be used
 EXPOSE 8080

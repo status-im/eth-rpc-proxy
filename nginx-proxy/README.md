@@ -149,7 +149,9 @@ This will:
 
 1. Build the Docker image:
 ```bash
-docker build -t rpc-proxy .
+# from the repository root, with the proxy-common submodule checked out
+# (git submodule update --init)
+docker build -f nginx-proxy/Dockerfile -t rpc-proxy .
 ```
 
 2. Run the container:
@@ -290,8 +292,10 @@ curl -X POST http://localhost:8080/ethereum/mainnet \
 
 The nginx proxy uses Lua modules to manage configuration:
 
-- `auth_config.lua` - Reads JSON config and provides authentication settings
-- `auth_token_validator.lua` - Validates JWT tokens with caching and rate limiting
+- Puzzle auth (JWT token check, its limits, the auth service address) is the
+  module shared with nft-proxy and market-proxy:
+  [proxy-common/auth/nginx](../proxy-common/auth/nginx/README.md). The image
+  copies it from the submodule; `utils/resolver_utils.lua` comes with it.
 - `provider_loader.lua` - Manages provider list reloading
 - `request_handler.lua` - Handles main request routing logic
 - `cache.lua` - Handles RPC response caching with three-level architecture (L1/L2/L3)

@@ -24,6 +24,9 @@ jobs:
     
     steps:
     - uses: actions/checkout@v6
+      with:
+        # the provider loader uses utils/resolver_utils.lua of proxy-common
+        submodules: true
 
     - name: Install Lua and LuaRocks
       run: |

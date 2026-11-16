@@ -1,3 +1,5 @@
+# Build context: the repository root (proxy-common is a submodule there):
+#   docker build -f nginx-proxy/Dockerfile.local .
 FROM openresty/openresty:alpine
 
 # Install dependencies and configure
@@ -17,12 +19,16 @@ RUN apk add --no-cache ca-certificates curl perl build-base wget tar yaml-dev zl
     luarocks install lua-zlib
 
 # Copy configuration files
-COPY nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
-COPY metrics.conf /usr/local/openresty/nginx/conf/metrics.conf
+COPY nginx-proxy/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
+COPY nginx-proxy/metrics.conf /usr/local/openresty/nginx/conf/metrics.conf
 # cache_metrics.conf removed - metrics now served by go-proxy-cache service
-COPY providers.json /app/providers.json
-COPY lua /usr/local/openresty/nginx/lua
-COPY patch-local-cors.sh /usr/local/bin/patch-local-cors.sh
+COPY nginx-proxy/providers.json /app/providers.json
+# Puzzle auth for nginx, shared with nft-proxy and market-proxy; it also
+# brings utils/resolver_utils.lua, which the provider loader uses
+COPY proxy-common/auth/nginx/conf/auth_locations.conf /usr/local/openresty/nginx/conf/auth_locations.conf
+COPY proxy-common/auth/nginx/lua /usr/local/openresty/nginx/lua
+COPY nginx-proxy/lua /usr/local/openresty/nginx/lua
+COPY nginx-proxy/patch-local-cors.sh /usr/local/bin/patch-local-cors.sh
 
 # Make the script executable
 RUN chmod +x /usr/local/bin/patch-local-cors.sh
@@ -31,4 +37,4 @@ RUN chmod +x /usr/local/bin/patch-local-cors.sh
 EXPOSE 8080
 
 # Nginx startup command
-CMD sh -c "/usr/local/bin/patch-local-cors.sh /usr/local/openresty/nginx/conf/nginx.conf ${CORS_ORIGIN:-http://localhost:3001} && openresty -g 'daemon off;'"
+CMD sh -c "/usr/local/bin/patch-local-cors.sh /usr/local/openresty/nginx/conf/nginx.conf ${CORS_ORIGIN:-http://localhost:3001} && /usr/local/bin/patch-local-cors.sh /usr/local/openresty/nginx/conf/auth_locations.conf ${CORS_ORIGIN:-http://localhost:3001} && openresty -g 'daemon off;'"

@@ -1,8 +1,10 @@
 # Create Docker network (if it doesn't exist)
 docker network create rpc-network || true
 
-# Build image
-docker build -t rpc-proxy .
+# Build image. The build context is the repository root: the image copies the
+# puzzle auth module from the proxy-common submodule.
+cd "$(dirname "$0")/.."
+docker build -f nginx-proxy/Dockerfile -t rpc-proxy .
 
 # Remove existing container (if exists)
 docker rm -f rpc-proxy || true

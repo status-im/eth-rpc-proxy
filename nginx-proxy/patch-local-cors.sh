@@ -74,8 +74,11 @@ add_cors_config() {
 
 # Note: cache_metrics.conf function removed - metrics now served by go-proxy-cache service
 
-# Add CORS configuration for all endpoints
+# Add CORS configuration for all endpoints. The auth locations live in
+# auth_locations.conf (from proxy-common), the rest in nginx.conf: the script
+# is run on both and patches the locations a file has.
 add_cors_config "$NGINX_CONF" "\/auth\/"
+add_cors_config "$NGINX_CONF" "= \/auth\/solve"
 add_cors_config "$NGINX_CONF" "\/"
 
 # Note: cache_metrics.conf patching removed - metrics now served by go-proxy-cache service
